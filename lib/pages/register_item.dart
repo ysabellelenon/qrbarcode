@@ -207,11 +207,12 @@ class _RegisterItemState extends State<RegisterItem> {
                                 ),
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    final countingCodes = selectedCategories.entries
-                                        .where((entry) => entry.value == 'Counting')
-                                        .map((entry) => {
-                                              'code': entry.key.toString(),
-                                              'content': '',
+                                    // Get all code containers with their label content
+                                    final countingCodes = codeContainers
+                                        .where((container) => selectedCategories[container.codeNumber] == 'Counting')
+                                        .map((container) => {
+                                              'code': container.codeNumber.toString(),
+                                              'content': container.labelController.text, // Get the actual label content
                                             })
                                         .toList();
 
@@ -221,7 +222,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                         MaterialPageRoute(
                                           builder: (context) => SublotConfig(
                                             itemName: _itemNameController.text,
-                                            countingCodes: countingCodes,
+                                            countingCodes: countingCodes.cast<Map<String, String>>(),
                                           ),
                                         ),
                                       );
