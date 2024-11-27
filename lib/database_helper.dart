@@ -19,26 +19,21 @@ class DatabaseHelper {
     
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: (db, version) async {
         await _createTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('''
-            CREATE TABLE items(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              itemCode TEXT,
-              description TEXT,
-              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          ''');
-        }
+        await _createTables(db);
       },
     );
   }
 
   Future<void> _createTables(Database db) async {
+    await db.execute('DROP TABLE IF EXISTS item_codes');
+    await db.execute('DROP TABLE IF EXISTS items');
+    await db.execute('DROP TABLE IF EXISTS users');
+
     await db.execute('''
       CREATE TABLE users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,8 +51,21 @@ class DatabaseHelper {
       CREATE TABLE items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         itemCode TEXT,
-        description TEXT,
+        revision TEXT,
+        codeCount TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE item_codes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemId INTEGER,
+        category TEXT,
+        content TEXT,
+        hasSubLot INTEGER,
+        serialCount TEXT,
+        FOREIGN KEY (itemId) REFERENCES items (id)
       )
     ''');
   }
@@ -84,12 +92,40 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getItems() async {
     final db = await database;
-    return await db.query('items', orderBy: 'id DESC');
+    final items = await db.query('items', orderBy: 'id DESC');
+    
+    for (var item in items) {
+      final codes = await db.query(
+        'item_codes',
+        where: 'itemId = ?',
+        whereArgs: [item['id']],
+      );
+      item['codes'] = codes;
+    }
+    
+    return items;
   }
 
   Future<void> insertItem(Map<String, dynamic> item) async {
     final db = await database;
-    await db.insert('items', item);
+    
+    await db.transaction((txn) async {
+      final itemId = await txn.insert('items', {
+        'itemCode': item['itemCode'],
+        'revision': item['revision'],
+        'codeCount': item['codeCount'],
+      });
+
+      for (var code in (item['codes'] as List)) {
+        await txn.insert('item_codes', {
+          'itemId': itemId,
+          'category': code['category'],
+          'content': code['content'],
+          'hasSubLot': code['hasSubLot'],
+          'serialCount': code['serialCount'],
+        });
+      }
+    });
   }
 
   Future<void> updateItem(Map<String, dynamic> item) async {

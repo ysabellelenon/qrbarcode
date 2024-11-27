@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import '../database_helper.dart';
 
 class ReviewItem extends StatelessWidget {
   final String itemName;
@@ -37,6 +38,49 @@ class ReviewItem extends StatelessWidget {
         const SizedBox(height: 16),
       ],
     );
+  }
+
+  Future<void> _registerItem(BuildContext context) async {
+    try {
+      // Create item map for database
+      final item = {
+        'itemCode': itemName,
+        'revision': revision,
+        'codeCount': codeCount.toString(),
+        'codes': codes.map((code) => {
+          'category': code['category'],
+          'content': code['content'],
+          'hasSubLot': code['hasSubLot'] ? 1 : 0,
+          'serialCount': code['serialCount'] ?? '0',
+        }).toList(),
+      };
+
+      // Insert into database
+      await DatabaseHelper().insertItem(item);
+
+      // Show success message and navigate
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to item masterlist
+        Navigator.pushReplacementNamed(context, '/item-masterlist');
+      }
+    } catch (e) {
+      // Show error message if something goes wrong
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating item: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -133,50 +177,7 @@ class ReviewItem extends StatelessWidget {
                         ...codes.asMap().entries.map((entry) {
                           final index = entry.key;
                           final code = entry.value;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Code ${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 3,
-                                    child: _buildInfoRow('Category', code['category']),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    flex: 7,
-                                    child: _buildInfoRow('Label Content', code['content']),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Sub-lot Configuration Section
-                              Text(
-                                'Sub-lot Configuration',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                'Sub-lot Rules Enabled',
-                                code['hasSubLot'] ? 'Yes' : 'No',
-                              ),
-                              if (code['hasSubLot'])
-                                _buildInfoRow('Number of Serial No.', code['serialCount']),
-                              const SizedBox(height: 16),
-                            ],
-                          );
+                          return _buildCodeSection(code, index);
                         }),
 
                         // Register Button
@@ -193,9 +194,7 @@ class ReviewItem extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: () {
-                              // Handle registration
-                            },
+                            onPressed: () => _registerItem(context),
                             child: const Text('Register'),
                           ),
                         ),
@@ -208,6 +207,54 @@ class ReviewItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCodeSection(Map<String, dynamic> code, int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Code ${index + 1}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: _buildInfoRow('Category', code['category']),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 7,
+              child: _buildInfoRow('Label Content', code['content']),
+            ),
+          ],
+        ),
+        // Only show Sub-lot Configuration for Counting category
+        if (code['category'] == 'Counting') ...[
+          const SizedBox(height: 24),
+          Text(
+            'Sub-lot Configuration',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            'Sub-lot Rules Enabled',
+            code['hasSubLot'] ? 'Yes' : 'No',
+          ),
+          if (code['hasSubLot'])
+            _buildInfoRow('Number of Serial No.', code['serialCount']),
+        ],
+        const SizedBox(height: 24),
+      ],
     );
   }
 } 

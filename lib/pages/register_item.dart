@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../database_helper.dart';
 import 'sublot_config.dart';
+import 'review_item.dart';
 
 class RegisterItem extends StatefulWidget {
   const RegisterItem({super.key});
@@ -207,16 +208,24 @@ class _RegisterItemState extends State<RegisterItem> {
                                 ),
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    // Get all code containers with their label content
-                                    final countingCodes = codeContainers
-                                        .where((container) => selectedCategories[container.codeNumber] == 'Counting')
-                                        .map((container) => {
-                                              'code': container.codeNumber.toString(),
-                                              'content': container.labelController.text, // Get the actual label content
+                                    // Get all code containers with their categories and label content
+                                    final allCodes = codeContainers.map((container) => {
+                                      'code': container.codeNumber.toString(),
+                                      'content': container.labelController.text,
+                                      'category': selectedCategories[container.codeNumber],
+                                    }).toList();
+
+                                    // Separate counting and non-counting codes
+                                    final countingCodes = allCodes
+                                        .where((code) => code['category'] == 'Counting')
+                                        .map((code) => {
+                                              'code': code['code'],
+                                              'content': code['content'],
                                             })
                                         .toList();
 
                                     if (countingCodes.isNotEmpty) {
+                                      // If there are counting codes, go to sublot configuration
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -227,10 +236,20 @@ class _RegisterItemState extends State<RegisterItem> {
                                         ),
                                       );
                                     } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('At least one code must have Counting category'),
-                                          backgroundColor: Colors.red,
+                                      // If no counting codes, go directly to review page
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ReviewItem(
+                                            itemName: _itemNameController.text,
+                                            revision: _selectedRevision!,
+                                            codeCount: allCodes.length,
+                                            codes: allCodes.map((code) => {
+                                              ...code,
+                                              'hasSubLot': false,
+                                              'serialCount': '0',
+                                            }).toList(),
+                                          ),
                                         ),
                                       );
                                     }
