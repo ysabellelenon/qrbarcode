@@ -4,6 +4,7 @@ import 'pages/engineer_login.dart';
 import 'pages/account_settings.dart';
 import 'pages/manage_accounts.dart';
 import 'pages/new_account.dart';
+import 'pages/edit_user.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -27,6 +28,9 @@ class MyApp extends StatelessWidget {
         '/account-settings': (context) => const AccountSettings(),
         '/manage-accounts': (context) => const ManageAccounts(),
         '/new-account': (context) => const NewAccount(),
+        '/edit-user': (context) => EditUser(
+          user: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>
+        ),
       },
     );
   }

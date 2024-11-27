@@ -17,9 +17,6 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'users.db');
     
-    // Delete the database to force recreation
-    await deleteDatabase(path);
-    
     return await openDatabase(
       path,
       version: 1,
@@ -48,5 +45,15 @@ class DatabaseHelper {
   Future<void> insertUser(Map<String, dynamic> user) async {
     final db = await database;
     await db.insert('users', user);
+  }
+
+  Future<void> updateUser(Map<String, dynamic> user) async {
+    final db = await database;
+    await db.update(
+      'users',
+      user,
+      where: 'id = ?',
+      whereArgs: [user['id']],
+    );
   }
 } 

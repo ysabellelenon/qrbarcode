@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import 'login_page.dart';
 import '../database_helper.dart';
+import 'edit_user.dart';
 
 class ManageAccounts extends StatefulWidget {
   const ManageAccounts({super.key});
@@ -233,7 +234,12 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                         DataCell(
                                           OutlinedButton(
                                             onPressed: () {
-                                              // Add edit functionality
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => EditUser(user: user),
+                                                ),
+                                              );
                                             },
                                             child: const Text('Edit'),
                                           ),
