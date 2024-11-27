@@ -92,18 +92,25 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getItems() async {
     final db = await database;
-    final items = await db.query('items', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> items = await db.query('items', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> result = [];
     
+    // For each item, fetch its codes and create a new map
     for (var item in items) {
       final codes = await db.query(
         'item_codes',
         where: 'itemId = ?',
         whereArgs: [item['id']],
       );
-      item['codes'] = codes;
+      
+      // Create a new map with all item data plus codes
+      result.add({
+        ...Map<String, dynamic>.from(item),
+        'codes': codes,
+      });
     }
     
-    return items;
+    return result;
   }
 
   Future<void> insertItem(Map<String, dynamic> item) async {

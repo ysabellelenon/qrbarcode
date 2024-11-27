@@ -217,28 +217,13 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                             child: DataTable(
                               columnSpacing: 40,
                               horizontalMargin: 20,
-                              columns: [
-                                DataColumn(
-                                  label: Checkbox(
-                                    value: selectAll,
-                                    onChanged: (bool? value) {
-                                      setState(() {
-                                        selectAll = value ?? false;
-                                        if (selectAll) {
-                                          selectedItems.addAll(
-                                            items.map((item) => item['id'] as int),
-                                          );
-                                        } else {
-                                          selectedItems.clear();
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const DataColumn(label: Text('No.')),
-                                const DataColumn(label: Text('Item Code')),
-                                const DataColumn(label: Text('Description')),
-                                const DataColumn(label: Text('Actions')),
+                              columns: const [
+                                DataColumn(label: Text('')), // Checkbox column
+                                DataColumn(label: Text('No.')),
+                                DataColumn(label: Text('Item Code')),
+                                DataColumn(label: Text('Rev No.')),
+                                DataColumn(label: Text('No. of Code')),
+                                DataColumn(label: Text('Actions')),
                               ],
                               rows: items.map((item) {
                                 return DataRow(
@@ -260,7 +245,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                     ),
                                     DataCell(Text(item['id'].toString())),
                                     DataCell(Text(item['itemCode'] ?? '')),
-                                    DataCell(Text(item['description'] ?? '')),
+                                    DataCell(Text(item['revision'] ?? '')),
+                                    DataCell(Text(item['codeCount'] ?? '')),
                                     DataCell(
                                       OutlinedButton(
                                         onPressed: () {
