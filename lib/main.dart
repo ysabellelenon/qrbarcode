@@ -4,8 +4,11 @@ import 'pages/engineer_login.dart';
 import 'pages/account_settings.dart';
 import 'pages/manage_accounts.dart';
 import 'pages/new_account.dart';
+import 'database_helper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseHelper().database;
   runApp(const MyApp());
 }
 

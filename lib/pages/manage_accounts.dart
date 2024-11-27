@@ -21,6 +21,25 @@ class _ManageAccountsState extends State<ManageAccounts> {
     _loadUsers();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check for success message in route arguments
+    final message = ModalRoute.of(context)?.settings.arguments as String?;
+    if (message != null) {
+      // Show success message after build is complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      });
+    }
+  }
+
   Future<void> _loadUsers() async {
     final data = await DatabaseHelper().getUsers();
     setState(() {

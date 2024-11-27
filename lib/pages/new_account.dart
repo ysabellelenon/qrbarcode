@@ -53,14 +53,32 @@ class _NewAccountState extends State<NewAccount> {
     if (_validateForm()) {
       final user = {
         'firstName': _firstNameController.text,
+        'middleName': _middleNameController.text,
         'lastName': _surnameController.text,
         'section': _sectionController.text,
-        'lineNo': _usernameController.text,
+        'lineNo': _selectedCategory,
+        'username': _usernameController.text,
+        'password': _passwordController.text,
       };
       
-      await DatabaseHelper().insertUser(user);
-      if (mounted) {
-        Navigator.pop(context);
+      try {
+        await DatabaseHelper().insertUser(user);
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context, 
+            '/manage-accounts',
+            arguments: 'Account successfully created',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error creating account: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -138,163 +156,167 @@ class _NewAccountState extends State<NewAccount> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Two cards in a row
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Personal Information Section
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Personal Information',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2C3E50),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        TextFormField(
-                                          controller: _firstNameController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'First Name',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        TextFormField(
-                                          controller: _middleNameController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Middle Name',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        TextFormField(
-                                          controller: _surnameController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Surname',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        TextFormField(
-                                          controller: _sectionController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Section',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 32),
-
-                                  // Account Details Section
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Account Details',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2C3E50),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        TextFormField(
-                                          controller: _usernameController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Username',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter.digitsOnly,
-                                          ],
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        DropdownButtonFormField<String>(
-                                          value: _selectedCategory.isEmpty ? null : _selectedCategory,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Category',
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          items: const [
-                                            DropdownMenuItem(
-                                              value: 'Admin',
-                                              child: Text('Admin'),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Two cards in a row
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Personal Information Section
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Personal Information',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF2C3E50),
                                             ),
-                                            DropdownMenuItem(
-                                              value: 'Assembly',
-                                              child: Text('Assembly'),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          TextFormField(
+                                            controller: _firstNameController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'First Name',
+                                              border: OutlineInputBorder(),
                                             ),
-                                          ],
-                                          onChanged: (value) {
-                                            setState(() {
-                                              _selectedCategory = value!;
-                                            });
-                                          },
-                                          validator: (value) => value == null ? 'Required' : null,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        TextFormField(
-                                          controller: _passwordController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Password',
-                                            border: OutlineInputBorder(),
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
                                           ),
-                                          obscureText: true,
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        TextFormField(
-                                          controller: _confirmPasswordController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Confirm Password',
-                                            border: OutlineInputBorder(),
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _middleNameController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Middle Name',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
                                           ),
-                                          obscureText: true,
-                                          validator: (value) => value!.isEmpty ? 'Required' : null,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _surnameController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Surname',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _sectionController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Section',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 32),
+                                    const SizedBox(width: 32),
 
-                              // Save Button
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepPurple,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 32,
-                                      vertical: 16,
+                                    // Account Details Section
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Account Details',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF2C3E50),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          TextFormField(
+                                            controller: _usernameController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Username',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter.digitsOnly,
+                                            ],
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          DropdownButtonFormField<String>(
+                                            value: _selectedCategory.isEmpty ? null : _selectedCategory,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Category',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: 'Admin',
+                                                child: Text('Admin'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: 'Assembly',
+                                                child: Text('Assembly'),
+                                              ),
+                                            ],
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _selectedCategory = value!;
+                                              });
+                                            },
+                                            validator: (value) => value == null ? 'Required' : null,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _passwordController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Password',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            obscureText: true,
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _confirmPasswordController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Confirm Password',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            obscureText: true,
+                                            validator: (value) => value!.isEmpty ? 'Required' : null,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  onPressed: _handleSubmit,
-                                  child: const Text('Save'),
+                                  ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 32),
+
+                                // Save Button
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.deepPurple,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: _handleSubmit,
+                                    child: const Text('Save'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

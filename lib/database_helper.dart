@@ -16,6 +16,10 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'users.db');
+    
+    // Delete the database to force recreation
+    await deleteDatabase(path);
+    
     return await openDatabase(
       path,
       version: 1,
@@ -23,10 +27,13 @@ class DatabaseHelper {
         await db.execute('''
           CREATE TABLE users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lastName TEXT,
             firstName TEXT,
+            middleName TEXT,
+            lastName TEXT,
+            section TEXT,
             lineNo TEXT,
-            section TEXT
+            username TEXT,
+            password TEXT
           )
         ''');
       },
