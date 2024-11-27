@@ -19,22 +19,47 @@ class DatabaseHelper {
     
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE users(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            firstName TEXT,
-            middleName TEXT,
-            lastName TEXT,
-            section TEXT,
-            lineNo TEXT,
-            username TEXT,
-            password TEXT
-          )
-        ''');
+        await _createTables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE items(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              itemCode TEXT,
+              description TEXT,
+              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          ''');
+        }
       },
     );
+  }
+
+  Future<void> _createTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        firstName TEXT,
+        middleName TEXT,
+        lastName TEXT,
+        section TEXT,
+        lineNo TEXT,
+        username TEXT,
+        password TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemCode TEXT,
+        description TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -54,6 +79,35 @@ class DatabaseHelper {
       user,
       where: 'id = ?',
       whereArgs: [user['id']],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getItems() async {
+    final db = await database;
+    return await db.query('items', orderBy: 'id DESC');
+  }
+
+  Future<void> insertItem(Map<String, dynamic> item) async {
+    final db = await database;
+    await db.insert('items', item);
+  }
+
+  Future<void> updateItem(Map<String, dynamic> item) async {
+    final db = await database;
+    await db.update(
+      'items',
+      item,
+      where: 'id = ?',
+      whereArgs: [item['id']],
+    );
+  }
+
+  Future<void> deleteItems(List<int> ids) async {
+    final db = await database;
+    await db.delete(
+      'items',
+      where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+      whereArgs: ids,
     );
   }
 } 
