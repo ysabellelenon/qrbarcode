@@ -3,6 +3,7 @@ import '../constants.dart';
 import '../database_helper.dart';
 import 'sublot_config.dart';
 import 'review_item.dart';
+import '../utils/logout_helper.dart';
 
 class RegisterItem extends StatefulWidget {
   const RegisterItem({super.key});
@@ -80,7 +81,7 @@ class _RegisterItemState extends State<RegisterItem> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
                   child: const Text('Logout'),
                 ),
               ],

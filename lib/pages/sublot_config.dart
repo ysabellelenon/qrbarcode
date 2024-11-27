@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import 'review_item.dart';
+import '../utils/logout_helper.dart';
 
 class SublotConfig extends StatefulWidget {
   final String itemName;
@@ -115,7 +116,7 @@ class _SublotConfigState extends State<SublotConfig> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
                   child: const Text('Logout'),
                 ),
               ],

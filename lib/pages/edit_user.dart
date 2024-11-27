@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants.dart';
 import '../database_helper.dart';
+import '../utils/logout_helper.dart';
 
 class EditUser extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -111,7 +112,7 @@ class _EditUserState extends State<EditUser> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
                   child: const Text('Logout'),
                 ),
               ],

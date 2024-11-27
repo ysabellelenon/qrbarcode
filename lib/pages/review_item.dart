@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../database_helper.dart';
+import '../utils/logout_helper.dart';
 
 class ReviewItem extends StatelessWidget {
   final String itemName;
@@ -113,7 +114,7 @@ class ReviewItem extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
                   child: const Text('Logout'),
                 ),
               ],

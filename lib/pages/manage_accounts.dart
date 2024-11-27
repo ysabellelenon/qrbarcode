@@ -3,6 +3,7 @@ import '../constants.dart';
 import 'login_page.dart';
 import '../database_helper.dart';
 import 'edit_user.dart';
+import '../utils/logout_helper.dart';
 
 class ManageAccounts extends StatefulWidget {
   const ManageAccounts({super.key});
@@ -62,40 +63,6 @@ class _ManageAccountsState extends State<ManageAccounts> {
     });
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Logout'),
-          content: const Text('Are you sure you want to logout?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.blue),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,7 +93,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => _showLogoutConfirmation(context),
+                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
                   child: const Text('Logout'),
                 ),
               ],
