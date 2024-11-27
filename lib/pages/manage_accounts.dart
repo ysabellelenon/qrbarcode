@@ -15,11 +15,14 @@ class _ManageAccountsState extends State<ManageAccounts> {
   final Set<int> selectedUsers = {};
   bool selectAll = false;
   List<Map<String, dynamic>> users = [];
+  List<Map<String, dynamic>> filteredUsers = [];
+  final TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadUsers();
+    searchController.addListener(_filterUsers);
   }
 
   @override
@@ -45,6 +48,17 @@ class _ManageAccountsState extends State<ManageAccounts> {
     final data = await DatabaseHelper().getUsers();
     setState(() {
       users = data;
+      filteredUsers = data;
+    });
+  }
+
+  void _filterUsers() {
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredUsers = users.where((user) {
+        final fullName = '${user['firstName']} ${user['middleName']} ${user['lastName']}'.toLowerCase();
+        return fullName.contains(query);
+      }).toList();
     });
   }
 
@@ -164,6 +178,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 16.0),
                                 child: TextField(
+                                  controller: searchController,
                                   decoration: InputDecoration(
                                     hintText: 'Search...',
                                     filled: true,
@@ -190,7 +205,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                           setState(() {
                                             selectAll = value ?? false;
                                             if (selectAll) {
-                                              selectedUsers.addAll(users.map((user) => user['id'] as int));
+                                              selectedUsers.addAll(filteredUsers.map((user) => user['id'] as int));
                                             } else {
                                               selectedUsers.clear();
                                             }
@@ -205,7 +220,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     const DataColumn(label: Text('Section')),
                                     const DataColumn(label: Text('Actions')),
                                   ],
-                                  rows: users.map((user) {
+                                  rows: filteredUsers.map((user) {
                                     return DataRow(
                                       cells: [
                                         DataCell(
@@ -215,7 +230,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                               setState(() {
                                                 if (value == true) {
                                                   selectedUsers.add(user['id'] as int);
-                                                  if (selectedUsers.length == users.length) {
+                                                  if (selectedUsers.length == filteredUsers.length) {
                                                     selectAll = true;
                                                   }
                                                 } else {
@@ -271,7 +286,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                         ? null
                                         : () {
                                             setState(() {
-                                              users.removeWhere(
+                                              filteredUsers.removeWhere(
                                                   (user) => selectedUsers.contains(user['id'] as int));
                                               selectedUsers.clear();
                                             });
