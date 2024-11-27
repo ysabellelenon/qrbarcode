@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import 'login_page.dart';
+import '../database_helper.dart';
 
 class ManageAccounts extends StatefulWidget {
   const ManageAccounts({super.key});
@@ -10,32 +11,22 @@ class ManageAccounts extends StatefulWidget {
 }
 
 class _ManageAccountsState extends State<ManageAccounts> {
-  final Set<String> selectedUsers = {};
+  final Set<int> selectedUsers = {};
   bool selectAll = false;
+  List<Map<String, dynamic>> users = [];
 
-  final List<Map<String, String>> users = [
-    {
-      'no': '1',
-      'lastName': 'User',
-      'firstName': 'Test',
-      'lineNo': 'Admin',
-      'section': 'A',
-    },
-    {
-      'no': '2',
-      'lastName': 'User',
-      'firstName': 'Assembly',
-      'lineNo': 'Assembly',
-      'section': 'B',
-    },
-    {
-      'no': '3',
-      'lastName': 'Lenon',
-      'firstName': 'Ricky',
-      'lineNo': 'Admin',
-      'section': 'Engineering',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    final data = await DatabaseHelper().getUsers();
+    setState(() {
+      users = data;
+    });
+  }
 
   void _showLogoutConfirmation(BuildContext context) {
     showDialog(
@@ -179,7 +170,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                           setState(() {
                                             selectAll = value ?? false;
                                             if (selectAll) {
-                                              selectedUsers.addAll(users.map((user) => user['no']!));
+                                              selectedUsers.addAll(users.map((user) => user['id'] as int));
                                             } else {
                                               selectedUsers.clear();
                                             }
@@ -199,27 +190,27 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                       cells: [
                                         DataCell(
                                           Checkbox(
-                                            value: selectedUsers.contains(user['no']),
+                                            value: selectedUsers.contains(user['id']),
                                             onChanged: (bool? value) {
                                               setState(() {
                                                 if (value == true) {
-                                                  selectedUsers.add(user['no']!);
+                                                  selectedUsers.add(user['id'] as int);
                                                   if (selectedUsers.length == users.length) {
                                                     selectAll = true;
                                                   }
                                                 } else {
-                                                  selectedUsers.remove(user['no']!);
+                                                  selectedUsers.remove(user['id'] as int);
                                                   selectAll = false;
                                                 }
                                               });
                                             },
                                           ),
                                         ),
-                                        DataCell(Text(user['no']!)),
-                                        DataCell(Text(user['lastName']!)),
-                                        DataCell(Text(user['firstName']!)),
-                                        DataCell(Text(user['lineNo']!)),
-                                        DataCell(Text(user['section']!)),
+                                        DataCell(Text(user['id'].toString())),
+                                        DataCell(Text(user['lastName'])),
+                                        DataCell(Text(user['firstName'])),
+                                        DataCell(Text(user['lineNo'])),
+                                        DataCell(Text(user['section'])),
                                         DataCell(
                                           OutlinedButton(
                                             onPressed: () {
@@ -249,7 +240,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                         : () {
                                             setState(() {
                                               users.removeWhere(
-                                                  (user) => selectedUsers.contains(user['no']));
+                                                  (user) => selectedUsers.contains(user['id'] as int));
                                               selectedUsers.clear();
                                             });
                                           },
