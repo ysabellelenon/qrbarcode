@@ -153,4 +153,18 @@ class DatabaseHelper {
       whereArgs: ids,
     );
   }
+
+  Future<Map<String, dynamic>?> getUserByUsernameAndPassword(String username, String password) async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.query(
+      'users',
+      where: 'username = ? AND password = ?',
+      whereArgs: [username, password],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
 } 
