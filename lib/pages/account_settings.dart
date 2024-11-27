@@ -188,7 +188,7 @@ class AccountSettings extends StatelessWidget {
                                       ),
                                     ),
                                     onPressed: () {
-                                      Navigator.of(context).pushNamed('/create-account');
+                                      Navigator.of(context).pushNamed('/new-account');
                                     },
                                     child: const Text('Create Account'),
                                   ),

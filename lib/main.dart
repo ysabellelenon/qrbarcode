@@ -3,8 +3,7 @@ import 'pages/login_page.dart';
 import 'pages/engineer_login.dart';
 import 'pages/account_settings.dart';
 import 'pages/manage_accounts.dart';
-
-const Color kBackgroundColor = Color(0xFFF5F5F5); // Replace with the color from engineer_login
+import 'pages/new_account.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,6 +23,7 @@ class MyApp extends StatelessWidget {
         '/engineer-login': (context) => const EngineerLogin(),
         '/account-settings': (context) => const AccountSettings(),
         '/manage-accounts': (context) => const ManageAccounts(),
+        '/new-account': (context) => const NewAccount(),
       },
     );
   }
