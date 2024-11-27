@@ -6,6 +6,7 @@ import 'pages/manage_accounts.dart';
 import 'pages/new_account.dart';
 import 'pages/edit_user.dart';
 import 'pages/item_masterlist.dart';
+import 'pages/register_item.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
           user: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>
         ),
         '/item-masterlist': (context) => const ItemMasterlist(),
+        '/register-item': (context) => const RegisterItem(),
       },
     );
   }

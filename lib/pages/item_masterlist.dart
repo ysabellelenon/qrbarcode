@@ -176,14 +176,9 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepPurple,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         ),
-                        onPressed: () {
-                          // Navigate to new item registration page
-                        },
+                        onPressed: () => Navigator.pushNamed(context, '/register-item'),
                         child: const Text('New Register'),
                       ),
                       // Delete Button (visible only when items are selected)
