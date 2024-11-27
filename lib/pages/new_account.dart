@@ -128,7 +128,7 @@ class _NewAccountState extends State<NewAccount> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/account-settings'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),

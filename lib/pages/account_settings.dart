@@ -86,9 +86,7 @@ class AccountSettings extends StatelessWidget {
                 children: [
                   // Back Button
                   OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/engineer-login'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),

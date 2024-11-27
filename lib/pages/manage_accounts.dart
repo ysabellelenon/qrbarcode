@@ -143,9 +143,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                 children: [
                   // Back Button
                   OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/account-settings'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),

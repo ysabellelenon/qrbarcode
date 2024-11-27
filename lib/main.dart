@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         '/register-item': (context) => const RegisterItem(),
         '/sublot-config': (context) => SublotConfig(
           itemName: '',
-          countingCodes: const [],
+          countingCodes: const <Map<String, String>>[],
         ),
         '/review-item': (context) => ReviewItem(
           itemName: '',

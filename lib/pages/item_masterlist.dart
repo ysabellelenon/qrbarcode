@@ -145,7 +145,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                 children: [
                   // Back Button
                   OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/engineer-login'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),

@@ -95,7 +95,7 @@ class _RegisterItemState extends State<RegisterItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/item-masterlist'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
@@ -225,13 +225,18 @@ class _RegisterItemState extends State<RegisterItem> {
                                         .toList();
 
                                     if (countingCodes.isNotEmpty) {
-                                      // If there are counting codes, go to sublot configuration
+                                      // Convert the counting codes to the correct type
+                                      final typedCountingCodes = countingCodes.map((code) => {
+                                        'code': code['code'].toString(),
+                                        'content': code['content'].toString(),
+                                      }).toList();
+
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => SublotConfig(
                                             itemName: _itemNameController.text,
-                                            countingCodes: countingCodes.cast<Map<String, String>>(),
+                                            countingCodes: typedCountingCodes,
                                           ),
                                         ),
                                       );

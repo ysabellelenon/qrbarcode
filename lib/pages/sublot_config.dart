@@ -17,8 +17,8 @@ class SublotConfig extends StatefulWidget {
 }
 
 class _SublotConfigState extends State<SublotConfig> {
-  Map<String, bool> enableRules = {};
-  Map<String, String?> selectedSerialCounts = {};
+  final Map<String, bool> enableRules = {};
+  final Map<String, String> selectedSerialCounts = {};
   final List<String> _serialCounts = List.generate(20, (i) => (i + 1).toString());
 
   @override
@@ -27,7 +27,7 @@ class _SublotConfigState extends State<SublotConfig> {
     // Initialize maps for each counting code
     for (var code in widget.countingCodes) {
       enableRules[code['content']!] = false;
-      selectedSerialCounts[code['content']!] = null;
+      selectedSerialCounts[code['content']!] = '1';
     }
   }
 
@@ -73,7 +73,7 @@ class _SublotConfigState extends State<SublotConfig> {
                   }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
-                      selectedSerialCounts[labelContent] = newValue;
+                      selectedSerialCounts[labelContent] = newValue ?? '';
                     });
                   },
                 ),
@@ -130,7 +130,7 @@ class _SublotConfigState extends State<SublotConfig> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pushReplacementNamed('/register-item'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
