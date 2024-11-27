@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants.dart'; // Import the constants file
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,10 +13,30 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
+  void _handleLogin() {
+    // Temporary super admin credentials
+    const superUsername = "admin";
+    const superPassword = "admin123";
+
+    if (_usernameController.text == superUsername && 
+        _passwordController.text == superPassword) {
+      // Successful login - Navigate to engineer login page
+      Navigator.of(context).pushReplacementNamed('/engineer-login');
+    } else {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid credentials. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: kBackgroundColor,
       body: Center(
         child: Card(
           elevation: 8,
@@ -32,14 +53,6 @@ class _LoginPageState extends State<LoginPage> {
                 Image.asset(
                   'assets/images/jae-logo.jpg',
                   height: 100,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Technology to Inspire Innovation',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
                 ),
                 const SizedBox(height: 32),
                 
@@ -94,9 +107,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {
-                      // TODO: Implement login logic
-                    },
+                    onPressed: _handleLogin,
                     child: const Text(
                       'Login',
                       style: TextStyle(fontSize: 16),
