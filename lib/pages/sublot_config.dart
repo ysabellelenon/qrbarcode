@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import 'review_item.dart';
 
 class SublotConfig extends StatefulWidget {
   final String itemName;
@@ -167,7 +168,30 @@ class _SublotConfigState extends State<SublotConfig> {
                         ),
                       ),
                       onPressed: () {
-                        // Handle next button press
+                        // Create a list of codes with their configurations
+                        final configuredCodes = widget.countingCodes.map((code) {
+                          return {
+                            'code': code['code'],
+                            'content': code['content'],
+                            'category': 'Counting',
+                            'hasSubLot': enableRules[code['content']] ?? false,
+                            'serialCount': enableRules[code['content']] ?? false 
+                                ? selectedSerialCounts[code['content']] 
+                                : '0',
+                          };
+                        }).toList();
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ReviewItem(
+                              itemName: widget.itemName,
+                              revision: '1', // Replace with actual revision
+                              codeCount: widget.countingCodes.length,
+                              codes: configuredCodes,
+                            ),
+                          ),
+                        );
                       },
                       child: const Text('Next'),
                     ),

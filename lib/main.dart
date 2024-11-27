@@ -8,6 +8,7 @@ import 'pages/edit_user.dart';
 import 'pages/item_masterlist.dart';
 import 'pages/register_item.dart';
 import 'pages/sublot_config.dart';
+import 'pages/review_item.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -39,6 +40,12 @@ class MyApp extends StatelessWidget {
         '/sublot-config': (context) => SublotConfig(
           itemName: '',
           countingCodes: const [],
+        ),
+        '/review-item': (context) => ReviewItem(
+          itemName: '',
+          revision: '',
+          codeCount: 0,
+          codes: [],
         ),
       },
     );
