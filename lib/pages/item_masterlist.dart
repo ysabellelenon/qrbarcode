@@ -106,18 +106,13 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Text(
-                      'QR Barcode System',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'QR Barcode System',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                // Update Logout Button
                 ElevatedButton(
                   onPressed: () => _showLogoutConfirmation(context),
                   child: const Text('Logout'),
@@ -125,19 +120,21 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
               ],
             ),
           ),
+
           // Main Content
           Expanded(
-            child: Container(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Update Back Button
+                  // Back Button
                   OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
+
                   // Title
                   const Center(
                     child: Text(
@@ -151,115 +148,131 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Table Section with Search and Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Search Bar
-                      Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search),
-                            hintText: 'Search...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                  // Table Container
+                  Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Search and New Register Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search...',
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.pushNamed(context, '/register-item'),
+                                child: const Text('New Register'),
+                              ),
+                            ],
                           ),
-                          onChanged: (value) {
-                            // Implement search functionality
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // New Register Button
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        ),
-                        onPressed: () => Navigator.pushNamed(context, '/register-item'),
-                        child: const Text('New Register'),
-                      ),
-                      // Delete Button (visible only when items are selected)
-                      if (selectedItems.isNotEmpty) ...[
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                          ),
-                          onPressed: _deleteSelectedItems,
-                          child: const Text('Delete'),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                  // Table or Empty State
-                  Expanded(
-                    child: items.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No items available. Please add new items.',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
+                          // Table
+                          items.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Center(
+                                    child: Text(
+                                      'No items available. Please add new items.',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columnSpacing: 40,
+                                    horizontalMargin: 20,
+                                    columns: const [
+                                      DataColumn(label: Text('')), // Checkbox column
+                                      DataColumn(label: Text('No.')),
+                                      DataColumn(label: Text('Item Code')),
+                                      DataColumn(label: Text('Rev No.')),
+                                      DataColumn(label: Text('No. of Code')),
+                                      DataColumn(label: Text('Actions')),
+                                    ],
+                                    rows: items.map((item) {
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(
+                                            Checkbox(
+                                              value: selectedItems.contains(item['id']),
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  if (value == true) {
+                                                    selectedItems.add(item['id'] as int);
+                                                  } else {
+                                                    selectedItems.remove(item['id']);
+                                                  }
+                                                  selectAll = selectedItems.length == items.length;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          DataCell(Text(item['id'].toString())),
+                                          DataCell(Text(item['itemCode'] ?? '')),
+                                          DataCell(Text(item['revision'] ?? '')),
+                                          DataCell(Text(item['codeCount'] ?? '')),
+                                          DataCell(
+                                            OutlinedButton(
+                                              onPressed: () {
+                                                // Navigate to edit item page
+                                              },
+                                              child: const Text('Edit'),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+
+                          // Delete Button
+                          if (selectedItems.isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                  onPressed: _deleteSelectedItems,
+                                  child: const Text('Delete Selected'),
+                                ),
                               ),
                             ),
-                          )
-                        : SingleChildScrollView(
-                            child: DataTable(
-                              columnSpacing: 40,
-                              horizontalMargin: 20,
-                              columns: const [
-                                DataColumn(label: Text('')), // Checkbox column
-                                DataColumn(label: Text('No.')),
-                                DataColumn(label: Text('Item Code')),
-                                DataColumn(label: Text('Rev No.')),
-                                DataColumn(label: Text('No. of Code')),
-                                DataColumn(label: Text('Actions')),
-                              ],
-                              rows: items.map((item) {
-                                return DataRow(
-                                  cells: [
-                                    DataCell(
-                                      Checkbox(
-                                        value: selectedItems.contains(item['id']),
-                                        onChanged: (bool? value) {
-                                          setState(() {
-                                            if (value == true) {
-                                              selectedItems.add(item['id'] as int);
-                                            } else {
-                                              selectedItems.remove(item['id']);
-                                            }
-                                            selectAll = selectedItems.length == items.length;
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                    DataCell(Text(item['id'].toString())),
-                                    DataCell(Text(item['itemCode'] ?? '')),
-                                    DataCell(Text(item['revision'] ?? '')),
-                                    DataCell(Text(item['codeCount'] ?? '')),
-                                    DataCell(
-                                      OutlinedButton(
-                                        onPressed: () {
-                                          // Navigate to edit item page
-                                        },
-                                        child: const Text('Edit'),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
