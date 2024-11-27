@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../database_helper.dart';
+import 'sublot_config.dart';
 
 class RegisterItem extends StatefulWidget {
   const RegisterItem({super.key});
@@ -36,6 +37,7 @@ class _RegisterItemState extends State<RegisterItem> {
               selectedCategories[index + 1] = value;
             });
           },
+          labelController: TextEditingController(),
         ),
       );
     });
@@ -205,7 +207,32 @@ class _RegisterItemState extends State<RegisterItem> {
                                 ),
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    // Handle form submission
+                                    final countingCodes = selectedCategories.entries
+                                        .where((entry) => entry.value == 'Counting')
+                                        .map((entry) => {
+                                              'code': entry.key.toString(),
+                                              'content': '',
+                                            })
+                                        .toList();
+
+                                    if (countingCodes.isNotEmpty) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => SublotConfig(
+                                            itemName: _itemNameController.text,
+                                            countingCodes: countingCodes,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('At least one code must have Counting category'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
                                   }
                                 },
                                 child: const Text('Next'),
@@ -231,12 +258,14 @@ class CodeContainer extends StatefulWidget {
   final int codeNumber;
   final String? selectedCategory;
   final Function(String) onCategoryChanged;
+  final TextEditingController labelController;
 
   const CodeContainer({
     Key? key,
     required this.codeNumber,
     this.selectedCategory,
     required this.onCategoryChanged,
+    required this.labelController,
   }) : super(key: key);
 
   @override
@@ -292,6 +321,7 @@ class _CodeContainerState extends State<CodeContainer> {
               const SizedBox(width: 16),
               Expanded(
                 child: TextFormField(
+                  controller: widget.labelController,
                   decoration: InputDecoration(
                     labelText: 'Label Content ${widget.codeNumber}',
                     border: const OutlineInputBorder(),

@@ -7,6 +7,7 @@ import 'pages/new_account.dart';
 import 'pages/edit_user.dart';
 import 'pages/item_masterlist.dart';
 import 'pages/register_item.dart';
+import 'pages/sublot_config.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -35,6 +36,10 @@ class MyApp extends StatelessWidget {
         ),
         '/item-masterlist': (context) => const ItemMasterlist(),
         '/register-item': (context) => const RegisterItem(),
+        '/sublot-config': (context) => SublotConfig(
+          itemName: '',
+          countingCodes: const [],
+        ),
       },
     );
   }
