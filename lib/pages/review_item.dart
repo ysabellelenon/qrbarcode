@@ -15,6 +15,30 @@ class ReviewItem extends StatelessWidget {
     required this.codes,
   });
 
+  Widget _buildInfoRow(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,112 +89,117 @@ class ReviewItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // Item Details Card
-                  Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Item Details',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _buildReadOnlyField('Item Name', itemName),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildReadOnlyField('Rev No.', revision),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildReadOnlyField(
-                                  'No. of Code',
-                                  codeCount.toString(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  // All content in one white container
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Code Details Cards
-                  ...codes.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final code = entry.value;
-                    return Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Item Details Section
+                        const Text(
+                          'Item Details',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildInfoRow('Item Name', itemName),
+                        Row(
                           children: [
-                            Text(
-                              'Code ${index + 1}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Expanded(
+                              child: _buildInfoRow('Rev No.', revision),
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: _buildReadOnlyField(
-                                    'Category',
-                                    code['category'],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  flex: 7,
-                                  child: _buildReadOnlyField(
-                                    'Label Content',
-                                    code['content'],
-                                  ),
-                                ),
-                              ],
+                            Expanded(
+                              child: _buildInfoRow('No. of Code', codeCount.toString()),
                             ),
-                            if (code['hasSubLot']) ...[
-                              const SizedBox(height: 16),
-                              _buildReadOnlyField(
-                                'Number of Serial No.',
-                                code['serialCount'],
-                              ),
-                            ],
                           ],
                         ),
-                      ),
-                    );
-                  }),
+                        const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[800],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
+                        // Code Details Section
+                        ...codes.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final code = entry.value;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Code ${index + 1}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: _buildInfoRow('Category', code['category']),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    flex: 7,
+                                    child: _buildInfoRow('Label Content', code['content']),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Sub-lot Configuration Section
+                              Text(
+                                'Sub-lot Configuration',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                'Sub-lot Rules Enabled',
+                                code['hasSubLot'] ? 'Yes' : 'No',
+                              ),
+                              if (code['hasSubLot'])
+                                _buildInfoRow('Number of Serial No.', code['serialCount']),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }),
+
+                        // Register Button
+                        Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[800],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              // Handle registration
+                            },
+                            child: const Text('Register'),
+                          ),
                         ),
-                      ),
-                      onPressed: () {
-                        // Handle registration
-                      },
-                      child: const Text('Register'),
+                      ],
                     ),
                   ),
                 ],
@@ -179,17 +208,6 @@ class ReviewItem extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildReadOnlyField(String label, String value) {
-    return TextFormField(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      readOnly: true,
     );
   }
 } 
