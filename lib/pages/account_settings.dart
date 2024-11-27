@@ -114,6 +114,7 @@ class AccountSettings extends StatelessWidget {
                         Expanded(
                           child: Card(
                             elevation: 4,
+                            color: Colors.white,
                             margin: const EdgeInsets.all(10),
                             child: Padding(
                               padding: const EdgeInsets.all(20),
@@ -157,6 +158,7 @@ class AccountSettings extends StatelessWidget {
                         Expanded(
                           child: Card(
                             elevation: 4,
+                            color: Colors.white,
                             margin: const EdgeInsets.all(10),
                             child: Padding(
                               padding: const EdgeInsets.all(20),
