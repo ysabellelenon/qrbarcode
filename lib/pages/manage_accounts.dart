@@ -138,129 +138,128 @@ class _ManageAccountsState extends State<ManageAccounts> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Search Bar
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search...',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.search),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Users Table
-                  Expanded(
-                    child: Card(
-                      color: Colors.white,
-                      elevation: 4,
-                      child: SingleChildScrollView(
-                        child: DataTable(
-                          columns: [
-                            DataColumn(
-                              label: Checkbox(
-                                value: selectAll,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    selectAll = value ?? false;
-                                    if (selectAll) {
-                                      // Select all users
-                                      selectedUsers.addAll(users.map((user) => user['no']!));
-                                    } else {
-                                      // Deselect all users
-                                      selectedUsers.clear();
-                                    }
-                                  });
-                                },
+                  // Table Section with Search and Delete Button
+                  Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 1000),
+                      child: Card(
+                        color: Colors.white,
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              // Search Bar
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Search...',
+                                    filled: true,
+                                    fillColor: Colors.grey[50],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    prefixIcon: const Icon(Icons.search),
+                                  ),
+                                ),
                               ),
-                            ),
-                            const DataColumn(
-                              label: Text('No.'),
-                            ),
-                            const DataColumn(
-                              label: Text('Last Name'),
-                            ),
-                            const DataColumn(
-                              label: Text('First Name'),
-                            ),
-                            const DataColumn(
-                              label: Text('Line No.'),
-                            ),
-                            const DataColumn(
-                              label: Text('Section'),
-                            ),
-                            const DataColumn(
-                              label: Text('Actions'),
-                            ),
-                          ],
-                          rows: users.map((user) {
-                            return DataRow(
-                              cells: [
-                                DataCell(
-                                  Checkbox(
-                                    value: selectedUsers.contains(user['no']),
-                                    onChanged: (bool? value) {
-                                      setState(() {
-                                        if (value == true) {
-                                          selectedUsers.add(user['no']!);
-                                          // Update selectAll if all users are selected
-                                          if (selectedUsers.length == users.length) {
-                                            selectAll = true;
-                                          }
-                                        } else {
-                                          selectedUsers.remove(user['no']!);
-                                          // Update selectAll when any user is deselected
-                                          selectAll = false;
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-                                DataCell(Text(user['no']!)),
-                                DataCell(Text(user['lastName']!)),
-                                DataCell(Text(user['firstName']!)),
-                                DataCell(Text(user['lineNo']!)),
-                                DataCell(Text(user['section']!)),
-                                DataCell(
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      // Add edit functionality
-                                    },
-                                    child: const Text('Edit'),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                  ),
 
-                  // Delete Selected Button
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey,
-                          foregroundColor: Colors.white,
+                              // Table
+                              SingleChildScrollView(
+                                child: DataTable(
+                                  columnSpacing: 40,
+                                  horizontalMargin: 20,
+                                  columns: [
+                                    DataColumn(
+                                      label: Checkbox(
+                                        value: selectAll,
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            selectAll = value ?? false;
+                                            if (selectAll) {
+                                              selectedUsers.addAll(users.map((user) => user['no']!));
+                                            } else {
+                                              selectedUsers.clear();
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const DataColumn(label: Text('No.')),
+                                    const DataColumn(label: Text('Last Name')),
+                                    const DataColumn(label: Text('First Name')),
+                                    const DataColumn(label: Text('Line No.')),
+                                    const DataColumn(label: Text('Section')),
+                                    const DataColumn(label: Text('Actions')),
+                                  ],
+                                  rows: users.map((user) {
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Checkbox(
+                                            value: selectedUsers.contains(user['no']),
+                                            onChanged: (bool? value) {
+                                              setState(() {
+                                                if (value == true) {
+                                                  selectedUsers.add(user['no']!);
+                                                  if (selectedUsers.length == users.length) {
+                                                    selectAll = true;
+                                                  }
+                                                } else {
+                                                  selectedUsers.remove(user['no']!);
+                                                  selectAll = false;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        DataCell(Text(user['no']!)),
+                                        DataCell(Text(user['lastName']!)),
+                                        DataCell(Text(user['firstName']!)),
+                                        DataCell(Text(user['lineNo']!)),
+                                        DataCell(Text(user['section']!)),
+                                        DataCell(
+                                          OutlinedButton(
+                                            onPressed: () {
+                                              // Add edit functionality
+                                            },
+                                            child: const Text('Edit'),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+
+                              // Delete Selected Button
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: selectedUsers.isEmpty
+                                        ? null
+                                        : () {
+                                            setState(() {
+                                              users.removeWhere(
+                                                  (user) => selectedUsers.contains(user['no']));
+                                              selectedUsers.clear();
+                                            });
+                                          },
+                                    child: const Text('Delete Selected'),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        onPressed: selectedUsers.isEmpty
-                            ? null  // Disable button if no users are selected
-                            : () {
-                                // Add delete functionality
-                                setState(() {
-                                  users.removeWhere((user) => selectedUsers.contains(user['no']));
-                                  selectedUsers.clear();
-                                });
-                              },
-                        child: const Text('Delete Selected'),
                       ),
                     ),
                   ),
