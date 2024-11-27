@@ -71,6 +71,106 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     }
   }
 
+  bool _isGoodResult(Map<String, dynamic> item) {
+    final codes = item['codes'] as List<Map<String, dynamic>>;
+    if (codes.isEmpty) return false;
+
+    final category = codes.first['category'];
+    final labelContents = codes.map((code) => code['content']).toList();
+
+    if (category == 'Counting') {
+      for (int i = 1; i < labelContents.length; i++) {
+        final prev = int.tryParse(labelContents[i - 1].substring(labelContents[i - 1].length - 2));
+        final current = int.tryParse(labelContents[i].substring(labelContents[i].length - 2));
+        if (prev == null || current == null || current != prev + 1) {
+          return false;
+        }
+      }
+    } else if (category == 'Non-Counting') {
+      final firstLabel = labelContents.first.substring(labelContents.first.length - 2);
+      for (final content in labelContents) {
+        if (content.substring(content.length - 2) != firstLabel) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  DataRow _buildDataRow(Map<String, dynamic> item) {
+    final codes = item['codes'] as List<Map<String, dynamic>>;
+    final isGood = _isGoodResult(item);
+
+    return DataRow(
+      cells: [
+        DataCell(Checkbox(
+          value: selectedItems.contains(item['id']),
+          onChanged: (bool? value) {
+            setState(() {
+              if (value == true) {
+                selectedItems.add(item['id'] as int);
+              } else {
+                selectedItems.remove(item['id']);
+              }
+              selectAll = selectedItems.length == items.length;
+            });
+          },
+        )),
+        DataCell(Text(item['id'].toString())),
+        DataCell(Text(item['itemCode'] ?? '')),
+        DataCell(Text(item['revision'] ?? '')),
+        DataCell(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: codes.map((code) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: code['category'] == 'Counting' ? Colors.blue : Colors.cyan,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      code['category'] ?? '',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(code['content'] ?? ''),
+                ],
+              )).toList(),
+            ),
+          ),
+        ),
+        DataCell(
+          Text(
+            isGood ? 'GOOD' : 'NO GOOD',
+            style: TextStyle(
+              color: isGood ? Colors.green : Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        DataCell(
+          OutlinedButton(
+            onPressed: () {
+              // Navigate to edit item page
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.deepPurple,
+              side: const BorderSide(color: Colors.deepPurple),
+            ),
+            child: const Text('Revise'),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,49 +289,20 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                               SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: DataTable(
+                                  dataRowMinHeight: 80,
+                                  dataRowMaxHeight: 120,
                                   columnSpacing: 40,
                                   horizontalMargin: 20,
                                   columns: const [
-                                    DataColumn(label: Text('')), // Checkbox column
+                                    DataColumn(label: Text('')),
                                     DataColumn(label: Text('No.')),
-                                    DataColumn(label: Text('Item Code')),
-                                    DataColumn(label: Text('Rev No.')),
-                                    DataColumn(label: Text('No. of Code')),
+                                    DataColumn(label: Text('Item Name')),
+                                    DataColumn(label: Text('REV.')),
+                                    DataColumn(label: Text('Category & Label Content')),
+                                    DataColumn(label: Text('Results')),
                                     DataColumn(label: Text('Actions')),
                                   ],
-                                  rows: filteredItems.map((item) {
-                                    return DataRow(
-                                      cells: [
-                                        DataCell(
-                                          Checkbox(
-                                            value: selectedItems.contains(item['id']),
-                                            onChanged: (bool? value) {
-                                              setState(() {
-                                                if (value == true) {
-                                                  selectedItems.add(item['id'] as int);
-                                                } else {
-                                                  selectedItems.remove(item['id']);
-                                                }
-                                                selectAll = selectedItems.length == items.length;
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        DataCell(Text(item['id'].toString())),
-                                        DataCell(Text(item['itemCode'] ?? '')),
-                                        DataCell(Text(item['revision'] ?? '')),
-                                        DataCell(Text(item['codeCount'] ?? '')),
-                                        DataCell(
-                                          OutlinedButton(
-                                            onPressed: () {
-                                              // Navigate to edit item page
-                                            },
-                                            child: const Text('Edit'),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
+                                  rows: filteredItems.map((item) => _buildDataRow(item)).toList(),
                                 ),
                               ),
 
