@@ -15,13 +15,11 @@ class _RegisterItemState extends State<RegisterItem> {
   String? _selectedRevision;
   String? _selectedCodeCount;
   List<CodeContainer> codeContainers = [];
+  Map<int, String> selectedCategories = {};
 
   // Lists for dropdown items
   final List<String> _revisionNumbers = List.generate(10, (i) => (i + 1).toString());
   final List<String> _codeCounts = List.generate(20, (i) => (i + 1).toString());
-
-  // In the _RegisterItemState class, add this to track categories:
-  Map<int, String> selectedCategories = {};
 
   void _updateCodeContainers(String? count) {
     if (count == null) return;
@@ -228,8 +226,8 @@ class _RegisterItemState extends State<RegisterItem> {
   }
 }
 
-// Create a separate widget for the code container
-class CodeContainer extends StatelessWidget {
+// Update the CodeContainer to be stateful
+class CodeContainer extends StatefulWidget {
   final int codeNumber;
   final String? selectedCategory;
   final Function(String) onCategoryChanged;
@@ -240,6 +238,19 @@ class CodeContainer extends StatelessWidget {
     this.selectedCategory,
     required this.onCategoryChanged,
   }) : super(key: key);
+
+  @override
+  State<CodeContainer> createState() => _CodeContainerState();
+}
+
+class _CodeContainerState extends State<CodeContainer> {
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.selectedCategory;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +265,7 @@ class CodeContainer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Code $codeNumber',
+            'Code ${widget.codeNumber}',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -267,23 +278,13 @@ class CodeContainer extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Category'),
+                  Text('Category ${widget.codeNumber}'),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Radio<String>(
-                        value: 'Counting',
-                        groupValue: selectedCategory,
-                        onChanged: (value) => onCategoryChanged(value!),
-                      ),
-                      const Text('Counting'),
-                      const SizedBox(width: 16),
-                      Radio<String>(
-                        value: 'Non-Counting',
-                        groupValue: selectedCategory,
-                        onChanged: (value) => onCategoryChanged(value!),
-                      ),
-                      const Text('Non-Counting'),
+                      _buildCategoryButton('Counting'),
+                      const SizedBox(width: 8),
+                      _buildCategoryButton('Non-Counting'),
                     ],
                   ),
                 ],
@@ -292,7 +293,7 @@ class CodeContainer extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   decoration: InputDecoration(
-                    labelText: 'Label Content $codeNumber',
+                    labelText: 'Label Content ${widget.codeNumber}',
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) => value!.isEmpty ? 'Required' : null,
@@ -302,6 +303,30 @@ class CodeContainer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCategoryButton(String category) {
+    final isSelected = _selectedCategory == category;
+    
+    return OutlinedButton(
+      onPressed: () {
+        setState(() {
+          _selectedCategory = category;
+        });
+        widget.onCategoryChanged(category);
+      },
+      style: OutlinedButton.styleFrom(
+        backgroundColor: isSelected ? Colors.deepPurple : Colors.white,
+        foregroundColor: isSelected ? Colors.white : Colors.black,
+        side: BorderSide(
+          color: isSelected ? Colors.deepPurple : Colors.grey,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Text(category),
     );
   }
 } 
