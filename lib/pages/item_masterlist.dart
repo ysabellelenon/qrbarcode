@@ -106,22 +106,21 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'QR Barcode System',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
                 Row(
                   children: [
-                    IconButton(
-                      onPressed: () {
-                        _showLogoutConfirmation(context);
-                      },
-                      icon: const Icon(Icons.logout),
+                    const Text(
+                      'QR Barcode System',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
+                ),
+                // Update Logout Button
+                ElevatedButton(
+                  onPressed: () => _showLogoutConfirmation(context),
+                  child: const Text('Logout'),
                 ),
               ],
             ),
@@ -131,7 +130,14 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
             child: Container(
               padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Update Back Button
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Back'),
+                  ),
+                  const SizedBox(height: 20),
                   // Title
                   const Center(
                     child: Text(
