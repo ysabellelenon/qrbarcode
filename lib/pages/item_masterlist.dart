@@ -48,6 +48,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
       await DatabaseHelper().deleteItems(selectedItems.toList());
       setState(() {
         items.removeWhere((item) => selectedItems.contains(item['id']));
+        filteredItems.removeWhere((item) => selectedItems.contains(item['id']));
         selectedItems.clear();
         selectAll = false;
       });
@@ -71,104 +72,120 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     }
   }
 
-  bool _isGoodResult(Map<String, dynamic> item) {
-    final codes = item['codes'] as List<Map<String, dynamic>>;
-    if (codes.isEmpty) return false;
+  // Function to compute isGood per code
+  bool _isGoodResultPerCode(List<Map<String, dynamic>> codes, int index) {
+    String currentCategory = codes[index]['category']?.trim() ?? '';
+    String currentLabel = codes[index]['content']?.trim() ?? '';
+    String firstLabel = codes[0]['content']?.trim() ?? '';
+    bool isGood = true;
 
-    final category = codes.first['category'];
-    final labelContents = codes.map((code) => code['content']).toList();
-
-    if (category == 'Counting') {
-      for (int i = 1; i < labelContents.length; i++) {
-        final prev = int.tryParse(labelContents[i - 1].substring(labelContents[i - 1].length - 2));
-        final current = int.tryParse(labelContents[i].substring(labelContents[i].length - 2));
-        if (prev == null || current == null || current != prev + 1) {
-          return false;
-        }
+    if (currentCategory == 'Non-Counting') {
+      if (currentLabel != firstLabel) {
+        isGood = false;
       }
-    } else if (category == 'Non-Counting') {
-      final firstLabel = labelContents.first.substring(labelContents.first.length - 2);
-      for (final content in labelContents) {
-        if (content.substring(content.length - 2) != firstLabel) {
-          return false;
-        }
+    } else if (currentCategory == 'Counting' && index > 0) {
+      // Extract last four digits
+      String currentLastFourStr = currentLabel.length >= 4
+          ? currentLabel.substring(currentLabel.length - 4)
+          : '';
+      String firstLastFourStr = firstLabel.length >= 4
+          ? firstLabel.substring(firstLabel.length - 4)
+          : '';
+
+      int currentLastFour = int.tryParse(currentLastFourStr) ?? 0;
+      int firstLastFour = int.tryParse(firstLastFourStr) ?? 0;
+
+      if (currentLastFour == firstLastFour) {
+        isGood = false;
       }
     }
-    return true;
+    return isGood;
   }
 
-  DataRow _buildDataRow(Map<String, dynamic> item) {
-    final codes = item['codes'] as List<Map<String, dynamic>>;
-    final isGood = _isGoodResult(item);
+  List<DataRow> _buildDataRows() {
+    List<DataRow> dataRows = [];
+    int index = 1;
+    for (var item in filteredItems) {
+      List<Map<String, dynamic>> codes =
+          (item['codes'] as List<dynamic>).cast<Map<String, dynamic>>();
+      bool isSelected = selectedItems.contains(item['id']);
+      String firstLabel = codes.isNotEmpty
+          ? (codes[0]['content']?.trim() ?? '')
+          : '';
 
-    return DataRow(
-      cells: [
-        DataCell(Checkbox(
-          value: selectedItems.contains(item['id']),
-          onChanged: (bool? value) {
-            setState(() {
-              if (value == true) {
-                selectedItems.add(item['id'] as int);
-              } else {
-                selectedItems.remove(item['id']);
-              }
-              selectAll = selectedItems.length == items.length;
-            });
-          },
-        )),
-        DataCell(Text(item['id'].toString())),
-        DataCell(Text(item['itemCode'] ?? '')),
-        DataCell(Text(item['revision'] ?? '')),
-        DataCell(
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 300),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: codes.map((code) => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: code['category'] == 'Counting' ? Colors.blue : Colors.cyan,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      code['category'] ?? '',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
+      for (int i = 0; i < codes.length; i++) {
+        var code = codes[i];
+        bool isFirstRow = i == 0;
+
+        bool isGood = _isGoodResultPerCode(codes, i);
+
+        dataRows.add(
+          DataRow(
+            cells: [
+              isFirstRow
+                  ? DataCell(
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              selectedItems.add(item['id'] as int);
+                            } else {
+                              selectedItems.remove(item['id']);
+                            }
+                            selectAll = selectedItems.length == items.length;
+                          });
+                        },
+                      ),
+                    )
+                  : const DataCell(Text('')),
+              isFirstRow
+                  ? DataCell(Text(index.toString()))
+                  : const DataCell(Text('')),
+              isFirstRow
+                  ? DataCell(Text(item['itemCode'] ?? ''))
+                  : const DataCell(Text('')),
+              isFirstRow
+                  ? DataCell(Text(item['revision'] ?? ''))
+                  : const DataCell(Text('')),
+              DataCell(
+                code['category'] == 'Counting'
+                    ? Text('Counting',
+                        style: const TextStyle(color: Colors.blue))
+                    : Text('Non-Counting',
+                        style: const TextStyle(color: Colors.cyan)),
+              ),
+              DataCell(Text(code['content'] ?? '')),
+              DataCell(
+                Text(
+                  isGood ? 'GOOD' : 'NO GOOD',
+                  style: TextStyle(
+                    color: isGood ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 8),
-                  Text(code['content'] ?? ''),
-                ],
-              )).toList(),
-            ),
+                ),
+              ),
+              isFirstRow
+                  ? DataCell(
+                      OutlinedButton(
+                        onPressed: () {
+                          // Navigate to revise item page
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.deepPurple,
+                          side: const BorderSide(color: Colors.deepPurple),
+                        ),
+                        child: const Text('Revise'),
+                      ),
+                    )
+                  : const DataCell(Text('')),
+            ],
           ),
-        ),
-        DataCell(
-          Text(
-            isGood ? 'GOOD' : 'NO GOOD',
-            style: TextStyle(
-              color: isGood ? Colors.green : Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        DataCell(
-          OutlinedButton(
-            onPressed: () {
-              // Navigate to edit item page
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.deepPurple,
-              side: const BorderSide(color: Colors.deepPurple),
-            ),
-            child: const Text('Revise'),
-          ),
-        ),
-      ],
-    );
+        );
+      }
+      index++;
+    }
+    return dataRows;
   }
 
   @override
@@ -210,111 +227,67 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
 
           // Main Content
           Expanded(
-            child: Container(
-              color: kBackgroundColor,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Back Button
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/engineer-login'),
-                    child: const Text('Back'),
-                  ),
-                  const SizedBox(height: 20),
+            child: SingleChildScrollView(
+              child: Container(
+                color: kBackgroundColor,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Back Button
+                    OutlinedButton(
+                      onPressed: () =>
+                          Navigator.of(context).pushReplacementNamed('/engineer-login'),
+                      child: const Text('Back'),
+                    ),
+                    const SizedBox(height: 20),
 
-                  // Title
-                  const Center(
-                    child: Text(
-                      'Item Masterlist',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
+                    // Title
+                    const Center(
+                      child: Text(
+                        'Item Masterlist',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
+                    const SizedBox(height: 30),
 
-                  // Table Section with Search and Buttons
-                  Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1000),
-                      child: Card(
-                        color: Colors.white,
-                        elevation: 4,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              // Search Bar and New Register Button
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: searchController,
-                                      decoration: InputDecoration(
-                                        hintText: 'Search...',
-                                        filled: true,
-                                        fillColor: Colors.grey[50],
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
+                    // Table Section with Search and Buttons
+                    Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 1000),
+                        child: Card(
+                          color: Colors.white,
+                          elevation: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              children: [
+                                // Search Bar and New Register Button
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: searchController,
+                                        decoration: InputDecoration(
+                                          hintText: 'Search...',
+                                          filled: true,
+                                          fillColor: Colors.grey[50],
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          prefixIcon: const Icon(Icons.search),
                                         ),
-                                        prefixIcon: const Icon(Icons.search),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepPurple,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: () => Navigator.pushNamed(context, '/register-item'),
-                                    child: const Text('New Register'),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Table
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: DataTable(
-                                  dataRowMinHeight: 80,
-                                  dataRowMaxHeight: 120,
-                                  columnSpacing: 40,
-                                  horizontalMargin: 20,
-                                  columns: const [
-                                    DataColumn(label: Text('')),
-                                    DataColumn(label: Text('No.')),
-                                    DataColumn(label: Text('Item Name')),
-                                    DataColumn(label: Text('REV.')),
-                                    DataColumn(label: Text('Category & Label Content')),
-                                    DataColumn(label: Text('Results')),
-                                    DataColumn(label: Text('Actions')),
-                                  ],
-                                  rows: filteredItems.map((item) => _buildDataRow(item)).toList(),
-                                ),
-                              ),
-
-                              // Delete Button
-                              if (selectedItems.isNotEmpty)
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 16),
-                                    child: ElevatedButton(
+                                    const SizedBox(width: 16),
+                                    ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
+                                        backgroundColor: Colors.deepPurple,
                                         foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 32,
@@ -324,18 +297,87 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                       ),
-                                      onPressed: _deleteSelectedItems,
-                                      child: const Text('Delete Selected'),
+                                      onPressed: () =>
+                                          Navigator.pushNamed(context, '/register-item'),
+                                      child: const Text('New Register'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Table
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.vertical,
+                                    child: DataTable(
+                                      dataRowMinHeight: 50,
+                                      dataRowMaxHeight: 100,
+                                      columnSpacing: 20,
+                                      horizontalMargin: 20,
+                                      columns: [
+                                        DataColumn(
+                                          label: Checkbox(
+                                            value: selectAll,
+                                            onChanged: (bool? value) {
+                                              setState(() {
+                                                selectAll = value ?? false;
+                                                if (selectAll) {
+                                                  selectedItems.clear();
+                                                  for (var item in items) {
+                                                    selectedItems.add(item['id'] as int);
+                                                  }
+                                                } else {
+                                                  selectedItems.clear();
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        const DataColumn(label: Text('No.')),
+                                        const DataColumn(label: Text('Item Name')),
+                                        const DataColumn(label: Text('REV.')),
+                                        const DataColumn(label: Text('Category')),
+                                        const DataColumn(label: Text('Label Content')),
+                                        const DataColumn(label: Text('Results')),
+                                        const DataColumn(label: Text('Actions')),
+                                      ],
+                                      rows: _buildDataRows(),
                                     ),
                                   ),
                                 ),
-                            ],
+
+                                // Delete Button
+                                if (selectedItems.isNotEmpty)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 16),
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 32,
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        onPressed: _deleteSelectedItems,
+                                        child: const Text('Delete Selected'),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -343,4 +385,4 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
       ),
     );
   }
-} 
+}
