@@ -9,6 +9,7 @@ import 'pages/item_masterlist.dart';
 import 'pages/register_item.dart';
 import 'pages/sublot_config.dart';
 import 'pages/review_item.dart';
+import 'pages/revise_item.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -46,6 +47,9 @@ class MyApp extends StatelessWidget {
           revision: '',
           codeCount: 0,
           codes: [],
+        ),
+        '/revise-item': (context) => ReviseItem(
+          item: ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>,
         ),
       },
     );

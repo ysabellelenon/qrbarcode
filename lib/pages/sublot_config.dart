@@ -6,11 +6,19 @@ import '../utils/logout_helper.dart';
 class SublotConfig extends StatefulWidget {
   final String itemName;
   final List<Map<String, String>> countingCodes;
+  final bool isUpdate;
+  final int? itemId;
+  final List<Map<String, dynamic>>? allCodes;
+  final String? revision;
 
   const SublotConfig({
     super.key,
     required this.itemName,
     required this.countingCodes,
+    this.isUpdate = false,
+    this.itemId,
+    this.allCodes,
+    this.revision,
   });
 
   @override
@@ -186,10 +194,20 @@ class _SublotConfigState extends State<SublotConfig> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => ReviewItem(
+                              itemId: widget.itemId,
                               itemName: widget.itemName,
-                              revision: '1', // Replace with actual revision
-                              codeCount: widget.countingCodes.length,
-                              codes: configuredCodes,
+                              revision: widget.revision ?? '1',
+                              codeCount: widget.allCodes?.length ?? widget.countingCodes.length,
+                              codes: configuredCodes + (widget.allCodes?.where((code) => code['category'] != 'Counting').map((code) {
+                                return {
+                                  'code': code['code'],
+                                  'content': code['content'],
+                                  'category': code['category'],
+                                  'hasSubLot': false,
+                                  'serialCount': '0',
+                                };
+                              }).toList() ?? []),
+                              isUpdate: widget.isUpdate,
                             ),
                           ),
                         );

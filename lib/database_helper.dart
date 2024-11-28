@@ -135,14 +135,39 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> updateItem(Map<String, dynamic> item) async {
+  Future<void> updateItem(int itemId, Map<String, dynamic> item) async {
     final db = await database;
-    await db.update(
-      'items',
-      item,
-      where: 'id = ?',
-      whereArgs: [item['id']],
-    );
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'items',
+        {
+          'itemCode': item['itemCode'],
+          'revision': item['revision'],
+          'codeCount': item['codeCount'],
+        },
+        where: 'id = ?',
+        whereArgs: [itemId],
+      );
+
+      // Delete existing codes
+      await txn.delete(
+        'item_codes',
+        where: 'itemId = ?',
+        whereArgs: [itemId],
+      );
+
+      // Insert updated codes
+      for (var code in (item['codes'] as List)) {
+        await txn.insert('item_codes', {
+          'itemId': itemId,
+          'category': code['category'],
+          'content': code['content'],
+          'hasSubLot': code['hasSubLot'],
+          'serialCount': code['serialCount'],
+        });
+      }
+    });
   }
 
   Future<void> deleteItems(List<int> ids) async {

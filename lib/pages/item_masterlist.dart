@@ -3,6 +3,7 @@ import '../constants.dart';
 import '../database_helper.dart';
 import 'login_page.dart';
 import '../utils/logout_helper.dart';
+import 'revise_item.dart';
 
 class ItemMasterlist extends StatefulWidget {
   const ItemMasterlist({super.key});
@@ -119,18 +120,19 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
             cells: [
               isFirstRow
                   ? DataCell(
-                      Checkbox(
-                        value: isSelected,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              selectedItems.add(item['id'] as int);
-                            } else {
-                              selectedItems.remove(item['id']);
-                            }
-                            selectAll = selectedItems.length == items.length;
-                          });
+                      OutlinedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/revise-item',
+                            arguments: item,
+                          );
                         },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.deepPurple,
+                          side: const BorderSide(color: Colors.deepPurple),
+                        ),
+                        child: const Text('Revise'),
                       ),
                     )
                   : const DataCell(Text('')),
@@ -164,7 +166,11 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                   ? DataCell(
                       OutlinedButton(
                         onPressed: () {
-                          // Navigate to revise item page
+                          Navigator.pushNamed(
+                            context,
+                            '/revise-item',
+                            arguments: item,
+                          );
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.deepPurple,

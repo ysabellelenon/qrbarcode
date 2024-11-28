@@ -4,17 +4,21 @@ import '../database_helper.dart';
 import '../utils/logout_helper.dart';
 
 class ReviewItem extends StatelessWidget {
+  final int? itemId;
   final String itemName;
   final String revision;
   final int codeCount;
   final List<Map<String, dynamic>> codes;
+  final bool isUpdate;
 
   const ReviewItem({
     super.key,
+    this.itemId,
     required this.itemName,
     required this.revision,
     required this.codeCount,
     required this.codes,
+    this.isUpdate = false,
   });
 
   Widget _buildInfoRow(String label, String value) {
@@ -49,34 +53,47 @@ class ReviewItem extends StatelessWidget {
         'revision': revision,
         'codeCount': codeCount.toString(),
         'codes': codes.map((code) => {
-          'category': code['category'],
-          'content': code['content'],
-          'hasSubLot': code['hasSubLot'] ? 1 : 0,
-          'serialCount': code['serialCount'] ?? '0',
-        }).toList(),
+              'category': code['category'],
+              'content': code['content'],
+              'hasSubLot': code['hasSubLot'] ? 1 : 0,
+              'serialCount': code['serialCount'] ?? '0',
+            }).toList(),
       };
 
-      // Insert into database
-      await DatabaseHelper().insertItem(item);
-
-      // Show success message and navigate
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Item created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Navigate to item masterlist
-        Navigator.pushReplacementNamed(context, '/item-masterlist');
+      if (isUpdate && itemId != null) {
+        // Update existing item
+        await DatabaseHelper().updateItem(itemId!, item);
+        // Show success message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Item updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Insert new item
+        await DatabaseHelper().insertItem(item);
+        // Show success message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Item created successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
+
+      // Navigate to item masterlist
+      Navigator.pushReplacementNamed(context, '/item-masterlist');
     } catch (e) {
       // Show error message if something goes wrong
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating item: ${e.toString()}'),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
