@@ -76,27 +76,22 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
   bool _isGoodResultPerCode(List<Map<String, dynamic>> codes, int index) {
     String currentCategory = codes[index]['category']?.trim() ?? '';
     String currentLabel = codes[index]['content']?.trim() ?? '';
-    String firstLabel = codes[0]['content']?.trim() ?? '';
     bool isGood = true;
 
     if (currentCategory == 'Non-Counting') {
+      // For Non-Counting, all label contents should be the same as the first label
+      String firstLabel = codes[0]['content']?.trim() ?? '';
       if (currentLabel != firstLabel) {
         isGood = false;
       }
-    } else if (currentCategory == 'Counting' && index > 0) {
-      // Extract last four digits
-      String currentLastFourStr = currentLabel.length >= 4
-          ? currentLabel.substring(currentLabel.length - 4)
-          : '';
-      String firstLastFourStr = firstLabel.length >= 4
-          ? firstLabel.substring(firstLabel.length - 4)
-          : '';
-
-      int currentLastFour = int.tryParse(currentLastFourStr) ?? 0;
-      int firstLastFour = int.tryParse(firstLastFourStr) ?? 0;
-
-      if (currentLastFour == firstLastFour) {
-        isGood = false;
+    } else if (currentCategory == 'Counting') {
+      // For Counting, check if current label content matches any of the previous label contents
+      for (int i = 0; i < index; i++) {
+        String previousLabel = codes[i]['content']?.trim() ?? '';
+        if (currentLabel == previousLabel) {
+          isGood = false;
+          break;
+        }
       }
     }
     return isGood;
