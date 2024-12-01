@@ -128,7 +128,7 @@ class DatabaseHelper {
           'itemId': itemId,
           'category': code['category'],
           'content': code['content'],
-          'hasSubLot': code['hasSubLot'],
+          'hasSubLot': code['hasSubLot'] ? 1 : 0,
           'serialCount': code['serialCount'],
         });
       }

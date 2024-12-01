@@ -73,31 +73,6 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     }
   }
 
-  // Function to compute isGood per code
-  bool _isGoodResultPerCode(List<Map<String, dynamic>> codes, int index) {
-    String currentCategory = codes[index]['category']?.trim() ?? '';
-    String currentLabel = codes[index]['content']?.trim() ?? '';
-    bool isGood = true;
-
-    if (currentCategory == 'Non-Counting') {
-      // For Non-Counting, all label contents should be the same as the first label
-      String firstLabel = codes[0]['content']?.trim() ?? '';
-      if (currentLabel != firstLabel) {
-        isGood = false;
-      }
-    } else if (currentCategory == 'Counting') {
-      // For Counting, check if current label content matches any of the previous label contents
-      for (int i = 0; i < index; i++) {
-        String previousLabel = codes[i]['content']?.trim() ?? '';
-        if (currentLabel == previousLabel) {
-          isGood = false;
-          break;
-        }
-      }
-    }
-    return isGood;
-  }
-
   List<DataRow> _buildDataRows() {
     List<DataRow> dataRows = [];
     int index = 1;
@@ -112,8 +87,6 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
       for (int i = 0; i < codes.length; i++) {
         var code = codes[i];
         bool isFirstRow = i == 0;
-
-        bool isGood = _isGoodResultPerCode(codes, i);
 
         dataRows.add(
           DataRow(
@@ -153,15 +126,6 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                         style: const TextStyle(color: Colors.cyan)),
               ),
               DataCell(Text(code['content'] ?? '')),
-              DataCell(
-                Text(
-                  isGood ? 'GOOD' : 'NO GOOD',
-                  style: TextStyle(
-                    color: isGood ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
               isFirstRow
                   ? DataCell(
                       OutlinedButton(
@@ -340,7 +304,6 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                         const DataColumn(label: Text('REV.')),
                                         const DataColumn(label: Text('Category')),
                                         const DataColumn(label: Text('Label Content')),
-                                        const DataColumn(label: Text('Results')),
                                         const DataColumn(label: Text('Actions')),
                                       ],
                                       rows: _buildDataRows(),

@@ -4,6 +4,7 @@ import '../database_helper.dart';
 import 'sublot_config.dart';
 import 'review_item.dart';
 import '../utils/logout_helper.dart';
+import '../widgets/code_container.dart';
 
 class RegisterItem extends StatefulWidget {
   const RegisterItem({super.key});
@@ -20,13 +21,12 @@ class _RegisterItemState extends State<RegisterItem> {
   List<CodeContainer> codeContainers = [];
   Map<int, String> selectedCategories = {};
 
-  // Lists for dropdown items
   final List<String> _revisionNumbers = List.generate(10, (i) => (i + 1).toString());
   final List<String> _codeCounts = List.generate(20, (i) => (i + 1).toString());
 
   void _updateCodeContainers(String? count) {
     if (count == null) return;
-    
+
     setState(() {
       int numberOfCodes = int.parse(count);
       codeContainers = List.generate(
@@ -40,6 +40,7 @@ class _RegisterItemState extends State<RegisterItem> {
             });
           },
           labelController: TextEditingController(),
+          hasSubLot: false,
         ),
       );
     });
@@ -196,53 +197,32 @@ class _RegisterItemState extends State<RegisterItem> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey[800],
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    // Get all code containers with their categories and label content
                                     final allCodes = codeContainers.map((container) => {
                                       'code': container.codeNumber.toString(),
                                       'content': container.labelController.text,
                                       'category': selectedCategories[container.codeNumber],
                                     }).toList();
 
-                                    // Separate counting and non-counting codes
                                     final countingCodes = allCodes
                                         .where((code) => code['category'] == 'Counting')
-                                        .map((code) => {
-                                              'code': code['code'],
-                                              'content': code['content'],
-                                            })
                                         .toList();
 
                                     if (countingCodes.isNotEmpty) {
-                                      // Convert the counting codes to the correct type
-                                      final typedCountingCodes = countingCodes.map((code) => {
-                                        'code': code['code'].toString(),
-                                        'content': code['content'].toString(),
-                                      }).toList();
-
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => SublotConfig(
                                             itemName: _itemNameController.text,
-                                            countingCodes: typedCountingCodes,
+                                            countingCodes: countingCodes.map((code) => {
+                                              'key1': code['key1']!,
+                                              'key2': code['key2']!,
+                                            }).toList(),
                                           ),
                                         ),
                                       );
                                     } else {
-                                      // If no counting codes, go directly to review page
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -278,111 +258,3 @@ class _RegisterItemState extends State<RegisterItem> {
     );
   }
 }
-
-// Update the CodeContainer to be stateful
-class CodeContainer extends StatefulWidget {
-  final int codeNumber;
-  final String? selectedCategory;
-  final Function(String) onCategoryChanged;
-  final TextEditingController labelController;
-
-  const CodeContainer({
-    Key? key,
-    required this.codeNumber,
-    this.selectedCategory,
-    required this.onCategoryChanged,
-    required this.labelController,
-  }) : super(key: key);
-
-  @override
-  State<CodeContainer> createState() => _CodeContainerState();
-}
-
-class _CodeContainerState extends State<CodeContainer> {
-  String? _selectedCategory;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedCategory = widget.selectedCategory;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F0FF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Code ${widget.codeNumber}',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Category ${widget.codeNumber}'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildCategoryButton('Counting'),
-                      const SizedBox(width: 8),
-                      _buildCategoryButton('Non-Counting'),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: widget.labelController,
-                  decoration: InputDecoration(
-                    labelText: 'Label Content ${widget.codeNumber}',
-                    border: const OutlineInputBorder(),
-                  ),
-                  validator: (value) => value!.isEmpty ? 'Required' : null,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryButton(String category) {
-    final isSelected = _selectedCategory == category;
-    
-    return OutlinedButton(
-      onPressed: () {
-        setState(() {
-          _selectedCategory = category;
-        });
-        widget.onCategoryChanged(category);
-      },
-      style: OutlinedButton.styleFrom(
-        backgroundColor: isSelected ? Colors.deepPurple : Colors.white,
-        foregroundColor: isSelected ? Colors.white : Colors.black,
-        side: BorderSide(
-          color: isSelected ? Colors.deepPurple : Colors.grey,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: Text(category),
-    );
-  }
-} 
