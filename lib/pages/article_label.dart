@@ -94,13 +94,19 @@ class ArticleLabel extends StatelessWidget {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(30),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Item Name: $itemName'),
-                        Text('P.O No: $poNo'),
+                        Text(
+                          'Item Name: $itemName',
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        Text(
+                          'P.O No: $poNo',
+                          style: const TextStyle(fontSize: 18),
+                        ),
                         const SizedBox(height: 32),
                         TextFormField(
                           decoration: const InputDecoration(
@@ -124,22 +130,24 @@ class ArticleLabel extends StatelessWidget {
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 32),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Handle proceed action
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple, // Match the color
-                            foregroundColor: Colors.white, // Text color
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Handle proceed action
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple, // Match the color
+                              foregroundColor: Colors.white, // Text color
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            child: const Text('Proceed'),
                           ),
-                          child: const Text('Proceed'),
                         ),
                       ],
                     ),
