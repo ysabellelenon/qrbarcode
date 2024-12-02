@@ -150,15 +150,8 @@ class ArticleLabel extends StatelessWidget {
                                 String itemName = articleLabel.substring(10, 22); // Extracting based on the position
                                 
                                 // Extract QTY per box
-                                List<String> parts = articleLabel.split(' ');
-                                String qtyPerBox = '0'; // Default value
-
-                                if (parts.length > 1) {
-                                  String qtyPart = parts[1]; // Get the second part after splitting
-                                  if (qtyPart.length >= 2) {
-                                    qtyPerBox = qtyPart.substring(qtyPart.length - 2); // Last two characters
-                                  }
-                                }
+                                String qtyPart = articleLabel.split(' ')[1]; // Get the second part after splitting
+                                String qtyPerBox = qtyPart.substring(2); // Get the part after the first two characters
 
                                 // Extract P.O No.
                                 String poNo = articleLabel.substring(0, 10); // First 10 characters
