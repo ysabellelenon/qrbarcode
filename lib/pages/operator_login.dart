@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import database helper
+import 'article_label.dart'; // Import the new ArticleLabel page
 
 class OperatorLogin extends StatefulWidget {
   const OperatorLogin({super.key});
@@ -72,6 +73,13 @@ class _OperatorLoginState extends State<OperatorLogin> {
           _labelContent = 'Item not found';
         });
       }
+
+      // Navigate to ArticleLabel page
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ArticleLabel(itemName: itemName, poNo: poNo),
+        ),
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
