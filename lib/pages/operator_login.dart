@@ -24,6 +24,27 @@ class _OperatorLoginState extends State<OperatorLogin> {
     super.dispose();
   }
 
+  void _fetchLabelContent(String itemName) async {
+    // Fetch the label content from the database
+    final itemData = await DatabaseHelper().getItems(); // Fetch all items
+    final matchingItem = itemData.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => {}, // Return an empty map instead of null
+    );
+
+    if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
+      setState(() {
+        _labelContent = matchingItem['codes'].isNotEmpty
+            ? matchingItem['codes'][0]['content'] // Get the first code content
+            : 'No content available';
+      });
+    } else {
+      setState(() {
+        _labelContent = 'Item not found';
+      });
+    }
+  }
+
   void _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
       final itemName = _itemNameController.text;
@@ -138,6 +159,9 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    onChanged: (value) {
+                                      _fetchLabelContent(value); // Fetch label content on change
+                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   TextFormField(
