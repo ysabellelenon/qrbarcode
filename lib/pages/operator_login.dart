@@ -135,6 +135,18 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
                                   ),
                                   const SizedBox(height: 32),
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Content:',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.normal,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
                                   ElevatedButton(
                                     onPressed: _handleSubmit,
                                     style: ElevatedButton.styleFrom(
