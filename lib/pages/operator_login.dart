@@ -31,12 +31,16 @@ class _OperatorLoginState extends State<OperatorLogin> {
 
       // Fetch the label content from the database
       final itemData = await DatabaseHelper().getItems(); // Fetch all items
+      print("Fetched items: $itemData"); // Debugging statement
+
       final matchingItem = itemData.firstWhere(
         (item) => item['itemCode'] == itemName || item['revision'] == poNo,
-        orElse: () => {},
+        orElse: () => {}, // Return an empty map instead of null
       );
 
-      if (matchingItem.isNotEmpty) {
+      print("Matching item: $matchingItem"); // Debugging statement
+
+      if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
         setState(() {
           _labelContent = matchingItem['codes'].isNotEmpty
               ? matchingItem['codes'][0]['content'] // Get the first code content
