@@ -13,6 +13,10 @@ class ArticleLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController articleLabelController = TextEditingController();
+    final TextEditingController lotNumberController = TextEditingController();
+    final TextEditingController qtyController = TextEditingController();
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       body: Column(
@@ -94,21 +98,22 @@ class ArticleLabel extends StatelessWidget {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(30),
+                    padding: const EdgeInsets.all(30), // Increased padding
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Item Name: $itemName',
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         Text(
                           'P.O No: $poNo',
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
+                          controller: articleLabelController,
                           decoration: const InputDecoration(
                             labelText: 'Article Label',
                             border: OutlineInputBorder(),
@@ -116,6 +121,7 @@ class ArticleLabel extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
+                          controller: lotNumberController,
                           decoration: const InputDecoration(
                             labelText: 'Lot Number',
                             border: OutlineInputBorder(),
@@ -123,6 +129,7 @@ class ArticleLabel extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
+                          controller: qtyController,
                           decoration: const InputDecoration(
                             labelText: 'QTY per box',
                             border: OutlineInputBorder(),
@@ -130,10 +137,47 @@ class ArticleLabel extends StatelessWidget {
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 32),
+                        // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              // Handle proceed action
+                              // Extract values from the Article Label
+                              String articleLabel = articleLabelController.text;
+
+                              // Check if the Article Label is not empty
+                              if (articleLabel.isNotEmpty) {
+                                // Extract Item Name
+                                String itemName = articleLabel.substring(10, 22); // Extracting based on the position
+                                
+                                // Extract QTY per box
+                                List<String> parts = articleLabel.split(' ');
+                                String qtyPerBox = '0'; // Default value
+
+                                if (parts.length > 1) {
+                                  String qtyPart = parts[1]; // Get the second part after splitting
+                                  if (qtyPart.length >= 2) {
+                                    qtyPerBox = qtyPart.substring(qtyPart.length - 2); // Last two characters
+                                  }
+                                }
+
+                                // Extract P.O No.
+                                String poNo = articleLabel.substring(0, 10); // First 10 characters
+
+                                // Extract Lot Number
+                                String lotNumber = articleLabel.split(' ').last; // Last part after space
+
+                                // Update the controllers with extracted values
+                                lotNumberController.text = lotNumber;
+                                qtyController.text = qtyPerBox;
+
+                                // Debugging output
+                                print('Item Name: $itemName');
+                                print('P.O No: $poNo');
+                                print('QTY per box: $qtyPerBox');
+                                print('Lot Number: $lotNumber');
+                              } else {
+                                print('Article Label is empty.');
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepPurple, // Match the color
