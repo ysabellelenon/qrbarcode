@@ -48,7 +48,12 @@ class _LoginPageState extends State<LoginPage> {
           });
 
           if (user != null) {
-            Navigator.pushReplacementNamed(context, '/engineer-login');
+            // Check the category/line number
+            if (user['lineNo'] == 'Assembly') {
+              Navigator.pushReplacementNamed(context, '/operator-login');
+            } else {
+              Navigator.pushReplacementNamed(context, '/engineer-login');
+            }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

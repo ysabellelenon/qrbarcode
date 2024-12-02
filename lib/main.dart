@@ -10,6 +10,7 @@ import 'pages/register_item.dart';
 import 'pages/sublot_config.dart';
 import 'pages/review_item.dart';
 import 'pages/revise_item.dart';
+import 'pages/operator_login.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/engineer-login': (context) => const EngineerLogin(),
+        '/operator-login': (context) => const OperatorLogin(),
         '/account-settings': (context) => const AccountSettings(),
         '/manage-accounts': (context) => const ManageAccounts(),
         '/new-account': (context) => const NewAccount(),
