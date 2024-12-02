@@ -91,24 +91,20 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
         dataRows.add(
           DataRow(
             cells: [
-              isFirstRow
-                  ? DataCell(
-                      OutlinedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/revise-item',
-                            arguments: item,
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.deepPurple,
-                          side: const BorderSide(color: Colors.deepPurple),
-                        ),
-                        child: const Text('Revise'),
-                      ),
-                    )
-                  : const DataCell(Text('')),
+              DataCell(
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        selectedItems.add(item['id']);
+                      } else {
+                        selectedItems.remove(item['id']);
+                      }
+                    });
+                  },
+                ),
+              ),
               isFirstRow
                   ? DataCell(Text(index.toString()))
                   : const DataCell(Text('')),
