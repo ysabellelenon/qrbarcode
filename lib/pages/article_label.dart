@@ -55,7 +55,7 @@ class ArticleLabel extends StatelessWidget {
             padding: const EdgeInsets.only(left: 20),
             child: OutlinedButton(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/operator-login');
+                Navigator.of(context).pop();
               },
               child: const Text('Back'),
             ),

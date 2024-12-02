@@ -80,12 +80,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
           builder: (context) => ArticleLabel(itemName: itemName, poNo: poNo),
         ),
       );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Item: $itemName, P.O No: $poNo, Label Content: $_labelContent'),
-        ),
-      );
     }
   }
 
@@ -203,23 +197,23 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                          Text(_labelContent ?? 'No content available'), // Display the label content
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: _handleSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Ok'),
-                          ),
+                                  Text(_labelContent ?? 'No content available'), // Display the label content
+                                  const SizedBox(height: 20),
+                                  ElevatedButton(
+                                    onPressed: _handleSubmit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.deepPurple,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: const Text('Ok'),
+                                  ),
                                 ],
                               ),
                             ),
