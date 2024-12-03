@@ -22,6 +22,7 @@ class DatabaseHelper {
       version: 4,
       onCreate: (db, version) async {
         await _createTables(db);
+        await _insertDefaultUsers(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         await _createTables(db);
@@ -68,6 +69,33 @@ class DatabaseHelper {
         FOREIGN KEY (itemId) REFERENCES items (id)
       )
     ''');
+  }
+
+  Future<void> _insertDefaultUsers(Database db) async {
+    final existingUsers = await db.query('users');
+    print('Existing users: $existingUsers');
+
+    if (existingUsers.isEmpty) {
+      await db.insert('users', {
+        'firstName': 'Engineer',
+        'lastName': 'User',
+        'username': 'engineer',
+        'password': 'password123',
+        'section': 'Engineering',
+        'lineNo': 'Assembly',
+      });
+      print('Inserted Engineer user');
+
+      await db.insert('users', {
+        'firstName': 'Operator',
+        'lastName': 'User',
+        'username': 'operator',
+        'password': 'password123',
+        'section': 'Operations',
+        'lineNo': 'Assembly',
+      });
+      print('Inserted Operator user');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
