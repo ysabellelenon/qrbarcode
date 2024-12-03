@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 
-class ArticleLabel extends StatelessWidget {
+class ArticleLabel extends StatefulWidget {
   final String itemName;
   final String poNo;
 
@@ -12,11 +12,17 @@ class ArticleLabel extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController articleLabelController = TextEditingController();
-    final TextEditingController lotNumberController = TextEditingController();
-    final TextEditingController qtyController = TextEditingController();
+  _ArticleLabelState createState() => _ArticleLabelState();
+}
 
+class _ArticleLabelState extends State<ArticleLabel> {
+  final TextEditingController articleLabelController = TextEditingController();
+  final TextEditingController lotNumberController = TextEditingController();
+  final TextEditingController qtyController = TextEditingController();
+  bool isError = false; // Track if there's an error
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       body: Column(
@@ -104,11 +110,11 @@ class ArticleLabel extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Item Name: $itemName',
+                          'Item Name: ${widget.itemName}',
                           style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         Text(
-                          'P.O No: $poNo',
+                          'P.O No: ${widget.poNo}',
                           style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         const SizedBox(height: 32),
@@ -120,12 +126,20 @@ class ArticleLabel extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // Error message
+                        if (isError)
+                          const Text(
+                            'Wrong Article Label entered!',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: lotNumberController,
                           decoration: const InputDecoration(
                             labelText: 'Lot Number',
                             border: OutlineInputBorder(),
                           ),
+                          enabled: !isError, // Disable if there's an error
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -135,51 +149,89 @@ class ArticleLabel extends StatelessWidget {
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
+                          enabled: !isError, // Disable if there's an error
                         ),
                         const SizedBox(height: 32),
                         // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              // Extract values from the Article Label
                               String articleLabel = articleLabelController.text;
 
-                              // Check if the Article Label is not empty
-                              if (articleLabel.isNotEmpty) {
-                                // Extract Item Name
-                                String itemName = articleLabel.substring(10, 22); // Extracting based on the position
-                                
-                                // Split the article label by spaces
+                              // Check if the articleLabel is long enough
+                              if (articleLabel.length >= 22) {
+                                String extractedItemName = articleLabel.substring(10, 22);
                                 List<String> parts = articleLabel.split(' ');
 
-                                // Check if there are enough parts to extract the QTY per box
-                                String qtyPerBox = '';
-                                if (parts.length > 2) {
-                                    // Get the part after the second space
-                                    String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
-                                    RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
-                                    Match? match = qtyRegExp.firstMatch(qtyPart);
-                                    qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+                                // Ensure there are enough parts to extract P.O No.
+                                String extractedPoNo = '';
+                                if (parts.length > 3 && parts[3].length >= 10) {
+                                  extractedPoNo = parts[3].substring(0, 10);
+                                } else {
+                                  // Handle the case where P.O No. cannot be extracted
+                                  setState(() {
+                                    isError = true; // Set error flag
+                                  });
+                                  return; // Exit early
                                 }
 
-                                // Extract P.O No.
-                                String poNo = articleLabel.substring(0, 10); // First 10 characters
+                                // Validate against displayed values
+                                if (extractedItemName != widget.itemName || extractedPoNo != widget.poNo) {
+                                  setState(() {
+                                    isError = true; // Set error flag
+                                  });
+                                } else {
+                                  setState(() {
+                                    isError = false; // Clear error flag
+                                  });
+                                  // Extract values from the Article Label
+                                  String articleLabel = articleLabelController.text;
 
-                                // Extract Lot Number
-                                String lotNumber = parts.last; // Last part after space
+                                  // Check if the Article Label is not empty
+                                  if (articleLabel.isNotEmpty) {
+                                    // Extract Item Name
+                                    String itemName = articleLabel.substring(10, 22); // Extracting based on the position
+                                    
+                                    // Split the article label by spaces
+                                    List<String> parts = articleLabel.split(' ');
 
-                                // Update the controllers with extracted values
-                                lotNumberController.text = lotNumber;
-                                qtyController.text = qtyPerBox;
+                                    // Check if there are enough parts to extract the QTY per box
+                                    String qtyPerBox = '';
+                                    if (parts.length > 2) {
+                                        // Get the part after the second space
+                                        String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
+                                        RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
+                                        Match? match = qtyRegExp.firstMatch(qtyPart);
+                                        qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+                                    }
 
-                                // Debugging output
-                                print('Item Name: $itemName');
-                                print('P.O No: $poNo');
-                                print('QTY per box: $qtyPerBox');
-                                print('Lot Number: $lotNumber');
+                                    // Extract P.O No.
+                                    String poNo = articleLabel.substring(0, 10); // First 10 characters
+
+                                    // Extract Lot Number
+                                    String lotNumber = parts.last; // Last part after space
+
+                                    // Update the controllers with extracted values
+                                    lotNumberController.text = lotNumber;
+                                    qtyController.text = qtyPerBox;
+
+                                    // Debugging output
+                                    print('Item Name: $itemName');
+                                    print('P.O No: $poNo');
+                                    print('QTY per box: $qtyPerBox');
+                                    print('Lot Number: $lotNumber');
+                                  } else {
+                                    print('Article Label is empty.');
+                                  }
+                                }
                               } else {
-                                print('Article Label is empty.');
+                                setState(() {
+                                  isError = true; // Set error flag
+                                });
                               }
+
+                              // Update the state to reflect changes
+                              (context as Element).markNeedsBuild();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepPurple, // Match the color
