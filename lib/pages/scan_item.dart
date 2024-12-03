@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
+import '../database_helper.dart'; // Import the DatabaseHelper
 
 class ScanItem extends StatefulWidget {
   final String itemName;
@@ -24,6 +25,34 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController qtyPerBoxController = TextEditingController();
   final TextEditingController inspectionQtyController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
+  String? _labelContent; // New variable to hold the fetched label content
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLabelContent(widget.itemName); // Fetch label content on initialization
+  }
+
+  void _fetchLabelContent(String itemName) async {
+    // Fetch the label content from the database
+    final itemData = await DatabaseHelper().getItems(); // Fetch all items
+    final matchingItem = itemData.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => {}, // Return an empty map instead of null
+    );
+
+    if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
+      setState(() {
+        _labelContent = matchingItem['codes'].isNotEmpty
+            ? matchingItem['codes'][0]['content'] // Get the first code content
+            : 'No content available';
+      });
+    } else {
+      setState(() {
+        _labelContent = 'Item not found';
+      });
+    }
+  }
 
   void _addRow() {
     if (qtyPerBoxController.text.isNotEmpty) {
@@ -126,7 +155,12 @@ class _ScanItemState extends State<ScanItem> {
                         Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 18)),
                         Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 18)),
                         Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 18)),
-                        Text('Content: ${widget.content}', style: const TextStyle(fontSize: 18)),
+                        const SizedBox(height: 32),
+
+                        // Display the fetched content
+                        const Text('Content:', style: TextStyle(fontSize: 18)),
+                        const SizedBox(height: 8),
+                        Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 18)),
                         const SizedBox(height: 32),
 
                         // Input fields
