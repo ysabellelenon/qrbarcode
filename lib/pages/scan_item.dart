@@ -136,22 +136,23 @@ class _ScanItemState extends State<ScanItem> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Center(
-                child: Column(
-                  children: [
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 5,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 900), // Outer container
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 5,
+                        offset: Offset(0, 2),
                       ),
-                      child: Padding(
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Existing Container for Item Details
+                      Padding(
                         padding: const EdgeInsets.all(30),
                         child: Row(
                           children: [
@@ -232,73 +233,69 @@ class _ScanItemState extends State<ScanItem> {
                           ],
                         ),
                       ),
-                    ),
 
-                    // New Container for the Results Table
-                    const SizedBox(height: 20), // Space between containers
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      margin: const EdgeInsets.all(20),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 5,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Results Table',
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 20),
-                          DataTable(
-                            columns: const [
-                              DataColumn(label: Text('No.')),
-                              DataColumn(label: Text('Content')),
-                              DataColumn(label: Text('Result')),
-                            ],
-                            rows: _tableData.asMap().entries.map((entry) {
-                              int index = entry.key;
-                              Map<String, dynamic> data = entry.value;
-                              return DataRow(cells: [
-                                DataCell(Text((index + 1).toString())),
-                                DataCell(
-                                  TextField(
-                                    onChanged: (value) {
-                                      setState(() {
-                                        data['content'] = value;
-                                        // Update result based on content
-                                        data['result'] = value.isNotEmpty
-                                            ? (value == 'Good' ? 'Good' : 'No Good')
-                                            : null;
-                                      });
-                                    },
-                                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                      const SizedBox(height: 20), // Space between containers
+
+                      // New Container for the Results Table
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            DataTable(
+                              columns: const [
+                                DataColumn(label: Text('No.')),
+                                DataColumn(
+                                  label: SizedBox(
+                                    width: 300, // Set width for Content column
+                                    child: Center(child: Text('Content')), // Center the title
                                   ),
                                 ),
-                                DataCell(
-                                  Text(
-                                    data['result'] ?? '',
-                                    style: TextStyle(
-                                      color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                                DataColumn(
+                                  label: SizedBox(
+                                    width: 150, // Set width for Result column
+                                    child: Center(child: Text('Result')), // Center the title
+                                  ),
+                                ),
+                              ],
+                              rows: _tableData.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                Map<String, dynamic> data = entry.value;
+                                return DataRow(cells: [
+                                  DataCell(Text((index + 1).toString())),
+                                  DataCell(
+                                    TextField(
+                                      onChanged: (value) {
+                                        setState(() {
+                                          data['content'] = value;
+                                          // Update result based on content
+                                          data['result'] = value.isNotEmpty
+                                              ? (value == 'Good' ? 'Good' : 'No Good')
+                                              : null;
+                                        });
+                                      },
+                                      decoration: const InputDecoration(border: OutlineInputBorder()),
                                     ),
                                   ),
-                                ),
-                              ]);
-                            }).toList(),
-                          ),
-                        ],
+                                  DataCell(
+                                    Center( // Center the result text
+                                      child: Text(
+                                        data['result'] ?? '',
+                                        style: TextStyle(
+                                          color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ]);
+                              }).toList(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
