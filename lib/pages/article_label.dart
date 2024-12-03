@@ -149,15 +149,24 @@ class ArticleLabel extends StatelessWidget {
                                 // Extract Item Name
                                 String itemName = articleLabel.substring(10, 22); // Extracting based on the position
                                 
-                                // Extract QTY per box
-                                String qtyPart = articleLabel.split(' ')[1]; // Get the second part after splitting
-                                String qtyPerBox = qtyPart.substring(2); // Get the part after the first two characters
+                                // Split the article label by spaces
+                                List<String> parts = articleLabel.split(' ');
+
+                                // Check if there are enough parts to extract the QTY per box
+                                String qtyPerBox = '';
+                                if (parts.length > 2) {
+                                    // Get the part after the second space
+                                    String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
+                                    RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
+                                    Match? match = qtyRegExp.firstMatch(qtyPart);
+                                    qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+                                }
 
                                 // Extract P.O No.
                                 String poNo = articleLabel.substring(0, 10); // First 10 characters
 
                                 // Extract Lot Number
-                                String lotNumber = articleLabel.split(' ').last; // Last part after space
+                                String lotNumber = parts.last; // Last part after space
 
                                 // Update the controllers with extracted values
                                 lotNumberController.text = lotNumber;
