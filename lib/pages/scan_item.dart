@@ -7,6 +7,7 @@ class ScanItem extends StatefulWidget {
   final String poNo;
   final String lotNumber;
   final String content;
+  final String qtyPerBox;
 
   const ScanItem({
     Key? key,
@@ -14,6 +15,7 @@ class ScanItem extends StatefulWidget {
     required this.poNo,
     required this.lotNumber,
     required this.content,
+    required this.qtyPerBox,
   }) : super(key: key);
 
   @override
@@ -175,7 +177,7 @@ class _ScanItemState extends State<ScanItem> {
                               Row(
                                 children: [
                                   const Expanded(
-                                    child: Text('Total QTY', style: TextStyle(fontSize: 18)),
+                                    child: Text('Total QTY', style: TextStyle(fontSize: 16)),
                                   ),
                                   Expanded(
                                     flex: 1,
@@ -190,8 +192,11 @@ class _ScanItemState extends State<ScanItem> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Expanded(
-                                    child: Text('QTY per box', style: TextStyle(fontSize: 18)),
+                                  Expanded(
+                                    child: Text(
+                                      'QTY per box (${widget.qtyPerBox})',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
                                   ),
                                   Expanded(
                                     flex: 1,
@@ -207,7 +212,7 @@ class _ScanItemState extends State<ScanItem> {
                               Row(
                                 children: [
                                   const Expanded(
-                                    child: Text('Inspection QTY', style: TextStyle(fontSize: 18)),
+                                    child: Text('Inspection QTY', style: TextStyle(fontSize: 16)),
                                   ),
                                   Expanded(
                                     flex: 1,

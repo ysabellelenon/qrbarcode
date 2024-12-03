@@ -218,8 +218,9 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                   builder: (context) => ScanItem(
                                     itemName: widget.itemName,
                                     poNo: widget.poNo,
-                                    lotNumber: lotNumberController.text, // Extracted Lot Number
-                                    content: articleLabelController.text, // Extracted Article Label
+                                    lotNumber: lotNumberController.text,
+                                    content: articleLabelController.text,
+                                    qtyPerBox: qtyController.text,
                                   ),
                                 ),
                               );
