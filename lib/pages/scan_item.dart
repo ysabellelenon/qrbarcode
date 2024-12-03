@@ -162,7 +162,7 @@ class _ScanItemState extends State<ScanItem> {
                               const SizedBox(height: 32),
                               const Text('Content:', style: TextStyle(fontSize: 18)),
                               const SizedBox(height: 8),
-                              Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 18)),
+                              Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
@@ -178,7 +178,7 @@ class _ScanItemState extends State<ScanItem> {
                                     child: Text('Total QTY', style: TextStyle(fontSize: 18)),
                                   ),
                                   Expanded(
-                                    flex: 2,
+                                    flex: 1,
                                     child: TextField(
                                       controller: totalQtyController,
                                       decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -187,14 +187,14 @@ class _ScanItemState extends State<ScanItem> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   const Expanded(
                                     child: Text('QTY per box', style: TextStyle(fontSize: 18)),
                                   ),
                                   Expanded(
-                                    flex: 2,
+                                    flex: 1,
                                     child: TextField(
                                       controller: qtyPerBoxController,
                                       decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -203,14 +203,14 @@ class _ScanItemState extends State<ScanItem> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   const Expanded(
                                     child: Text('Inspection QTY', style: TextStyle(fontSize: 18)),
                                   ),
                                   Expanded(
-                                    flex: 2,
+                                    flex: 1,
                                     child: TextField(
                                       controller: inspectionQtyController,
                                       decoration: const InputDecoration(border: OutlineInputBorder()),
