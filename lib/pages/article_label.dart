@@ -104,7 +104,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                     ],
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(30), // Increased padding
+                    padding: const EdgeInsets.all(30),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,13 +160,19 @@ class _ArticleLabelState extends State<ArticleLabel> {
 
                               // Check if the articleLabel is long enough
                               if (articleLabel.length >= 22) {
-                                String extractedItemName = articleLabel.substring(10, 22);
+                                // Split the article label by spaces and take the first part
+                                String firstPart = articleLabel.split(' ')[0];
+
+                                // Extract Item Name starting after the first twelve digits
+                                String extractedItemName = firstPart.substring(12); // Get everything after the first 12 digits
+
+                                // Split the article label by spaces
                                 List<String> parts = articleLabel.split(' ');
 
                                 // Ensure there are enough parts to extract P.O No.
                                 String extractedPoNo = '';
-                                if (parts.length > 3 && parts[3].length >= 10) {
-                                  extractedPoNo = parts[3].substring(0, 10);
+                                if (parts.length > 3) {
+                                  extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
                                 } else {
                                   // Handle the case where P.O No. cannot be extracted
                                   setState(() {
@@ -176,7 +182,12 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                 }
 
                                 // Validate against displayed values
-                                if (extractedItemName != widget.itemName || extractedPoNo != widget.poNo) {
+                                print('Extracted Item Name: $extractedItemName');
+                                print('Expected Item Name: ${widget.itemName}');
+                                print('Extracted P.O No: $extractedPoNo');
+                                print('Expected P.O No: ${widget.poNo}');
+
+                                if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
                                   setState(() {
                                     isError = true; // Set error flag
                                   });
