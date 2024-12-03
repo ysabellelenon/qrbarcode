@@ -136,100 +136,169 @@ class _ScanItemState extends State<ScanItem> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 900),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 5,
-                        offset: Offset(0, 2),
+                child: Column(
+                  children: [
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(30),
-                    child: Row(
-                      children: [
-                        // Static Text Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 18)),
-                              Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 18)),
-                              Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 18)),
-                              const SizedBox(height: 32),
-                              const Text('Content:', style: TextStyle(fontSize: 18)),
-                              const SizedBox(height: 8),
-                              Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 16)),
-                            ],
-                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(30),
+                        child: Row(
+                          children: [
+                            // Static Text Section
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 18)),
+                                  Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 18)),
+                                  Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(height: 32),
+                                  const Text('Content:', style: TextStyle(fontSize: 18)),
+                                  const SizedBox(height: 8),
+                                  Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20), // Space between sections
+                            // Input Fields Section
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        child: Text('Total QTY', style: TextStyle(fontSize: 16)),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: TextField(
+                                          controller: totalQtyController,
+                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          keyboardType: TextInputType.number,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'QTY per box (${widget.qtyPerBox})',
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: TextField(
+                                          controller: qtyPerBoxController,
+                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          keyboardType: TextInputType.number,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        child: Text('Inspection QTY', style: TextStyle(fontSize: 16)),
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: TextField(
+                                          controller: inspectionQtyController,
+                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          keyboardType: TextInputType.number,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 20), // Space between sections
-                        // Input Fields Section
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text('Total QTY', style: TextStyle(fontSize: 16)),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: TextField(
-                                      controller: totalQtyController,
-                                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'QTY per box (${widget.qtyPerBox})',
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: TextField(
-                                      controller: qtyPerBoxController,
-                                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text('Inspection QTY', style: TextStyle(fontSize: 16)),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: TextField(
-                                      controller: inspectionQtyController,
-                                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    // New Container for the Results Table
+                    const SizedBox(height: 20), // Space between containers
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      margin: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Results Table',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 20),
+                          DataTable(
+                            columns: const [
+                              DataColumn(label: Text('No.')),
+                              DataColumn(label: Text('Content')),
+                              DataColumn(label: Text('Result')),
+                            ],
+                            rows: _tableData.asMap().entries.map((entry) {
+                              int index = entry.key;
+                              Map<String, dynamic> data = entry.value;
+                              return DataRow(cells: [
+                                DataCell(Text((index + 1).toString())),
+                                DataCell(
+                                  TextField(
+                                    onChanged: (value) {
+                                      setState(() {
+                                        data['content'] = value;
+                                        // Update result based on content
+                                        data['result'] = value.isNotEmpty
+                                            ? (value == 'Good' ? 'Good' : 'No Good')
+                                            : null;
+                                      });
+                                    },
+                                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    data['result'] ?? '',
+                                    style: TextStyle(
+                                      color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ]);
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
