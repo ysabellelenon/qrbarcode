@@ -95,6 +95,8 @@ class DatabaseHelper {
         'lineNo': 'Assembly',
       });
       print('Inserted Operator user');
+    } else {
+      print('Default users already exist, not inserting.');
     }
   }
 
