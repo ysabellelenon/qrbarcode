@@ -21,6 +21,60 @@ class _ArticleLabelState extends State<ArticleLabel> {
   final TextEditingController qtyController = TextEditingController();
   bool isError = false; // Track if there's an error
 
+  void _validateArticleLabel(String articleLabel) {
+    if (articleLabel.length >= 22) {
+      // Split the article label by spaces and take the first part
+      String firstPart = articleLabel.split(' ')[0];
+
+      // Extract Item Name starting after the first twelve digits
+      String extractedItemName = firstPart.substring(12);
+
+      // Split the article label by spaces
+      List<String> parts = articleLabel.split(' ');
+
+      // Ensure there are enough parts to extract P.O No.
+      String extractedPoNo = '';
+      if (parts.length > 3) {
+        extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
+      } else {
+        setState(() {
+          isError = true; // Set error flag
+        });
+        return; // Exit early
+      }
+
+      // Validate against displayed values
+      if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
+        setState(() {
+          isError = true; // Set error flag
+        });
+      } else {
+        setState(() {
+          isError = false; // Clear error flag
+        });
+
+        // Extract Lot Number and QTY per box
+        String lotNumber = parts.last; // Last part after space
+        String qtyPerBox = '';
+        if (parts.length > 2) {
+          // Get the part after the second space
+          String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
+          RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
+          Match? match = qtyRegExp.firstMatch(qtyPart);
+          qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+        }
+
+        // Update the controllers with extracted values
+        lotNumberController.text = lotNumber;
+        qtyController.text = qtyPerBox;
+      }
+    } else {
+      setState(() {
+        isError = true; // Set error flag
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,6 +178,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             labelText: 'Article Label',
                             border: OutlineInputBorder(),
                           ),
+                          onChanged: _validateArticleLabel, // Validate on change
                         ),
                         const SizedBox(height: 16),
                         // Error message
@@ -156,93 +211,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              String articleLabel = articleLabelController.text;
-
-                              // Check if the articleLabel is long enough
-                              if (articleLabel.length >= 22) {
-                                // Split the article label by spaces and take the first part
-                                String firstPart = articleLabel.split(' ')[0];
-
-                                // Extract Item Name starting after the first twelve digits
-                                String extractedItemName = firstPart.substring(12); // Get everything after the first 12 digits
-
-                                // Split the article label by spaces
-                                List<String> parts = articleLabel.split(' ');
-
-                                // Ensure there are enough parts to extract P.O No.
-                                String extractedPoNo = '';
-                                if (parts.length > 3) {
-                                  extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
-                                } else {
-                                  // Handle the case where P.O No. cannot be extracted
-                                  setState(() {
-                                    isError = true; // Set error flag
-                                  });
-                                  return; // Exit early
-                                }
-
-                                // Validate against displayed values
-                                print('Extracted Item Name: $extractedItemName');
-                                print('Expected Item Name: ${widget.itemName}');
-                                print('Extracted P.O No: $extractedPoNo');
-                                print('Expected P.O No: ${widget.poNo}');
-
-                                if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
-                                  setState(() {
-                                    isError = true; // Set error flag
-                                  });
-                                } else {
-                                  setState(() {
-                                    isError = false; // Clear error flag
-                                  });
-                                  // Extract values from the Article Label
-                                  String articleLabel = articleLabelController.text;
-
-                                  // Check if the Article Label is not empty
-                                  if (articleLabel.isNotEmpty) {
-                                    // Extract Item Name
-                                    String itemName = articleLabel.substring(10, 22); // Extracting based on the position
-                                    
-                                    // Split the article label by spaces
-                                    List<String> parts = articleLabel.split(' ');
-
-                                    // Check if there are enough parts to extract the QTY per box
-                                    String qtyPerBox = '';
-                                    if (parts.length > 2) {
-                                        // Get the part after the second space
-                                        String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
-                                        RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
-                                        Match? match = qtyRegExp.firstMatch(qtyPart);
-                                        qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
-                                    }
-
-                                    // Extract P.O No.
-                                    String poNo = articleLabel.substring(0, 10); // First 10 characters
-
-                                    // Extract Lot Number
-                                    String lotNumber = parts.last; // Last part after space
-
-                                    // Update the controllers with extracted values
-                                    lotNumberController.text = lotNumber;
-                                    qtyController.text = qtyPerBox;
-
-                                    // Debugging output
-                                    print('Item Name: $itemName');
-                                    print('P.O No: $poNo');
-                                    print('QTY per box: $qtyPerBox');
-                                    print('Lot Number: $lotNumber');
-                                  } else {
-                                    print('Article Label is empty.');
-                                  }
-                                }
-                              } else {
-                                setState(() {
-                                  isError = true; // Set error flag
-                                });
-                              }
-
-                              // Update the state to reflect changes
-                              (context as Element).markNeedsBuild();
+                              // Proceed button logic will go here later
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepPurple, // Match the color
