@@ -135,7 +135,7 @@ class _ScanItemState extends State<ScanItem> {
               padding: const EdgeInsets.all(20),
               child: Center(
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 600),
+                  constraints: const BoxConstraints(maxWidth: 900),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -149,73 +149,78 @@ class _ScanItemState extends State<ScanItem> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(30),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 18)),
-                        Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 18)),
-                        Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 18)),
-                        const SizedBox(height: 32),
-
-                        // Display the fetched content
-                        const Text('Content:', style: TextStyle(fontSize: 18)),
-                        const SizedBox(height: 8),
-                        Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 18)),
-                        const SizedBox(height: 32),
-
-                        // Input fields
-                        TextField(
-                          controller: totalQtyController,
-                          decoration: const InputDecoration(labelText: 'Total QTY', border: OutlineInputBorder()),
-                          keyboardType: TextInputType.number,
+                        // Static Text Section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 18)),
+                              Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 18)),
+                              Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 18)),
+                              const SizedBox(height: 32),
+                              const Text('Content:', style: TextStyle(fontSize: 18)),
+                              const SizedBox(height: 8),
+                              Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 18)),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: qtyPerBoxController,
-                          decoration: const InputDecoration(labelText: 'QTY per box', border: OutlineInputBorder()),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: inspectionQtyController,
-                          decoration: const InputDecoration(labelText: 'Inspection QTY', border: OutlineInputBorder()),
-                          keyboardType: TextInputType.number,
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Add Row Button
-                        ElevatedButton(
-                          onPressed: _addRow,
-                          child: const Text('Add Row'),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Table
-                        DataTable(
-                          columns: const [
-                            DataColumn(label: Text('No.')),
-                            DataColumn(label: Text('Content')),
-                            DataColumn(label: Text('Result')),
-                          ],
-                          rows: _tableData.asMap().entries.map((entry) {
-                            int index = entry.key;
-                            Map<String, dynamic> row = entry.value;
-                            return DataRow(cells: [
-                              DataCell(Text('${index + 1}')),
-                              DataCell(
-                                TextField(
-                                  onChanged: (value) {
-                                    setState(() {
-                                      row['content'] = value;
-                                      row['result'] = value.isNotEmpty ? 'Good' : '';
-                                    });
-                                  },
-                                  decoration: const InputDecoration(border: OutlineInputBorder()),
-                                ),
+                        const SizedBox(width: 20), // Space between sections
+                        // Input Fields Section
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: Text('Total QTY', style: TextStyle(fontSize: 18)),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: TextField(
+                                      controller: totalQtyController,
+                                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              DataCell(Text(row['result'] ?? '')),
-                            ]);
-                          }).toList(),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: Text('QTY per box', style: TextStyle(fontSize: 18)),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: TextField(
+                                      controller: qtyPerBoxController,
+                                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: Text('Inspection QTY', style: TextStyle(fontSize: 18)),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: TextField(
+                                      controller: inspectionQtyController,
+                                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
