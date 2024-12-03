@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
+import '../database_helper.dart'; // Import database helper
+import 'scan_item.dart'; // Import the ScanItem page
 
 class ArticleLabel extends StatefulWidget {
   final String itemName;
@@ -23,50 +25,49 @@ class _ArticleLabelState extends State<ArticleLabel> {
 
   void _validateArticleLabel(String articleLabel) {
     if (articleLabel.length >= 22) {
-      // Split the article label by spaces and take the first part
       String firstPart = articleLabel.split(' ')[0];
 
-      // Extract Item Name starting after the first twelve digits
-      String extractedItemName = firstPart.substring(12);
+      if (firstPart.length >= 12) {
+        String extractedItemName = firstPart.substring(12);
 
-      // Split the article label by spaces
-      List<String> parts = articleLabel.split(' ');
+        List<String> parts = articleLabel.split(' ');
 
-      // Ensure there are enough parts to extract P.O No.
-      String extractedPoNo = '';
-      if (parts.length > 3) {
-        extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
+        String extractedPoNo = '';
+        if (parts.length > 3) {
+          extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
+        } else {
+          setState(() {
+            isError = true; // Set error flag
+          });
+          return; // Exit early
+        }
+
+        if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
+          setState(() {
+            isError = true; // Set error flag
+          });
+        } else {
+          setState(() {
+            isError = false; // Clear error flag
+          });
+
+          String lotNumber = parts.last; // Last part after space
+          String qtyPerBox = '';
+          if (parts.length > 2) {
+            String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
+            RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
+            Match? match = qtyRegExp.firstMatch(qtyPart);
+            qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+          }
+
+          lotNumberController.text = lotNumber;
+          qtyController.text = qtyPerBox;
+        }
       } else {
         setState(() {
           isError = true; // Set error flag
         });
         return; // Exit early
-      }
-
-      // Validate against displayed values
-      if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
-        setState(() {
-          isError = true; // Set error flag
-        });
-      } else {
-        setState(() {
-          isError = false; // Clear error flag
-        });
-
-        // Extract Lot Number and QTY per box
-        String lotNumber = parts.last; // Last part after space
-        String qtyPerBox = '';
-        if (parts.length > 2) {
-          // Get the part after the second space
-          String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
-          RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
-          Match? match = qtyRegExp.firstMatch(qtyPart);
-          qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
-        }
-
-        // Update the controllers with extracted values
-        lotNumberController.text = lotNumber;
-        qtyController.text = qtyPerBox;
       }
     } else {
       setState(() {
@@ -211,7 +212,17 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         Center(
                           child: ElevatedButton(
                             onPressed: () {
-                              // Proceed button logic will go here later
+                              // Navigate to ScanItem page with the required parameters
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ScanItem(
+                                    itemName: widget.itemName,
+                                    poNo: widget.poNo,
+                                    lotNumber: lotNumberController.text, // Extracted Lot Number
+                                    content: articleLabelController.text, // Extracted Article Label
+                                  ),
+                                ),
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepPurple, // Match the color
