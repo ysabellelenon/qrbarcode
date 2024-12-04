@@ -190,6 +190,7 @@ class _ScanItemState extends State<ScanItem> {
     setState(() {
       goodCountController.text = goodCount.toString();
       noGoodCountController.text = noGoodCount.toString();
+      inspectionQtyController.text = (goodCount + noGoodCount).toString();
     });
   }
 
@@ -349,6 +350,7 @@ class _ScanItemState extends State<ScanItem> {
                                           controller: inspectionQtyController,
                                           decoration: const InputDecoration(border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
+                                          readOnly: true, // Make it read-only
                                         ),
                                       ),
                                     ],
