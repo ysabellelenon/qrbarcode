@@ -59,34 +59,25 @@ class _OperatorLoginState extends State<OperatorLogin> {
     if (_formKey.currentState!.validate()) {
       final itemName = _itemNameController.text;
       final poNo = _poNoController.text;
+      final totalQty = int.parse(_qtyController.text);
 
-      // Fetch the label content from the database
-      final itemData = await DatabaseHelper().getItems(); // Fetch all items
-      print("Fetched items: $itemData"); // Debugging statement
+      // Save the operator scan to database
+      final operatorScanId = await DatabaseHelper().insertOperatorScan({
+        'itemName': itemName,
+        'poNo': poNo,
+        'totalQty': totalQty,
+        'content': _labelContent ?? '',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
 
-      final matchingItem = itemData.firstWhere(
-        (item) => item['itemCode'] == itemName || item['revision'] == poNo,
-        orElse: () => {}, // Return an empty map instead of null
-      );
-
-      print("Matching item: $matchingItem"); // Debugging statement
-
-      if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
-        setState(() {
-          _labelContent = matchingItem['codes'].isNotEmpty
-              ? matchingItem['codes'][0]['content'] // Get the first code content
-              : 'No content available';
-        });
-      } else {
-        setState(() {
-          _labelContent = 'Item not found';
-        });
-      }
-
-      // Navigate to ArticleLabel page
+      // Navigate to ArticleLabel page with the operatorScanId
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => ArticleLabel(itemName: itemName, poNo: poNo),
+          builder: (context) => ArticleLabel(
+            itemName: itemName,
+            poNo: poNo,
+            operatorScanId: operatorScanId, // Pass the ID to ArticleLabel
+          ),
         ),
       );
     }

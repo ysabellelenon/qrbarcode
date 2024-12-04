@@ -6,11 +6,13 @@ import 'scan_item.dart'; // Import the ScanItem page
 class ArticleLabel extends StatefulWidget {
   final String itemName;
   final String poNo;
+  final int operatorScanId;
 
   const ArticleLabel({
     Key? key,
     required this.itemName,
     required this.poNo,
+    required this.operatorScanId,
   }) : super(key: key);
 
   @override
@@ -227,8 +229,18 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
-                            onPressed: () {
-                              // Navigate to ScanItem page with the required parameters
+                            onPressed: () async {
+                              // Save the article label data to database
+                              await DatabaseHelper().insertArticleLabel({
+                                'operatorScanId': widget.operatorScanId,
+                                'articleLabel': articleLabelController.text,
+                                'lotNumber': lotNumberController.text,
+                                'qtyPerBox': qtyController.text,
+                                'content': articleLabelController.text,
+                                'createdAt': DateTime.now().toIso8601String(),
+                              });
+
+                              // Navigate to ScanItem page
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => ScanItem(

@@ -19,52 +19,45 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    // Get the path to the documents directory.
     String documentsDirectory = (await getApplicationDocumentsDirectory()).path;
     String path = join(documentsDirectory, 'users.db');
 
-    // Check if database needs to be copied from assets
     bool shouldCopy = !await File(path).exists();
     
     if (shouldCopy) {
-      // Copy database from assets
       try {
-        // Create the parent directory if it doesn't exist
         await Directory(dirname(path)).create(recursive: true);
-        
-        // Load database from assets
         ByteData data = await rootBundle.load('assets/databases/users.db');
         List<int> bytes = data.buffer.asUint8List();
-        
-        // Write and flush the bytes to the device
         await File(path).writeAsBytes(bytes, flush: true);
         print('Database copied from assets successfully');
       } catch (e) {
         print('Error copying database from assets: $e');
+        shouldCopy = false;
       }
     }
 
-    // Open the database
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
-        // Only create tables if we didn't copy from assets
-        if (!shouldCopy) {
-          await _createTables(db);
-          await _insertDefaultUsers(db);
-        }
+        print('Creating new database tables');
+        await _createTables(db);
+        await _insertDefaultUsers(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
+        print('Upgrading database from version $oldVersion to $newVersion');
         if (oldVersion < 2) {
           await _migrateToVersion2(db);
+        }
+        if (oldVersion < 3) {
+          await _migrateToVersion3(db);
         }
       },
     );
   }
 
   Future<void> _createTables(Database db) async {
-    // Create 'users' table if it doesn't exist
     await db.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +71,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create 'items' table if it doesn't exist
     await db.execute('''
       CREATE TABLE IF NOT EXISTS items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,7 +81,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create 'item_codes' table if it doesn't exist
     await db.execute('''
       CREATE TABLE IF NOT EXISTS item_codes(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,10 +92,33 @@ class DatabaseHelper {
         FOREIGN KEY (itemId) REFERENCES items (id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS operator_scans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        poNo TEXT,
+        totalQty INTEGER,
+        content TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS article_labels(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operatorScanId INTEGER,
+        articleLabel TEXT,
+        lotNumber TEXT,
+        qtyPerBox TEXT,
+        content TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _insertDefaultUsers(Database db) async {
-    // Check if the Engineer user already exists
     List<Map<String, dynamic>> engineer = await db.query(
       'users',
       where: 'username = ?',
@@ -112,18 +126,16 @@ class DatabaseHelper {
     );
 
     if (engineer.isEmpty) {
-      // Insert Engineer user with correct lineNo
       await db.insert('users', {
         'firstName': 'Engineer',
         'lastName': 'User',
         'username': 'engineer',
         'password': 'password123',
         'section': 'Engineering',
-        'lineNo': 'Admin', // Correct lineNo
+        'lineNo': 'Admin',
       });
       print('Inserted Engineer user with lineNo: Admin');
     } else {
-      // Optional: Update Engineer user's lineNo if incorrect
       if (engineer.first['lineNo'] != 'Admin') {
         await db.update(
           'users',
@@ -135,7 +147,6 @@ class DatabaseHelper {
       }
     }
 
-    // Check if the Operator user already exists
     List<Map<String, dynamic>> operatorUser = await db.query(
       'users',
       where: 'username = ?',
@@ -143,7 +154,6 @@ class DatabaseHelper {
     );
 
     if (operatorUser.isEmpty) {
-      // Insert Operator user
       await db.insert('users', {
         'firstName': 'Operator',
         'lastName': 'User',
@@ -159,7 +169,6 @@ class DatabaseHelper {
   }
 
   Future<void> _migrateToVersion2(Database db) async {
-    // Example migration: Update Engineer user's lineNo to Admin
     await db.update(
       'users',
       {'lineNo': 'Admin'},
@@ -167,6 +176,34 @@ class DatabaseHelper {
       whereArgs: ['engineer', 'Admin'],
     );
     print('Migrated Engineer user\'s lineNo to Admin');
+  }
+
+  Future<void> _migrateToVersion3(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS operator_scans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        poNo TEXT,
+        totalQty INTEGER,
+        content TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS article_labels(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operatorScanId INTEGER,
+        articleLabel TEXT,
+        lotNumber TEXT,
+        qtyPerBox TEXT,
+        content TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+      )
+    ''');
+    
+    print('Migrated database to version 3: Added operator_scans and article_labels tables');
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -194,7 +231,6 @@ class DatabaseHelper {
     final List<Map<String, dynamic>> items = await db.query('items', orderBy: 'id DESC');
     final List<Map<String, dynamic>> result = [];
     
-    // For each item, fetch its codes and create a new map
     for (var item in items) {
       final codes = await db.query(
         'item_codes',
@@ -202,7 +238,6 @@ class DatabaseHelper {
         whereArgs: [item['id']],
       );
       
-      // Create a new map with all item data plus codes
       result.add({
         ...Map<String, dynamic>.from(item),
         'codes': codes,
@@ -249,14 +284,12 @@ class DatabaseHelper {
         whereArgs: [itemId],
       );
 
-      // Delete existing codes
       await txn.delete(
         'item_codes',
         where: 'itemId = ?',
         whereArgs: [itemId],
       );
 
-      // Insert updated codes
       for (var code in (item['codes'] as List)) {
         await txn.insert('item_codes', {
           'itemId': itemId,
@@ -300,7 +333,6 @@ class DatabaseHelper {
   Future<Map<String, List<Map<String, dynamic>>>> getAllDatabaseContents() async {
     final db = await database;
     
-    // Get contents of each table
     final users = await db.query('users');
     final items = await db.query('items');
     final itemCodes = await db.query('item_codes');
@@ -310,5 +342,30 @@ class DatabaseHelper {
       'items': items, 
       'item_codes': itemCodes,
     };
+  }
+
+  Future<int> insertOperatorScan(Map<String, dynamic> scan) async {
+    final db = await database;
+    return await db.insert('operator_scans', scan);
+  }
+
+  Future<int> insertArticleLabel(Map<String, dynamic> label) async {
+    final db = await database;
+    return await db.insert('article_labels', label);
+  }
+
+  Future<List<Map<String, dynamic>>> getOperatorScans() async {
+    final db = await database;
+    return await db.query('operator_scans', orderBy: 'createdAt DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getArticleLabels(int operatorScanId) async {
+    final db = await database;
+    return await db.query(
+      'article_labels',
+      where: 'operatorScanId = ?',
+      whereArgs: [operatorScanId],
+      orderBy: 'createdAt DESC'
+    );
   }
 } 

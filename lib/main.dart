@@ -13,12 +13,13 @@ import 'pages/revise_item.dart';
 import 'pages/operator_login.dart';
 import 'database_helper.dart';
 import 'utils/db_path_printer.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseHelper().database;
   
-  // Print database path and contents
+  final dbHelper = DatabaseHelper();
+  await dbHelper.database;
   await DbPathPrinter.printPath();
   
   runApp(const MyApp());
