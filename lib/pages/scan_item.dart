@@ -319,6 +319,14 @@ class _ScanItemState extends State<ScanItem> {
                           ),
                           child: DataTable(
                             dividerThickness: 1,
+                            border: TableBorder(
+                              verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                              horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                              left: BorderSide(width: 1, color: Colors.grey.shade300),
+                              right: BorderSide(width: 1, color: Colors.grey.shade300),
+                              top: BorderSide(width: 1, color: Colors.grey.shade300),
+                              bottom: BorderSide(width: 1, color: Colors.grey.shade300),
+                            ),
                             columns: const [
                               DataColumn(
                                 label: SizedBox(
@@ -372,7 +380,7 @@ class _ScanItemState extends State<ScanItem> {
                                 ),
                                 DataCell(
                                   TextField(
-                                    textAlign: TextAlign.center, // Center the text input
+                                    textAlign: TextAlign.center,
                                     focusNode: _ensureFocusNode(index),
                                     onChanged: (value) {
                                       setState(() {
@@ -395,7 +403,7 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                     },
                                     decoration: const InputDecoration(
-                                      border: OutlineInputBorder(),
+                                      border: InputBorder.none,
                                       contentPadding: EdgeInsets.symmetric(horizontal: 8),
                                     ),
                                   ),
