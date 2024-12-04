@@ -17,11 +17,20 @@ class _OperatorLoginState extends State<OperatorLogin> {
   final _qtyController = TextEditingController();
   String? _labelContent; // New variable to hold the fetched label content
 
+  // Add FocusNode for each text field
+  final _itemNameFocus = FocusNode();
+  final _poNoFocus = FocusNode();
+  final _qtyFocus = FocusNode();
+
   @override
   void dispose() {
     _itemNameController.dispose();
     _poNoController.dispose();
     _qtyController.dispose();
+    // Dispose focus nodes
+    _itemNameFocus.dispose();
+    _poNoFocus.dispose();
+    _qtyFocus.dispose();
     super.dispose();
   }
 
@@ -156,33 +165,45 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                 children: [
                                   TextFormField(
                                     controller: _itemNameController,
+                                    focusNode: _itemNameFocus,
                                     decoration: const InputDecoration(
                                       labelText: 'Item Name',
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
                                     onChanged: (value) {
-                                      _fetchLabelContent(value); // Fetch label content on change
+                                      _fetchLabelContent(value);
+                                    },
+                                    onFieldSubmitted: (_) {
+                                      FocusScope.of(context).requestFocus(_poNoFocus);
                                     },
                                   ),
                                   const SizedBox(height: 16),
                                   TextFormField(
                                     controller: _poNoController,
+                                    focusNode: _poNoFocus,
                                     decoration: const InputDecoration(
                                       labelText: 'P.O No.',
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    onFieldSubmitted: (_) {
+                                      FocusScope.of(context).requestFocus(_qtyFocus);
+                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   TextFormField(
                                     controller: _qtyController,
+                                    focusNode: _qtyFocus,
                                     decoration: const InputDecoration(
                                       labelText: 'Total QTY',
                                       border: OutlineInputBorder(),
                                     ),
                                     keyboardType: TextInputType.number,
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    onFieldSubmitted: (_) {
+                                      _handleSubmit();
+                                    },
                                   ),
                                   const SizedBox(height: 32),
                                   const Align(

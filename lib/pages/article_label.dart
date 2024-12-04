@@ -179,7 +179,23 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             labelText: 'Article Label',
                             border: OutlineInputBorder(),
                           ),
-                          onChanged: _validateArticleLabel, // Validate on change
+                          onChanged: _validateArticleLabel,
+                          onFieldSubmitted: (_) {
+                            // When Enter is pressed and there's no error, proceed
+                            if (!isError) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ScanItem(
+                                    itemName: widget.itemName,
+                                    poNo: widget.poNo,
+                                    lotNumber: lotNumberController.text,
+                                    content: articleLabelController.text,
+                                    qtyPerBox: qtyController.text,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: 16),
                         // Error message
