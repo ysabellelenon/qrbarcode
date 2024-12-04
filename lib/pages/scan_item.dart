@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import the DatabaseHelper
+import 'article_label.dart'; // Add this import
 
 class ScanItem extends StatefulWidget {
   final String itemName;
@@ -252,7 +253,10 @@ class _ScanItemState extends State<ScanItem> {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => ArticleLabel(
+                        itemName: widget.itemName,
+                        poNo: widget.poNo,
                         operatorScanId: widget.operatorScanId,
+                        totalQty: widget.totalQty,
                       ),
                     ),
                   );
