@@ -30,6 +30,8 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController totalQtyController = TextEditingController();
   final TextEditingController qtyPerBoxController = TextEditingController();
   final TextEditingController inspectionQtyController = TextEditingController();
+  final TextEditingController goodCountController = TextEditingController();
+  final TextEditingController noGoodCountController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
   String? _labelContent; // New variable to hold the fetched label content
   String? _itemCategory; // To store the item's category
@@ -53,6 +55,9 @@ class _ScanItemState extends State<ScanItem> {
     print('Operator Scan ID: ${widget.operatorScanId}');
     // Set the total quantity from the operator login
     totalQtyController.text = widget.totalQty.toString();
+    // Initialize with '0'
+    goodCountController.text = '0';
+    noGoodCountController.text = '0';
   }
 
   @override
@@ -61,6 +66,8 @@ class _ScanItemState extends State<ScanItem> {
     for (var node in _focusNodes) {
       node.dispose();
     }
+    goodCountController.dispose();
+    noGoodCountController.dispose();
     super.dispose();
   }
 
@@ -155,6 +162,7 @@ class _ScanItemState extends State<ScanItem> {
           'content': '',
           'result': '',
         });
+        _updateCounts();
       });
     }
   }
@@ -165,6 +173,24 @@ class _ScanItemState extends State<ScanItem> {
       _focusNodes.add(FocusNode());
     }
     return _focusNodes[index];
+  }
+
+  void _updateCounts() {
+    int goodCount = 0;
+    int noGoodCount = 0;
+
+    for (var data in _tableData) {
+      if (data['result'] == 'Good') {
+        goodCount++;
+      } else if (data['result'] == 'No Good') {
+        noGoodCount++;
+      }
+    }
+
+    setState(() {
+      goodCountController.text = goodCount.toString();
+      noGoodCountController.text = noGoodCount.toString();
+    });
   }
 
   @override
@@ -348,7 +374,9 @@ class _ScanItemState extends State<ScanItem> {
                               SizedBox(
                                 width: 200,
                                 child: TextField(
+                                  controller: goodCountController,
                                   textAlign: TextAlign.center,
+                                  readOnly: true, // Make it read-only
                                   decoration: const InputDecoration(
                                     labelText: 'Good',
                                     border: OutlineInputBorder(),
@@ -359,7 +387,9 @@ class _ScanItemState extends State<ScanItem> {
                               SizedBox(
                                 width: 200,
                                 child: TextField(
+                                  controller: noGoodCountController,
                                   textAlign: TextAlign.center,
+                                  readOnly: true, // Make it read-only
                                   decoration: const InputDecoration(
                                     labelText: 'No Good',
                                     border: OutlineInputBorder(),
@@ -453,10 +483,11 @@ class _ScanItemState extends State<ScanItem> {
                                         if (value.isNotEmpty) {
                                           String result = _validateContent(value, index);
                                           data['result'] = result;
-                                          print('Content: $value, Result: $result'); // Debug print
+                                          print('Content: $value, Result: $result');
                                         } else {
                                           data['result'] = '';
                                         }
+                                        _updateCounts();
                                       });
                                     },
                                     onSubmitted: (value) {
@@ -469,6 +500,7 @@ class _ScanItemState extends State<ScanItem> {
                                         Future.delayed(const Duration(milliseconds: 100), () {
                                           _focusNodes.last.requestFocus();
                                         });
+                                        _updateCounts();
                                       });
                                     },
                                     decoration: const InputDecoration(
@@ -536,6 +568,8 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                       _focusNodes.add(FocusNode());
                                     }
+                                    
+                                    _updateCounts();
                                   });
                                 },
                                 child: const Text('Delete Selected'),
