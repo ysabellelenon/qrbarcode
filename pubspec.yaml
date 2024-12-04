@@ -94,4 +94,4 @@ flutter:
 
   assets:
     - assets/images/jae-logo.jpg
-    # - assets/databases/users.db
+    - assets/databases/users.db
