@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:io';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -15,8 +17,31 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'users.db');
-    
+    // Get the path to the documents directory.
+    String documentsDirectory = (await getApplicationDocumentsDirectory()).path;
+    String path = join(documentsDirectory, 'users.db');
+
+    // Check if the database exists
+    bool exists = await databaseExists(path);
+
+    if (!exists) {
+      // Copy from asset
+      try {
+        // Load database from assets
+        ByteData data = await rootBundle.load('assets/databases/users.db');
+        List<int> bytes =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
+        // Write to file
+        await File(path).writeAsBytes(bytes, flush: true);
+        print('Database copied from assets to $path');
+      } catch (e) {
+        print('Error copying database: $e');
+      }
+    } else {
+      print('Database already exists at $path');
+    }
+
     return await openDatabase(
       path,
       version: 4,
@@ -221,5 +246,25 @@ class DatabaseHelper {
       return result.first;
     }
     return null;
+  }
+
+  Future<String> getDatabasePath() async {
+    String path = join(await getDatabasesPath(), 'users.db');
+    return path;
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>> getAllDatabaseContents() async {
+    final db = await database;
+    
+    // Get contents of each table
+    final users = await db.query('users');
+    final items = await db.query('items');
+    final itemCodes = await db.query('item_codes');
+
+    return {
+      'users': users,
+      'items': items, 
+      'item_codes': itemCodes,
+    };
   }
 } 

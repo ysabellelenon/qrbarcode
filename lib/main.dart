@@ -12,10 +12,15 @@ import 'pages/review_item.dart';
 import 'pages/revise_item.dart';
 import 'pages/operator_login.dart';
 import 'database_helper.dart';
+import 'utils/db_path_printer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseHelper().database;
+  
+  // Print database path and contents
+  await DbPathPrinter.printPath();
+  
   runApp(const MyApp());
 }
 
