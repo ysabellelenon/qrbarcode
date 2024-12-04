@@ -33,7 +33,6 @@ class DatabaseHelper {
         print('Database copied from assets successfully');
       } catch (e) {
         print('Error copying database from assets: $e');
-        shouldCopy = false;
       }
     }
 
@@ -41,12 +40,12 @@ class DatabaseHelper {
       path,
       version: 3,
       onCreate: (db, version) async {
-        print('Creating new database tables');
-        await _createTables(db);
-        await _insertDefaultUsers(db);
+        if (!shouldCopy) {
+          await _createTables(db);
+          await _insertDefaultUsers(db);
+        }
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        print('Upgrading database from version $oldVersion to $newVersion');
         if (oldVersion < 2) {
           await _migrateToVersion2(db);
         }

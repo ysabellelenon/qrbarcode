@@ -38,6 +38,7 @@ class _ScanItemState extends State<ScanItem> {
   final Set<String> _usedContents = {}; // To track used contents for "Counting" category
   final List<FocusNode> _focusNodes = [];
   final Set<int> selectedRows = {};
+  bool _isQtyPerBoxReached = false;
 
   @override
   void initState() {
@@ -191,7 +192,78 @@ class _ScanItemState extends State<ScanItem> {
       goodCountController.text = goodCount.toString();
       noGoodCountController.text = noGoodCount.toString();
       inspectionQtyController.text = (goodCount + noGoodCount).toString();
+      qtyPerBoxController.text = _tableData.length.toString();
+
+      // Check if QTY per box limit is reached
+      if (_tableData.length == int.parse(widget.qtyPerBox) && !_isQtyPerBoxReached) {
+        _isQtyPerBoxReached = true;
+        _showQtyReachedDialog();
+      }
     });
+  }
+
+  void _showQtyReachedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Information'),
+          content: const Text('QTY per box has been reached'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showOptionsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Option'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed('/login');
+                },
+                child: const Text('End Session'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed('/operator-login');
+                },
+                child: const Text('Scan New P.O and Item Name'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => ArticleLabel(
+                        operatorScanId: widget.operatorScanId,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Scan New Article Label'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -334,6 +406,7 @@ class _ScanItemState extends State<ScanItem> {
                                           controller: qtyPerBoxController,
                                           decoration: const InputDecoration(border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
+                                          readOnly: true, // Make it read-only
                                         ),
                                       ),
                                     ],
@@ -493,17 +566,19 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                     },
                                     onSubmitted: (value) {
-                                      setState(() {
-                                        _tableData.add({
-                                          'content': '',
-                                          'result': '',
+                                      if (!_isQtyPerBoxReached) {
+                                        setState(() {
+                                          _tableData.add({
+                                            'content': '',
+                                            'result': '',
+                                          });
+                                          _focusNodes.add(FocusNode());
+                                          Future.delayed(const Duration(milliseconds: 100), () {
+                                            _focusNodes.last.requestFocus();
+                                          });
+                                          _updateCounts();
                                         });
-                                        _focusNodes.add(FocusNode());
-                                        Future.delayed(const Duration(milliseconds: 100), () {
-                                          _focusNodes.last.requestFocus();
-                                        });
-                                        _updateCounts();
-                                      });
+                                      }
                                     },
                                     decoration: const InputDecoration(
                                       border: InputBorder.none,
@@ -575,6 +650,32 @@ class _ScanItemState extends State<ScanItem> {
                                   });
                                 },
                                 child: const Text('Delete Selected'),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Add Done button when QTY is reached
+                      if (_isQtyPerBoxReached)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: _showOptionsDialog,
+                                child: const Text('Done'),
                               ),
                             ],
                           ),
