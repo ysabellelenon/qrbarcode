@@ -1,7 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, ByteData;
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -21,60 +22,42 @@ class DatabaseHelper {
     String documentsDirectory = (await getApplicationDocumentsDirectory()).path;
     String path = join(documentsDirectory, 'users.db');
 
-    // Check if the database exists
-    bool exists = await databaseExists(path);
-
-    if (!exists) {
-      // Copy from asset
-      try {
-        // Load database from assets
-        ByteData data = await rootBundle.load('assets/databases/users.db');
-        List<int> bytes =
-            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-
-        // Write to file
-        await File(path).writeAsBytes(bytes, flush: true);
-        print('Database copied from assets to $path');
-      } catch (e) {
-        print('Error copying database: $e');
-      }
-    } else {
-      print('Database already exists at $path');
-    }
-
+    // Open or create the database
     return await openDatabase(
       path,
-      version: 4,
+      version: 2, // Incremented version for migration
       onCreate: (db, version) async {
         await _createTables(db);
         await _insertDefaultUsers(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        await _createTables(db);
+        if (oldVersion < 2) {
+          // Migration for version 2
+          await _migrateToVersion2(db);
+        }
+        // Future migrations can be handled here
       },
     );
   }
 
   Future<void> _createTables(Database db) async {
-    await db.execute('DROP TABLE IF EXISTS item_codes');
-    await db.execute('DROP TABLE IF EXISTS items');
-    await db.execute('DROP TABLE IF EXISTS users');
-
+    // Create 'users' table if it doesn't exist
     await db.execute('''
-      CREATE TABLE users(
+      CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         firstName TEXT,
         middleName TEXT,
         lastName TEXT,
         section TEXT,
         lineNo TEXT,
-        username TEXT,
+        username TEXT UNIQUE,
         password TEXT
       )
     ''');
 
+    // Create 'items' table if it doesn't exist
     await db.execute('''
-      CREATE TABLE items(
+      CREATE TABLE IF NOT EXISTS items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         itemCode TEXT,
         revision TEXT,
@@ -83,34 +66,61 @@ class DatabaseHelper {
       )
     ''');
 
+    // Create 'item_codes' table if it doesn't exist
     await db.execute('''
-      CREATE TABLE item_codes(
+      CREATE TABLE IF NOT EXISTS item_codes(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         itemId INTEGER,
         category TEXT,
         content TEXT,
         hasSubLot INTEGER,
         serialCount TEXT,
-        FOREIGN KEY (itemId) REFERENCES items (id)
+        FOREIGN KEY (itemId) REFERENCES items (id) ON DELETE CASCADE
       )
     ''');
   }
 
   Future<void> _insertDefaultUsers(Database db) async {
-    final existingUsers = await db.query('users');
-    print('Existing users: $existingUsers');
+    // Check if the Engineer user already exists
+    List<Map<String, dynamic>> engineer = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: ['engineer'],
+    );
 
-    if (existingUsers.isEmpty) {
+    if (engineer.isEmpty) {
+      // Insert Engineer user with correct lineNo
       await db.insert('users', {
         'firstName': 'Engineer',
         'lastName': 'User',
         'username': 'engineer',
         'password': 'password123',
         'section': 'Engineering',
-        'lineNo': 'Assembly',
+        'lineNo': 'Admin', // Correct lineNo
       });
-      print('Inserted Engineer user');
+      print('Inserted Engineer user with lineNo: Admin');
+    } else {
+      // Optional: Update Engineer user's lineNo if incorrect
+      if (engineer.first['lineNo'] != 'Admin') {
+        await db.update(
+          'users',
+          {'lineNo': 'Admin'},
+          where: 'username = ?',
+          whereArgs: ['engineer'],
+        );
+        print('Updated Engineer user\'s lineNo to Admin');
+      }
+    }
 
+    // Check if the Operator user already exists
+    List<Map<String, dynamic>> operatorUser = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: ['operator'],
+    );
+
+    if (operatorUser.isEmpty) {
+      // Insert Operator user
       await db.insert('users', {
         'firstName': 'Operator',
         'lastName': 'User',
@@ -119,10 +129,21 @@ class DatabaseHelper {
         'section': 'Operations',
         'lineNo': 'Assembly',
       });
-      print('Inserted Operator user');
+      print('Inserted Operator user with lineNo: Assembly');
     } else {
-      print('Default users already exist, not inserting.');
+      print('Operator user already exists. No action taken.');
     }
+  }
+
+  Future<void> _migrateToVersion2(Database db) async {
+    // Example migration: Update Engineer user's lineNo to Admin
+    await db.update(
+      'users',
+      {'lineNo': 'Admin'},
+      where: 'username = ? AND lineNo != ?',
+      whereArgs: ['engineer', 'Admin'],
+    );
+    print('Migrated Engineer user\'s lineNo to Admin');
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -132,7 +153,7 @@ class DatabaseHelper {
 
   Future<void> insertUser(Map<String, dynamic> user) async {
     final db = await database;
-    await db.insert('users', user);
+    await db.insert('users', user, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> updateUser(Map<String, dynamic> user) async {
@@ -183,7 +204,7 @@ class DatabaseHelper {
           'itemId': itemId,
           'category': code['category'],
           'content': code['content'],
-          'hasSubLot': code['hasSubLot'] == 1,
+          'hasSubLot': code['hasSubLot'] == 1 ? 1 : 0,
           'serialCount': code['serialCount'],
         });
       }
@@ -218,7 +239,7 @@ class DatabaseHelper {
           'itemId': itemId,
           'category': code['category'],
           'content': code['content'],
-          'hasSubLot': code['hasSubLot'] == 1,
+          'hasSubLot': code['hasSubLot'] == 1 ? 1 : 0,
           'serialCount': code['serialCount'],
         });
       }
