@@ -224,52 +224,6 @@ class _ScanItemState extends State<ScanItem> {
     );
   }
 
-  void _showOptionsDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Option'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/login');
-                },
-                child: const Text('End Session'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/operator-login');
-                },
-                child: const Text('Scan New P.O and Item Name'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => ArticleLabel(
-                        itemName: widget.itemName,
-                        poNo: widget.poNo,
-                        operatorScanId: widget.operatorScanId,
-                        totalQty: widget.totalQty,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Scan New Article Label'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -659,28 +613,44 @@ class _ScanItemState extends State<ScanItem> {
                           ),
                         ),
 
-                      // Add Done button when QTY is reached
+                      // Add Scan New Article Label button when QTY is reached
                       if (_isQtyPerBoxReached)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                          child: Column(
                             children: [
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.deepPurple,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (context) => ArticleLabel(
+                                            itemName: widget.itemName,
+                                            poNo: widget.poNo,
+                                            operatorScanId: widget.operatorScanId,
+                                            totalQty: widget.totalQty,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Scan New Article Label'),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: _showOptionsDialog,
-                                child: const Text('Done'),
+                                ],
                               ),
+                              const SizedBox(height: 30),
                             ],
                           ),
                         ),
