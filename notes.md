@@ -1,3 +1,7 @@
+## Database Directory
+
+/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/users.db
+
 ## Moving `users.db` to Your Flutter Project Directory
 
 To move your `users.db` file from its current location to your Flutter project directory, follow the steps below. This guide covers **using Terminal** on macOS.
