@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:flutter/services.dart' show rootBundle, ByteData;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -22,20 +23,42 @@ class DatabaseHelper {
     String documentsDirectory = (await getApplicationDocumentsDirectory()).path;
     String path = join(documentsDirectory, 'users.db');
 
-    // Open or create the database
+    // Check if database needs to be copied from assets
+    bool shouldCopy = !await File(path).exists();
+    
+    if (shouldCopy) {
+      // Copy database from assets
+      try {
+        // Create the parent directory if it doesn't exist
+        await Directory(dirname(path)).create(recursive: true);
+        
+        // Load database from assets
+        ByteData data = await rootBundle.load('assets/databases/users.db');
+        List<int> bytes = data.buffer.asUint8List();
+        
+        // Write and flush the bytes to the device
+        await File(path).writeAsBytes(bytes, flush: true);
+        print('Database copied from assets successfully');
+      } catch (e) {
+        print('Error copying database from assets: $e');
+      }
+    }
+
+    // Open the database
     return await openDatabase(
       path,
-      version: 2, // Incremented version for migration
+      version: 2,
       onCreate: (db, version) async {
-        await _createTables(db);
-        await _insertDefaultUsers(db);
+        // Only create tables if we didn't copy from assets
+        if (!shouldCopy) {
+          await _createTables(db);
+          await _insertDefaultUsers(db);
+        }
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          // Migration for version 2
           await _migrateToVersion2(db);
         }
-        // Future migrations can be handled here
       },
     );
   }
