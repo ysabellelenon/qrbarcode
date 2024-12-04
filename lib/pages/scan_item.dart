@@ -8,6 +8,7 @@ class ScanItem extends StatefulWidget {
   final String lotNumber;
   final String content;
   final String qtyPerBox;
+  final String operatorScanId;
 
   const ScanItem({
     Key? key,
@@ -16,6 +17,7 @@ class ScanItem extends StatefulWidget {
     required this.lotNumber,
     required this.content,
     required this.qtyPerBox,
+    required this.operatorScanId,
   }) : super(key: key);
 
   @override
@@ -38,6 +40,10 @@ class _ScanItemState extends State<ScanItem> {
       'content': '',
       'result': '',
     });
+    
+    // Use operatorScanId if necessary
+    print('Operator Scan ID: ${widget.operatorScanId}');
+    // You can utilize operatorScanId as needed within your state
   }
 
   void _fetchLabelContent(String itemName) async {

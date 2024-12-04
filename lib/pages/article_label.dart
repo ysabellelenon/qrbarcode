@@ -193,6 +193,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                     lotNumber: lotNumberController.text,
                                     content: articleLabelController.text,
                                     qtyPerBox: qtyController.text,
+                                    operatorScanId: widget.operatorScanId.toString(),
                                   ),
                                 ),
                               );
@@ -249,6 +250,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                     lotNumber: lotNumberController.text,
                                     content: articleLabelController.text,
                                     qtyPerBox: qtyController.text,
+                                    operatorScanId: widget.operatorScanId.toString(),
                                   ),
                                 ),
                               );
