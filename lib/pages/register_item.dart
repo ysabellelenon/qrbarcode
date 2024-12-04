@@ -200,13 +200,18 @@ class _RegisterItemState extends State<RegisterItem> {
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
                                     final allCodes = codeContainers.map((container) => {
-                                      'code': container.codeNumber.toString(),
+                                      'category': selectedCategories[container.codeNumber] ?? '',
                                       'content': container.labelController.text,
-                                      'category': selectedCategories[container.codeNumber],
+                                      'hasSubLot': false,
+                                      'serialCount': '0',
                                     }).toList();
 
                                     final countingCodes = allCodes
                                         .where((code) => code['category'] == 'Counting')
+                                        .map((code) => {
+                                              'category': code['category'].toString(),
+                                              'content': code['content'].toString(),
+                                            })
                                         .toList();
 
                                     if (countingCodes.isNotEmpty) {
@@ -215,10 +220,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                         MaterialPageRoute(
                                           builder: (context) => SublotConfig(
                                             itemName: _itemNameController.text,
-                                            countingCodes: countingCodes.map((code) => {
-                                              'key1': code['key1']!,
-                                              'key2': code['key2']!,
-                                            }).toList(),
+                                            countingCodes: countingCodes as List<Map<String, String>>,
                                           ),
                                         ),
                                       );
@@ -230,11 +232,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                             itemName: _itemNameController.text,
                                             revision: _selectedRevision!,
                                             codeCount: allCodes.length,
-                                            codes: allCodes.map((code) => {
-                                              ...code,
-                                              'hasSubLot': false,
-                                              'serialCount': '0',
-                                            }).toList(),
+                                            codes: allCodes,
                                           ),
                                         ),
                                       );
