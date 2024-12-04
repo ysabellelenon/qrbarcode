@@ -264,12 +264,22 @@ class ReviewItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _buildInfoRow(
-            'Sub-lot Rules Enabled',
-            code['hasSubLot'] ? 'Yes' : 'No',
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoRow(
+                  'Sub-lot Rules Enabled',
+                  code['hasSubLot'] ? 'Yes' : 'No',
+                ),
+              ),
+              if (code['hasSubLot']) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildInfoRow('Number of Serial No.', code['serialCount']),
+                ),
+              ],
+            ],
           ),
-          if (code['hasSubLot'])
-            _buildInfoRow('Number of Serial No.', code['serialCount']),
         ],
         const SizedBox(height: 24),
       ],

@@ -91,43 +91,60 @@ class _ScanItemState extends State<ScanItem> {
 
   String _validateContent(String content, int rowIndex) {
     if (_itemCategory == null || _labelContent == null) {
-      print('Category or label content is null'); // Debug print
+      print('Category or label content is null');
       return '';
     }
 
-    print('Validating content: $content'); // Debug print
-    print('Category: $_itemCategory'); // Debug print
-    print('Label Content: $_labelContent'); // Debug print
-    print('Row Index: $rowIndex'); // Debug print
+    print('Validating content: $content');
+    print('Category: $_itemCategory');
+    print('Label Content: $_labelContent');
+    print('Row Index: $rowIndex');
 
     if (_itemCategory == 'Non-Counting') {
       bool isGood = content == _labelContent;
-      print('Non-Counting result: ${isGood ? "Good" : "No Good"}'); // Debug print
+      print('Non-Counting result: ${isGood ? "Good" : "No Good"}');
       return isGood ? 'Good' : 'No Good';
     } else if (_itemCategory == 'Counting') {
+      // For first row, content should be different from label content
       if (rowIndex == 0) {
-        bool isGood = content == _labelContent;
+        bool isGood = content != _labelContent;
         if (isGood) {
           _usedContents.add(content);
         }
-        print('Counting first row result: ${isGood ? "Good" : "No Good"}'); // Debug print
+        print('Counting first row result: ${isGood ? "Good" : "No Good"}');
         return isGood ? 'Good' : 'No Good';
       }
       
+      // For subsequent rows:
+      // 1. Check if content is already used in previous rows
       if (_usedContents.contains(content)) {
-        print('Duplicate content found'); // Debug print
+        print('Duplicate content found');
         return 'No Good';
       }
       
-      bool isGood = content == _labelContent;
+      // 2. Content should be different from static content
+      if (content == _labelContent) {
+        print('Content matches static label');
+        return 'No Good';
+      }
+      
+      // 3. Content should be different from all previous contents
+      bool isGood = true;
+      for (var i = 0; i < rowIndex; i++) {
+        if (_tableData[i]['content'] == content) {
+          isGood = false;
+          break;
+        }
+      }
+      
       if (isGood) {
         _usedContents.add(content);
       }
-      print('Counting subsequent row result: ${isGood ? "Good" : "No Good"}'); // Debug print
+      print('Counting subsequent row result: ${isGood ? "Good" : "No Good"}');
       return isGood ? 'Good' : 'No Good';
     }
     
-    print('No category match found'); // Debug print
+    print('No category match found');
     return '';
   }
 
