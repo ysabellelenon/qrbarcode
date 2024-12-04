@@ -32,6 +32,7 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController inspectionQtyController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
   String? _labelContent; // New variable to hold the fetched label content
+  final List<FocusNode> _focusNodes = [];
 
   @override
   void initState() {
@@ -42,11 +43,22 @@ class _ScanItemState extends State<ScanItem> {
       'content': '',
       'result': '',
     });
+    // Create initial focus node
+    _focusNodes.add(FocusNode());
     
     // Use operatorScanId if necessary
     print('Operator Scan ID: ${widget.operatorScanId}');
     // Set the total quantity from the operator login
     totalQtyController.text = widget.totalQty.toString();
+  }
+
+  @override
+  void dispose() {
+    // Clean up focus nodes
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
   }
 
   void _fetchLabelContent(String itemName) async {
@@ -79,6 +91,14 @@ class _ScanItemState extends State<ScanItem> {
         });
       });
     }
+  }
+
+  FocusNode _ensureFocusNode(int index) {
+    // Add focus nodes if needed
+    while (_focusNodes.length <= index) {
+      _focusNodes.add(FocusNode());
+    }
+    return _focusNodes[index];
   }
 
   @override
@@ -334,6 +354,12 @@ class _ScanItemState extends State<ScanItem> {
                                   child: Center(child: Text('Result')),
                                 ),
                               ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 80,
+                                  child: Center(child: Text('')),
+                                ),
+                              ),
                             ],
                             rows: _tableData.asMap().entries.map((entry) {
                               int index = entry.key;
@@ -342,6 +368,7 @@ class _ScanItemState extends State<ScanItem> {
                                 DataCell(Text((index + 1).toString())),
                                 DataCell(
                                   TextField(
+                                    focusNode: _ensureFocusNode(index),
                                     onChanged: (value) {
                                       setState(() {
                                         data['content'] = value;
@@ -352,11 +379,16 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                     },
                                     onSubmitted: (value) {
-                                      // Add new row when Enter is pressed
                                       setState(() {
                                         _tableData.add({
                                           'content': '',
                                           'result': '',
+                                        });
+                                        // Add new focus node for the new row
+                                        _focusNodes.add(FocusNode());
+                                        // Request focus on the new row after a brief delay
+                                        Future.delayed(const Duration(milliseconds: 100), () {
+                                          _focusNodes.last.requestFocus();
                                         });
                                       });
                                     },
@@ -364,13 +396,37 @@ class _ScanItemState extends State<ScanItem> {
                                   ),
                                 ),
                                 DataCell(
-                                  Center( // Center the result text
+                                  Center(
                                     child: Text(
                                       data['result'] ?? '',
                                       style: TextStyle(
                                         color: data['result'] == 'Good' ? Colors.green : Colors.red,
                                       ),
                                     ),
+                                  ),
+                                ),
+                                DataCell(
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {
+                                      setState(() {
+                                        // Remove the focus node for this row
+                                        if (index < _focusNodes.length) {
+                                          _focusNodes[index].dispose();
+                                          _focusNodes.removeAt(index);
+                                        }
+                                        // Remove the row data
+                                        _tableData.removeAt(index);
+                                        // Only add a new row if the table becomes empty
+                                        if (_tableData.isEmpty) {
+                                          _tableData.add({
+                                            'content': '',
+                                            'result': '',
+                                          });
+                                          _focusNodes.add(FocusNode());
+                                        }
+                                      });
+                                    },
                                   ),
                                 ),
                               ]);
