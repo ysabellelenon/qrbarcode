@@ -32,6 +32,8 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController inspectionQtyController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
   String? _labelContent; // New variable to hold the fetched label content
+  String? _itemCategory; // To store the item's category
+  final Set<String> _usedContents = {}; // To track used contents for "Counting" category
   final List<FocusNode> _focusNodes = [];
   final Set<int> selectedRows = {};
 
@@ -63,24 +65,70 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _fetchLabelContent(String itemName) async {
-    // Fetch the label content from the database
-    final itemData = await DatabaseHelper().getItems(); // Fetch all items
+    final itemData = await DatabaseHelper().getItems();
     final matchingItem = itemData.firstWhere(
       (item) => item['itemCode'] == itemName,
-      orElse: () => {}, // Return an empty map instead of null
+      orElse: () => {},
     );
 
-    if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
+    if (matchingItem.isNotEmpty) {
       setState(() {
-        _labelContent = matchingItem['codes'].isNotEmpty
-            ? matchingItem['codes'][0]['content'] // Get the first code content
-            : 'No content available';
+        if (matchingItem['codes'].isNotEmpty) {
+          _labelContent = matchingItem['codes'][0]['content'];
+          _itemCategory = matchingItem['codes'][0]['category'];
+        } else {
+          _labelContent = 'No content available';
+          _itemCategory = null;
+        }
       });
     } else {
       setState(() {
         _labelContent = 'Item not found';
+        _itemCategory = null;
       });
     }
+  }
+
+  String _validateContent(String content, int rowIndex) {
+    if (_itemCategory == null || _labelContent == null) {
+      print('Category or label content is null'); // Debug print
+      return '';
+    }
+
+    print('Validating content: $content'); // Debug print
+    print('Category: $_itemCategory'); // Debug print
+    print('Label Content: $_labelContent'); // Debug print
+    print('Row Index: $rowIndex'); // Debug print
+
+    if (_itemCategory == 'Non-Counting') {
+      bool isGood = content == _labelContent;
+      print('Non-Counting result: ${isGood ? "Good" : "No Good"}'); // Debug print
+      return isGood ? 'Good' : 'No Good';
+    } else if (_itemCategory == 'Counting') {
+      if (rowIndex == 0) {
+        bool isGood = content == _labelContent;
+        if (isGood) {
+          _usedContents.add(content);
+        }
+        print('Counting first row result: ${isGood ? "Good" : "No Good"}'); // Debug print
+        return isGood ? 'Good' : 'No Good';
+      }
+      
+      if (_usedContents.contains(content)) {
+        print('Duplicate content found'); // Debug print
+        return 'No Good';
+      }
+      
+      bool isGood = content == _labelContent;
+      if (isGood) {
+        _usedContents.add(content);
+      }
+      print('Counting subsequent row result: ${isGood ? "Good" : "No Good"}'); // Debug print
+      return isGood ? 'Good' : 'No Good';
+    }
+    
+    print('No category match found'); // Debug print
+    return '';
   }
 
   void _addRow() {
@@ -385,9 +433,13 @@ class _ScanItemState extends State<ScanItem> {
                                     onChanged: (value) {
                                       setState(() {
                                         data['content'] = value;
-                                        data['result'] = value.isNotEmpty
-                                            ? (value == 'Good' ? 'Good' : 'No Good')
-                                            : null;
+                                        if (value.isNotEmpty) {
+                                          String result = _validateContent(value, index);
+                                          data['result'] = result;
+                                          print('Content: $value, Result: $result'); // Debug print
+                                        } else {
+                                          data['result'] = '';
+                                        }
                                       });
                                     },
                                     onSubmitted: (value) {
@@ -413,7 +465,10 @@ class _ScanItemState extends State<ScanItem> {
                                     child: Text(
                                       data['result'] ?? '',
                                       style: TextStyle(
-                                        color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                                        color: data['result'] == 'Good' ? Colors.green : 
+                                               data['result'] == 'No Good' ? Colors.red : 
+                                               Colors.black,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
