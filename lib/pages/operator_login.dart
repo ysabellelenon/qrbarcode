@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import database helper
-import 'article_label.dart'; // Import the new ArticleLabel page
+import '../pages/article_label.dart'; // Import the new ArticleLabel page
 
 class OperatorLogin extends StatefulWidget {
   const OperatorLogin({super.key});
@@ -70,16 +70,19 @@ class _OperatorLoginState extends State<OperatorLogin> {
         'createdAt': DateTime.now().toIso8601String(),
       });
 
-      // Navigate to ArticleLabel page with the operatorScanId
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ArticleLabel(
-            itemName: itemName,
-            poNo: poNo,
-            operatorScanId: operatorScanId, // Pass the ID to ArticleLabel
+      if (mounted) {
+        // Navigate to ArticleLabel page with all required parameters
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ArticleLabel(
+              itemName: itemName,
+              poNo: poNo,
+              operatorScanId: operatorScanId,
+              totalQty: totalQty,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 

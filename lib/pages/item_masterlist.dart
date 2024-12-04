@@ -4,6 +4,8 @@ import '../database_helper.dart';
 import 'login_page.dart';
 import '../utils/logout_helper.dart';
 import 'revise_item.dart';
+import 'engineer_login.dart';
+import 'register_item.dart';
 
 class ItemMasterlist extends StatefulWidget {
   const ItemMasterlist({super.key});
@@ -126,10 +128,11 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                   ? DataCell(
                       OutlinedButton(
                         onPressed: () {
-                          Navigator.pushNamed(
+                          Navigator.push(
                             context,
-                            '/revise-item',
-                            arguments: item,
+                            MaterialPageRoute(
+                              builder: (context) => ReviseItem(item: item),
+                            ),
                           );
                         },
                         style: OutlinedButton.styleFrom(
@@ -198,7 +201,11 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                     // Back Button
                     OutlinedButton(
                       onPressed: () =>
-                          Navigator.of(context).pushReplacementNamed('/engineer-login'),
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const EngineerLogin(),
+                            ),
+                          ),
                       child: const Text('Back'),
                     ),
                     const SizedBox(height: 20),
@@ -259,7 +266,12 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                         ),
                                       ),
                                       onPressed: () =>
-                                          Navigator.pushNamed(context, '/register-item'),
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const RegisterItem(),
+                                            ),
+                                          ),
                                       child: const Text('New Register'),
                                     ),
                                   ],

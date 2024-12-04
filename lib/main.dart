@@ -8,8 +8,6 @@ import 'pages/new_account.dart';
 import 'pages/edit_user.dart';
 import 'pages/item_masterlist.dart';
 import 'pages/register_item.dart';
-import 'pages/sublot_config.dart';
-import 'pages/review_item.dart';
 import 'pages/revise_item.dart';
 import 'pages/operator_login.dart';
 import 'database_helper.dart';
@@ -48,16 +46,6 @@ class MyApp extends StatelessWidget {
                 as Map<String, dynamic>),
         '/item-masterlist': (context) => const ItemMasterlist(),
         '/register-item': (context) => const RegisterItem(),
-        '/sublot-config': (context) => SublotConfig(
-              itemName: '',
-              countingCodes: const <Map<String, String>>[],
-            ),
-        '/review-item': (context) => ReviewItem(
-              itemName: '',
-              revision: '',
-              codeCount: 0,
-              codes: [],
-            ),
         '/revise-item': (context) => ReviseItem(
               item: ModalRoute.of(context)!.settings.arguments
                   as Map<String, dynamic>,

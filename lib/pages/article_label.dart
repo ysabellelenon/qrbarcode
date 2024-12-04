@@ -7,12 +7,14 @@ class ArticleLabel extends StatefulWidget {
   final String itemName;
   final String poNo;
   final int operatorScanId;
+  final int totalQty;
 
   const ArticleLabel({
     Key? key,
     required this.itemName,
     required this.poNo,
     required this.operatorScanId,
+    required this.totalQty,
   }) : super(key: key);
 
   @override
@@ -193,7 +195,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                     lotNumber: lotNumberController.text,
                                     content: articleLabelController.text,
                                     qtyPerBox: qtyController.text,
-                                    operatorScanId: widget.operatorScanId.toString(),
+                                    operatorScanId: widget.operatorScanId,
+                                    totalQty: widget.totalQty,
                                   ),
                                 ),
                               );
@@ -250,7 +253,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                     lotNumber: lotNumberController.text,
                                     content: articleLabelController.text,
                                     qtyPerBox: qtyController.text,
-                                    operatorScanId: widget.operatorScanId.toString(),
+                                    operatorScanId: widget.operatorScanId,
+                                    totalQty: widget.totalQty,
                                   ),
                                 ),
                               );

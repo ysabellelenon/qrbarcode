@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../constants.dart'; // Import the constants file
 import 'login_page.dart';
 import '../utils/logout_helper.dart';
+import 'engineer_login.dart';
+import 'manage_accounts.dart';
+import 'new_account.dart';
 
 class AccountSettings extends StatelessWidget {
   const AccountSettings({super.key});
@@ -53,7 +56,11 @@ class AccountSettings extends StatelessWidget {
                 children: [
                   // Back Button
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/engineer-login'),
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => const EngineerLogin(),
+                      ),
+                    ),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
@@ -109,7 +116,11 @@ class AccountSettings extends StatelessWidget {
                                       ),
                                     ),
                                     onPressed: () {
-                                      Navigator.of(context).pushNamed('/manage-accounts');
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const ManageAccounts(),
+                                        ),
+                                      );
                                     },
                                     child: const Text('Manage Accounts'),
                                   ),
@@ -153,7 +164,11 @@ class AccountSettings extends StatelessWidget {
                                       ),
                                     ),
                                     onPressed: () {
-                                      Navigator.of(context).pushNamed('/new-account');
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const NewAccount(),
+                                        ),
+                                      );
                                     },
                                     child: const Text('Create Account'),
                                   ),

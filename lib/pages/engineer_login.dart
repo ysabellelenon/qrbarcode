@@ -3,6 +3,7 @@ import '../constants.dart'; // Import the constants file
 import 'login_page.dart';
 import 'account_settings.dart';
 import '../utils/logout_helper.dart';
+import 'item_masterlist.dart';
 
 class EngineerLogin extends StatelessWidget {
   const EngineerLogin({super.key});
@@ -74,7 +75,11 @@ class EngineerLogin extends StatelessWidget {
                       context,
                       'Item Masterlist',
                       () {
-                        Navigator.of(context).pushNamed('/item-masterlist');
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ItemMasterlist(),
+                          ),
+                        );
                       },
                     ),
                   ],

@@ -8,7 +8,8 @@ class ScanItem extends StatefulWidget {
   final String lotNumber;
   final String content;
   final String qtyPerBox;
-  final String operatorScanId;
+  final int operatorScanId;
+  final int totalQty;
 
   const ScanItem({
     Key? key,
@@ -18,6 +19,7 @@ class ScanItem extends StatefulWidget {
     required this.content,
     required this.qtyPerBox,
     required this.operatorScanId,
+    required this.totalQty,
   }) : super(key: key);
 
   @override
@@ -43,7 +45,8 @@ class _ScanItemState extends State<ScanItem> {
     
     // Use operatorScanId if necessary
     print('Operator Scan ID: ${widget.operatorScanId}');
-    // You can utilize operatorScanId as needed within your state
+    // Set the total quantity from the operator login
+    totalQtyController.text = widget.totalQty.toString();
   }
 
   void _fetchLabelContent(String itemName) async {
