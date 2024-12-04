@@ -302,8 +302,9 @@ class _ScanItemState extends State<ScanItem> {
 
                       // Results Table Container
                       Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
+                          margin: const EdgeInsets.only(bottom: 30), // Add bottom margin
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(8),
@@ -315,16 +316,21 @@ class _ScanItemState extends State<ScanItem> {
                               width: 1,
                             ),
                             columns: const [
-                              DataColumn(label: Text('No.')),
                               DataColumn(
                                 label: SizedBox(
-                                  width: 300,
+                                  width: 100,
+                                  child: Center(child: Text('No.')),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 400,
                                   child: Center(child: Text('Content')),
                                 ),
                               ),
                               DataColumn(
                                 label: SizedBox(
-                                  width: 150,
+                                  width: 200,
                                   child: Center(child: Text('Result')),
                                 ),
                               ),
