@@ -250,82 +250,126 @@ class _ScanItemState extends State<ScanItem> {
 
                       const SizedBox(height: 20), // Space between containers
 
-                      // New Container for the Results Table
+                      // Good/No Good Container
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Good', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        hintText: 'Enter Good value',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('No Good', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        hintText: 'Enter No Good value',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Results Table Container
                       Padding(
                         padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 20),
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: DataTable(
-                                dividerThickness: 1, // Add divider thickness
-                                border: TableBorder.all( // Add borders to the table
-                                  color: Colors.grey.shade300,
-                                  width: 1,
-                                ),
-                                columns: const [
-                                  DataColumn(label: Text('No.')),
-                                  DataColumn(
-                                    label: SizedBox(
-                                      width: 300,
-                                      child: Center(child: Text('Content')),
-                                    ),
-                                  ),
-                                  DataColumn(
-                                    label: SizedBox(
-                                      width: 150,
-                                      child: Center(child: Text('Result')),
-                                    ),
-                                  ),
-                                ],
-                                rows: _tableData.asMap().entries.map((entry) {
-                                  int index = entry.key;
-                                  Map<String, dynamic> data = entry.value;
-                                  return DataRow(cells: [
-                                    DataCell(Text((index + 1).toString())),
-                                    DataCell(
-                                      TextField(
-                                        onChanged: (value) {
-                                          setState(() {
-                                            data['content'] = value;
-                                            // Update result based on content
-                                            data['result'] = value.isNotEmpty
-                                                ? (value == 'Good' ? 'Good' : 'No Good')
-                                                : null;
-                                          });
-                                        },
-                                        onSubmitted: (value) {
-                                          // Add new row when Enter is pressed
-                                          setState(() {
-                                            _tableData.add({
-                                              'content': '',
-                                              'result': '',
-                                            });
-                                          });
-                                        },
-                                        decoration: const InputDecoration(border: OutlineInputBorder()),
-                                      ),
-                                    ),
-                                    DataCell(
-                                      Center( // Center the result text
-                                        child: Text(
-                                          data['result'] ?? '',
-                                          style: TextStyle(
-                                            color: data['result'] == 'Good' ? Colors.green : Colors.red,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ]);
-                                }).toList(),
-                              ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: DataTable(
+                            dividerThickness: 1,
+                            border: TableBorder.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
                             ),
-                          ],
+                            columns: const [
+                              DataColumn(label: Text('No.')),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 300,
+                                  child: Center(child: Text('Content')),
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 150,
+                                  child: Center(child: Text('Result')),
+                                ),
+                              ),
+                            ],
+                            rows: _tableData.asMap().entries.map((entry) {
+                              int index = entry.key;
+                              Map<String, dynamic> data = entry.value;
+                              return DataRow(cells: [
+                                DataCell(Text((index + 1).toString())),
+                                DataCell(
+                                  TextField(
+                                    onChanged: (value) {
+                                      setState(() {
+                                        data['content'] = value;
+                                        // Update result based on content
+                                        data['result'] = value.isNotEmpty
+                                            ? (value == 'Good' ? 'Good' : 'No Good')
+                                            : null;
+                                      });
+                                    },
+                                    onSubmitted: (value) {
+                                      // Add new row when Enter is pressed
+                                      setState(() {
+                                        _tableData.add({
+                                          'content': '',
+                                          'result': '',
+                                        });
+                                      });
+                                    },
+                                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                                  ),
+                                ),
+                                DataCell(
+                                  Center( // Center the result text
+                                    child: Text(
+                                      data['result'] ?? '',
+                                      style: TextStyle(
+                                        color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ]);
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ],
