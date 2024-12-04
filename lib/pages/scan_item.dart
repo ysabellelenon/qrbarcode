@@ -33,6 +33,7 @@ class _ScanItemState extends State<ScanItem> {
   final List<Map<String, dynamic>> _tableData = [];
   String? _labelContent; // New variable to hold the fetched label content
   final List<FocusNode> _focusNodes = [];
+  final Set<int> selectedRows = {};
 
   @override
   void initState() {
@@ -171,7 +172,7 @@ class _ScanItemState extends State<ScanItem> {
               padding: const EdgeInsets.all(20),
               child: Center(
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 900), // Outer container
+                  constraints: const BoxConstraints(maxWidth: 1200), // Increased from 900
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -274,43 +275,30 @@ class _ScanItemState extends State<ScanItem> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          width: 700,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Good', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'Enter Good value',
-                                      ),
-                                    ),
-                                  ],
+                              SizedBox(
+                                width: 200,
+                                child: TextField(
+                                  textAlign: TextAlign.center,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Good',
+                                    border: OutlineInputBorder(),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('No Good', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'Enter No Good value',
-                                      ),
-                                    ),
-                                  ],
+                              const SizedBox(width: 16), // Reduced spacing between inputs
+                              SizedBox(
+                                width: 200,
+                                child: TextField(
+                                  textAlign: TextAlign.center,
+                                  decoration: const InputDecoration(
+                                    labelText: 'No Good',
+                                    border: OutlineInputBorder(),
+                                  ),
                                 ),
                               ),
                             ],
@@ -324,40 +312,36 @@ class _ScanItemState extends State<ScanItem> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 30), // Add bottom margin
+                          margin: const EdgeInsets.only(bottom: 30),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: DataTable(
                             dividerThickness: 1,
-                            border: TableBorder.all(
-                              color: Colors.grey.shade300,
-                              width: 1,
-                            ),
                             columns: const [
                               DataColumn(
                                 label: SizedBox(
-                                  width: 100,
+                                  width: 50,
+                                  child: Center(child: Text('')), // For checkbox
+                                ),
+                              ),
+                              DataColumn(
+                                label: SizedBox(
+                                  width: 50,
                                   child: Center(child: Text('No.')),
                                 ),
                               ),
                               DataColumn(
                                 label: SizedBox(
-                                  width: 400,
+                                  width: 400, // Increased from 400
                                   child: Center(child: Text('Content')),
                                 ),
                               ),
                               DataColumn(
                                 label: SizedBox(
-                                  width: 200,
+                                  width: 170, // Increased from 200
                                   child: Center(child: Text('Result')),
-                                ),
-                              ),
-                              DataColumn(
-                                label: SizedBox(
-                                  width: 80,
-                                  child: Center(child: Text('')),
                                 ),
                               ),
                             ],
@@ -365,14 +349,34 @@ class _ScanItemState extends State<ScanItem> {
                               int index = entry.key;
                               Map<String, dynamic> data = entry.value;
                               return DataRow(cells: [
-                                DataCell(Text((index + 1).toString())),
+                                DataCell(
+                                  Center(
+                                    child: Checkbox(
+                                      value: selectedRows.contains(index),
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          if (value == true) {
+                                            selectedRows.add(index);
+                                          } else {
+                                            selectedRows.remove(index);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Center(
+                                    child: Text((index + 1).toString()),
+                                  ),
+                                ),
                                 DataCell(
                                   TextField(
+                                    textAlign: TextAlign.center, // Center the text input
                                     focusNode: _ensureFocusNode(index),
                                     onChanged: (value) {
                                       setState(() {
                                         data['content'] = value;
-                                        // Update result based on content
                                         data['result'] = value.isNotEmpty
                                             ? (value == 'Good' ? 'Good' : 'No Good')
                                             : null;
@@ -384,15 +388,16 @@ class _ScanItemState extends State<ScanItem> {
                                           'content': '',
                                           'result': '',
                                         });
-                                        // Add new focus node for the new row
                                         _focusNodes.add(FocusNode());
-                                        // Request focus on the new row after a brief delay
                                         Future.delayed(const Duration(milliseconds: 100), () {
                                           _focusNodes.last.requestFocus();
                                         });
                                       });
                                     },
-                                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
                                   ),
                                 ),
                                 DataCell(
@@ -405,35 +410,59 @@ class _ScanItemState extends State<ScanItem> {
                                     ),
                                   ),
                                 ),
-                                DataCell(
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      setState(() {
-                                        // Remove the focus node for this row
-                                        if (index < _focusNodes.length) {
-                                          _focusNodes[index].dispose();
-                                          _focusNodes.removeAt(index);
-                                        }
-                                        // Remove the row data
-                                        _tableData.removeAt(index);
-                                        // Only add a new row if the table becomes empty
-                                        if (_tableData.isEmpty) {
-                                          _tableData.add({
-                                            'content': '',
-                                            'result': '',
-                                          });
-                                          _focusNodes.add(FocusNode());
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
                               ]);
                             }).toList(),
                           ),
                         ),
                       ),
+
+                      // Add Delete Selected button
+                      if (selectedRows.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    // Sort indices in descending order to avoid index shifting issues
+                                    final sortedIndices = selectedRows.toList()..sort((a, b) => b.compareTo(a));
+                                    for (final index in sortedIndices) {
+                                      if (index < _focusNodes.length) {
+                                        _focusNodes[index].dispose();
+                                        _focusNodes.removeAt(index);
+                                      }
+                                      _tableData.removeAt(index);
+                                    }
+                                    selectedRows.clear();
+                                    
+                                    // Add a new row if table is empty
+                                    if (_tableData.isEmpty) {
+                                      _tableData.add({
+                                        'content': '',
+                                        'result': '',
+                                      });
+                                      _focusNodes.add(FocusNode());
+                                    }
+                                  });
+                                },
+                                child: const Text('Delete Selected'),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
