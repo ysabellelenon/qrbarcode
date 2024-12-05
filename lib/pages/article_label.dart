@@ -233,7 +233,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
-                            onPressed: () async {
+                            onPressed: isError ? null : () async {  // Disable button when isError is true
                               // Save the article label data to database
                               await DatabaseHelper().insertArticleLabel({
                                 'operatorScanId': widget.operatorScanId,
@@ -260,8 +260,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple, // Match the color
-                              foregroundColor: Colors.white, // Text color
+                              backgroundColor: isError ? Colors.grey : Colors.deepPurple, // Grey when disabled
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 32,
                                 vertical: 16,
