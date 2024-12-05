@@ -445,120 +445,144 @@ class _ScanItemState extends State<ScanItem> {
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: DataTable(
-                            dividerThickness: 1,
-                            border: TableBorder(
-                              verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                              horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                              left: BorderSide(width: 1, color: Colors.grey.shade300),
-                              right: BorderSide(width: 1, color: Colors.grey.shade300),
-                              top: BorderSide(width: 1, color: Colors.grey.shade300),
-                              bottom: BorderSide(width: 1, color: Colors.grey.shade300),
-                            ),
-                            columns: const [
-                              DataColumn(
-                                label: SizedBox(
-                                  width: 50,
-                                  child: Center(child: Text('')), // For checkbox
-                                ),
-                              ),
-                              DataColumn(
-                                label: SizedBox(
-                                  width: 50,
-                                  child: Center(child: Text('No.')),
-                                ),
-                              ),
-                              DataColumn(
-                                label: SizedBox(
-                                  width: 400, // Increased from 400
-                                  child: Center(child: Text('Content')),
-                                ),
-                              ),
-                              DataColumn(
-                                label: SizedBox(
-                                  width: 170, // Increased from 200
-                                  child: Center(child: Text('Result')),
-                                ),
-                              ),
-                            ],
-                            rows: _tableData.asMap().entries.map((entry) {
-                              int index = entry.key;
-                              Map<String, dynamic> data = entry.value;
-                              return DataRow(cells: [
-                                DataCell(
-                                  Center(
-                                    child: Checkbox(
-                                      value: selectedRows.contains(index),
-                                      onChanged: (bool? value) {
-                                        setState(() {
-                                          if (value == true) {
-                                            selectedRows.add(index);
-                                          } else {
-                                            selectedRows.remove(index);
-                                          }
-                                        });
-                                      },
-                                    ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Calculate dynamic widths based on container width
+                              final double checkboxWidth = constraints.maxWidth * 0.05;  // 5%
+                              final double numberWidth = constraints.maxWidth * 0.05;    // 5%
+                              final double contentWidth = constraints.maxWidth * 0.35;   // 35%
+                              final double resultWidth = constraints.maxWidth * 0.25;    // 25%
+
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: DataTable(
+                                  dividerThickness: 1,
+                                  border: TableBorder(
+                                    verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    left: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    right: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    top: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    bottom: BorderSide(width: 1, color: Colors.grey.shade300),
                                   ),
-                                ),
-                                DataCell(
-                                  Center(
-                                    child: Text((index + 1).toString()),
-                                  ),
-                                ),
-                                DataCell(
-                                  TextField(
-                                    textAlign: TextAlign.center,
-                                    focusNode: _ensureFocusNode(index),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        data['content'] = value;
-                                        if (value.isNotEmpty) {
-                                          String result = _validateContent(value, index);
-                                          data['result'] = result;
-                                          print('Content: $value, Result: $result');
-                                        } else {
-                                          data['result'] = '';
-                                        }
-                                        _updateCounts();
-                                      });
-                                    },
-                                    onSubmitted: (value) {
-                                      if (!_isQtyPerBoxReached) {
-                                        setState(() {
-                                          _tableData.add({
-                                            'content': '',
-                                            'result': '',
-                                          });
-                                          _focusNodes.add(FocusNode());
-                                          Future.delayed(const Duration(milliseconds: 100), () {
-                                            _focusNodes.last.requestFocus();
-                                          });
-                                          _updateCounts();
-                                        });
-                                      }
-                                    },
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                                    ),
-                                  ),
-                                ),
-                                DataCell(
-                                  Center(
-                                    child: Text(
-                                      data['result'] ?? '',
-                                      style: TextStyle(
-                                        color: data['result'] == 'Good' ? Colors.green : 
-                                               data['result'] == 'No Good' ? Colors.red : 
-                                               Colors.black,
-                                        fontWeight: FontWeight.bold,
+                                  columns: [
+                                    DataColumn(
+                                      label: SizedBox(
+                                        width: checkboxWidth,
+                                        child: const Center(child: Text('')), // For checkbox
                                       ),
                                     ),
-                                  ),
+                                    DataColumn(
+                                      label: SizedBox(
+                                        width: numberWidth,
+                                        child: const Center(child: Text('No.')),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: SizedBox(
+                                        width: contentWidth,
+                                        child: const Center(child: Text('Content')),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: SizedBox(
+                                        width: resultWidth,
+                                        child: const Center(child: Text('Result')),
+                                      ),
+                                    ),
+                                  ],
+                                  rows: _tableData.asMap().entries.map((entry) {
+                                    int index = entry.key;
+                                    Map<String, dynamic> data = entry.value;
+                                    return DataRow(cells: [
+                                      DataCell(
+                                        SizedBox(
+                                          width: checkboxWidth,
+                                          child: Center(
+                                            child: Checkbox(
+                                              value: selectedRows.contains(index),
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  if (value == true) {
+                                                    selectedRows.add(index);
+                                                  } else {
+                                                    selectedRows.remove(index);
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        SizedBox(
+                                          width: numberWidth,
+                                          child: Center(
+                                            child: Text((index + 1).toString()),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        SizedBox(
+                                          width: contentWidth,
+                                          child: TextField(
+                                            textAlign: TextAlign.center,
+                                            focusNode: _ensureFocusNode(index),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                data['content'] = value;
+                                                if (value.isNotEmpty) {
+                                                  String result = _validateContent(value, index);
+                                                  data['result'] = result;
+                                                } else {
+                                                  data['result'] = '';
+                                                }
+                                                _updateCounts();
+                                              });
+                                            },
+                                            onSubmitted: (value) {
+                                              if (!_isQtyPerBoxReached) {
+                                                setState(() {
+                                                  _tableData.add({
+                                                    'content': '',
+                                                    'result': '',
+                                                  });
+                                                  _focusNodes.add(FocusNode());
+                                                  Future.delayed(const Duration(milliseconds: 100), () {
+                                                    _focusNodes.last.requestFocus();
+                                                  });
+                                                  _updateCounts();
+                                                });
+                                              }
+                                            },
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DataCell(
+                                        SizedBox(
+                                          width: resultWidth,
+                                          child: Center(
+                                            child: Text(
+                                              data['result'] ?? '',
+                                              style: TextStyle(
+                                                color: data['result'] == 'Good' ? Colors.green : 
+                                                       data['result'] == 'No Good' ? Colors.red : 
+                                                       Colors.black,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ]);
+                                  }).toList(),
                                 ),
-                              ]);
-                            }).toList(),
+                              );
+                            },
                           ),
                         ),
                       ),
