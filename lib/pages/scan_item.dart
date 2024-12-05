@@ -600,7 +600,12 @@ class _ScanItemState extends State<ScanItem> {
 
                       // Add Delete Selected and Add Row buttons
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        padding: const EdgeInsets.only(
+                          left: 20,
+                          right: 20,
+                          top: 10,
+                          bottom: 30,  // Increased bottom padding
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
