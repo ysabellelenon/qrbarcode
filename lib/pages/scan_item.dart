@@ -180,12 +180,16 @@ class _ScanItemState extends State<ScanItem> {
   void _updateCounts() {
     int goodCount = 0;
     int noGoodCount = 0;
+    int populatedRowCount = 0;
 
     for (var data in _tableData) {
-      if (data['result'] == 'Good') {
-        goodCount++;
-      } else if (data['result'] == 'No Good') {
-        noGoodCount++;
+      if (data['content']?.isNotEmpty == true) {
+        populatedRowCount++;
+        if (data['result'] == 'Good') {
+          goodCount++;
+        } else if (data['result'] == 'No Good') {
+          noGoodCount++;
+        }
       }
     }
 
@@ -193,10 +197,14 @@ class _ScanItemState extends State<ScanItem> {
       goodCountController.text = goodCount.toString();
       noGoodCountController.text = noGoodCount.toString();
       inspectionQtyController.text = (goodCount + noGoodCount).toString();
-      qtyPerBoxController.text = _tableData.length.toString();
+      qtyPerBoxController.text = populatedRowCount.toString();
 
-      // Check if QTY per box limit is reached
-      if (_tableData.length == int.parse(widget.qtyPerBox) && !_isQtyPerBoxReached) {
+      // Reset _isQtyPerBoxReached if populated rows is less than required
+      if (populatedRowCount < int.parse(widget.qtyPerBox)) {
+        _isQtyPerBoxReached = false;
+      }
+      // Show dialog and set flag if QTY is reached
+      else if (populatedRowCount == int.parse(widget.qtyPerBox) && !_isQtyPerBoxReached) {
         _isQtyPerBoxReached = true;
         _showQtyReachedDialog();
       }
@@ -534,26 +542,29 @@ class _ScanItemState extends State<ScanItem> {
                                                 if (value.isNotEmpty) {
                                                   String result = _validateContent(value, index);
                                                   data['result'] = result;
+                                                  
+                                                  // Count populated rows
+                                                  int populatedRows = _tableData.where((row) => 
+                                                    row['content']?.isNotEmpty == true).length;
+                                                  
+                                                  // Create new row if this is the last row and QTY not reached
+                                                  if (index == _tableData.length - 1 && 
+                                                      !_isQtyPerBoxReached && 
+                                                      populatedRows < int.parse(widget.qtyPerBox)) {
+                                                    _tableData.add({
+                                                      'content': '',
+                                                      'result': '',
+                                                    });
+                                                    _focusNodes.add(FocusNode());
+                                                    Future.delayed(const Duration(milliseconds: 100), () {
+                                                      _focusNodes.last.requestFocus();
+                                                    });
+                                                  }
                                                 } else {
                                                   data['result'] = '';
                                                 }
                                                 _updateCounts();
                                               });
-                                            },
-                                            onSubmitted: (value) {
-                                              if (!_isQtyPerBoxReached) {
-                                                setState(() {
-                                                  _tableData.add({
-                                                    'content': '',
-                                                    'result': '',
-                                                  });
-                                                  _focusNodes.add(FocusNode());
-                                                  Future.delayed(const Duration(milliseconds: 100), () {
-                                                    _focusNodes.last.requestFocus();
-                                                  });
-                                                  _updateCounts();
-                                                });
-                                              }
                                             },
                                             decoration: const InputDecoration(
                                               border: InputBorder.none,
