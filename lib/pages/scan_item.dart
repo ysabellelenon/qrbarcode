@@ -598,13 +598,47 @@ class _ScanItemState extends State<ScanItem> {
                         ),
                       ),
 
-                      // Add Delete Selected button
-                      if (selectedRows.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
+                      // Add Delete Selected and Add Row buttons
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Add Row button - only show if QTY not reached
+                            if (!_isQtyPerBoxReached)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 32,
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _tableData.add({
+                                        'content': '',
+                                        'result': '',
+                                      });
+                                      _focusNodes.add(FocusNode());
+                                      // Focus on the new row after a short delay
+                                      Future.delayed(const Duration(milliseconds: 100), () {
+                                        _focusNodes.last.requestFocus();
+                                      });
+                                    });
+                                  },
+                                  child: const Text('Add Row'),
+                                ),
+                              ),
+                            
+                            // Delete Selected button
+                            if (selectedRows.isNotEmpty)
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
@@ -644,9 +678,9 @@ class _ScanItemState extends State<ScanItem> {
                                 },
                                 child: const Text('Delete Selected'),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
+                      ),
 
                       // Add Scan New Article Label button when QTY is reached
                       if (_isQtyPerBoxReached)
