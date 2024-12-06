@@ -388,9 +388,20 @@ class _ScanItemState extends State<ScanItem> {
                                   Text('P.O No: ${widget.resumeData?['poNo'] ?? ''}', style: const TextStyle(fontSize: 16)),
                                   Text('Lot Number: ${widget.resumeData?['lotNumber'] ?? ''}', style: const TextStyle(fontSize: 16)),
                                   const SizedBox(height: 32),
-                                  const Text('Content:', style: TextStyle(fontSize: 16)),
-                                  const SizedBox(height: 8),
-                                  Text(_labelContent ?? 'No content available', style: const TextStyle(fontSize: 16)),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Content:',
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '${_labelContent ?? ''}${_labelContent != null && lotNumber.isNotEmpty ? '_' : ''}${lotNumber}',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
