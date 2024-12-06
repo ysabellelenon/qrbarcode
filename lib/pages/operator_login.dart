@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import database helper
 import '../pages/article_label.dart'; // Import the new ArticleLabel page
+import '../pages/unfinished_items.dart'; // Import the new UnfinishedItems page
 
 class OperatorLogin extends StatefulWidget {
   const OperatorLogin({super.key});
@@ -232,6 +233,26 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                 ],
                               ),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UnfinishedItems(),
+                                ),
+                              );
+                            },
+                            child: const Text('View Unfinished Items'),
                           ),
                         ),
                       ],

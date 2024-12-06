@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle, ByteData;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
+import 'dart:convert';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -203,6 +204,21 @@ class DatabaseHelper {
     ''');
     
     print('Migrated database to version 3: Added operator_scans and article_labels tables');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS unfinished_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        lotNumber TEXT,
+        date TEXT,
+        content TEXT,
+        poNo TEXT,
+        quantity TEXT,
+        remarks TEXT,
+        tableData TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future<List<Map<String, dynamic>>> getUsers() async {
@@ -365,6 +381,37 @@ class DatabaseHelper {
       where: 'operatorScanId = ?',
       whereArgs: [operatorScanId],
       orderBy: 'createdAt DESC'
+    );
+  }
+
+  Future<void> insertUnfinishedItem(Map<String, dynamic> item) async {
+    final db = await database;
+    await db.insert(
+      'unfinished_items',
+      {
+        ...item,
+        'tableData': jsonEncode(item['tableData']),
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnfinishedItems() async {
+    final db = await database;
+    final List<Map<String, dynamic>> items = await db.query('unfinished_items', orderBy: 'date DESC');
+    return items.map((item) {
+      return {
+        ...item,
+        'tableData': jsonDecode(item['tableData']),
+      };
+    }).toList();
+  }
+
+  Future<void> deleteUnfinishedItems(List<int> ids) async {
+    final db = await database;
+    await db.delete(
+      'unfinished_items',
+      where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+      whereArgs: ids,
     );
   }
 } 
