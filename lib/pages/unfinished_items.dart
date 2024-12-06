@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../database_helper.dart';
+import '../pages/scan_item.dart';
 
 class UnfinishedItems extends StatefulWidget {
   const UnfinishedItems({super.key});
@@ -140,6 +141,7 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                                 // Table
                                 Expanded(
                                   child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
                                     child: DataTable(
                                       columnSpacing: 40,
                                       columns: [
@@ -275,6 +277,32 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ScanItem(
+                    resumeData: {
+                      'itemName': item['itemName'],
+                      'lotNumber': item['lotNumber'],
+                      'poNo': item['poNo'],
+                      'content': item['content'],
+                      'quantity': item['quantity'],
+                      'tableData': item['tableData'],
+                      'unfinishedItemId': item['id'], // Pass the ID to delete it later
+                    },
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Continue Process'),
           ),
         ],
       ),

@@ -4,17 +4,19 @@ import '../database_helper.dart'; // Import database helper
 import 'scan_item.dart'; // Import the ScanItem page
 
 class ArticleLabel extends StatefulWidget {
-  final String itemName;
-  final String poNo;
-  final int operatorScanId;
-  final int totalQty;
+  final String? itemName;
+  final String? poNo;
+  final int? operatorScanId;
+  final int? totalQty;
+  final Map<String, dynamic>? resumeData;
 
   const ArticleLabel({
     Key? key,
-    required this.itemName,
-    required this.poNo,
-    required this.operatorScanId,
-    required this.totalQty,
+    this.itemName,
+    this.poNo,
+    this.operatorScanId,
+    this.totalQty,
+    this.resumeData,
   }) : super(key: key);
 
   @override
@@ -26,6 +28,11 @@ class _ArticleLabelState extends State<ArticleLabel> {
   final TextEditingController lotNumberController = TextEditingController();
   final TextEditingController qtyController = TextEditingController();
   bool isError = false; // Track if there's an error
+
+  String get itemName => widget.resumeData?['itemName'] ?? widget.itemName ?? '';
+  String get poNo => widget.resumeData?['poNo'] ?? widget.poNo ?? '';
+  int get operatorScanId => widget.resumeData?['operatorScanId'] ?? widget.operatorScanId ?? 0;
+  int get totalQty => widget.resumeData?['totalQty'] ?? widget.totalQty ?? 0;
 
   void _validateArticleLabel(String articleLabel) {
     if (articleLabel.length >= 22) {
@@ -46,7 +53,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
           return; // Exit early
         }
 
-        if (extractedItemName.trim() != widget.itemName || extractedPoNo != widget.poNo) {
+        if (extractedItemName.trim() != itemName || extractedPoNo != poNo) {
           setState(() {
             isError = true; // Set error flag
           });
@@ -169,11 +176,11 @@ class _ArticleLabelState extends State<ArticleLabel> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Item Name: ${widget.itemName}',
+                          'Item Name: $itemName',
                           style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         Text(
-                          'P.O No: ${widget.poNo}',
+                          'P.O No: $poNo',
                           style: const TextStyle(fontSize: 18), // Adjusted font size
                         ),
                         const SizedBox(height: 32),
@@ -190,13 +197,15 @@ class _ArticleLabelState extends State<ArticleLabel> {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => ScanItem(
-                                    itemName: widget.itemName,
-                                    poNo: widget.poNo,
-                                    lotNumber: lotNumberController.text,
-                                    content: articleLabelController.text,
-                                    qtyPerBox: qtyController.text,
-                                    operatorScanId: widget.operatorScanId,
-                                    totalQty: widget.totalQty,
+                                    scanData: {
+                                      'itemName': itemName,
+                                      'poNo': poNo,
+                                      'lotNumber': lotNumberController.text,
+                                      'content': articleLabelController.text,
+                                      'qtyPerBox': qtyController.text,
+                                      'operatorScanId': operatorScanId,
+                                      'totalQty': totalQty,
+                                    },
                                   ),
                                 ),
                               );
@@ -236,7 +245,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             onPressed: isError ? null : () async {  // Disable button when isError is true
                               // Save the article label data to database
                               await DatabaseHelper().insertArticleLabel({
-                                'operatorScanId': widget.operatorScanId,
+                                'operatorScanId': operatorScanId,
                                 'articleLabel': articleLabelController.text,
                                 'lotNumber': lotNumberController.text,
                                 'qtyPerBox': qtyController.text,
@@ -248,13 +257,15 @@ class _ArticleLabelState extends State<ArticleLabel> {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => ScanItem(
-                                    itemName: widget.itemName,
-                                    poNo: widget.poNo,
-                                    lotNumber: lotNumberController.text,
-                                    content: articleLabelController.text,
-                                    qtyPerBox: qtyController.text,
-                                    operatorScanId: widget.operatorScanId,
-                                    totalQty: widget.totalQty,
+                                    scanData: {
+                                      'itemName': itemName,
+                                      'poNo': poNo,
+                                      'lotNumber': lotNumberController.text,
+                                      'content': articleLabelController.text,
+                                      'qtyPerBox': qtyController.text,
+                                      'operatorScanId': operatorScanId,
+                                      'totalQty': totalQty,
+                                    },
                                   ),
                                 ),
                               );

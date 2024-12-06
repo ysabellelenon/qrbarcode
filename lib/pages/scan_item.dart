@@ -5,27 +5,17 @@ import 'article_label.dart'; // Add this import
 import 'emergency_stop.dart'; // Add this import
 
 class ScanItem extends StatefulWidget {
-  final String itemName;
-  final String poNo;
-  final String lotNumber;
-  final String content;
-  final String qtyPerBox;
-  final int operatorScanId;
-  final int totalQty;
+  final Map<String, dynamic>? resumeData;
+  final Map<String, dynamic>? scanData;
 
   const ScanItem({
     Key? key,
-    required this.itemName,
-    required this.poNo,
-    required this.lotNumber,
-    required this.content,
-    required this.qtyPerBox,
-    required this.operatorScanId,
-    required this.totalQty,
+    this.resumeData,
+    this.scanData,
   }) : super(key: key);
 
   @override
-  _ScanItemState createState() => _ScanItemState();
+  State<ScanItem> createState() => _ScanItemState();
 }
 
 class _ScanItemState extends State<ScanItem> {
@@ -42,25 +32,71 @@ class _ScanItemState extends State<ScanItem> {
   final Set<int> selectedRows = {};
   bool _isQtyPerBoxReached = false;
 
+  String get itemName => widget.resumeData?['itemName'] ?? widget.scanData?['itemName'] ?? '';
+  String get poNo => widget.resumeData?['poNo'] ?? widget.scanData?['poNo'] ?? '';
+  String get lotNumber => widget.resumeData?['lotNumber'] ?? widget.scanData?['lotNumber'] ?? '';
+  String get content => widget.resumeData?['content'] ?? widget.scanData?['content'] ?? '';
+  String get qtyPerBox => widget.resumeData?['qtyPerBox'] ?? widget.scanData?['qtyPerBox'] ?? '';
+  int get operatorScanId => widget.resumeData?['operatorScanId'] ?? widget.scanData?['operatorScanId'] ?? 0;
+  int get totalQty => widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
+
   @override
   void initState() {
     super.initState();
-    _fetchLabelContent(widget.itemName);
-    // Add initial row
-    _tableData.add({
-      'content': '',
-      'result': '',
-    });
-    // Create initial focus node
-    _focusNodes.add(FocusNode());
+    _fetchLabelContent(itemName);
+
+    // If resuming from unfinished item, restore the table data
+    if (widget.resumeData != null) {
+      // Restore table data from resumeData
+      final List<dynamic> savedTableData = widget.resumeData!['tableData'];
+      _tableData.clear(); // Clear default empty row
+      _tableData.addAll(savedTableData.map((item) => {
+        'content': item['content'] ?? '',
+        'result': item['result'] ?? '',
+      }));
+      
+      // Create focus nodes for each row
+      for (int i = 0; i < _tableData.length; i++) {
+        _focusNodes.add(FocusNode());
+      }
+
+      // Add an empty row if needed
+      if (!_isQtyPerBoxReached) {
+        _tableData.add({
+          'content': '',
+          'result': '',
+        });
+        _focusNodes.add(FocusNode());
+      }
+
+      // Update counts
+      _updateCounts();
+    } else {
+      // Normal initialization for new scan
+      _tableData.add({
+        'content': '',
+        'result': '',
+      });
+      _focusNodes.add(FocusNode());
+    }
     
-    // Use operatorScanId if necessary
-    print('Operator Scan ID: ${widget.operatorScanId}');
-    // Set the total quantity from the operator login
-    totalQtyController.text = widget.totalQty.toString();
-    // Initialize with '0'
+    // Set the total quantity
+    if (widget.resumeData != null) {
+      // Use the quantity from unfinished item
+      totalQtyController.text = widget.resumeData!['quantity'] ?? totalQty.toString();
+    } else {
+      // Use the quantity from operator login or scan data
+      totalQtyController.text = totalQty.toString();
+    }
+
+    // Initialize with current counts
     goodCountController.text = '0';
     noGoodCountController.text = '0';
+    
+    // Update counts to reflect restored data
+    if (widget.resumeData != null) {
+      _updateCounts();
+    }
   }
 
   @override
@@ -200,14 +236,18 @@ class _ScanItemState extends State<ScanItem> {
       inspectionQtyController.text = (goodCount + noGoodCount).toString();
       qtyPerBoxController.text = populatedRowCount.toString();
 
-      // Reset _isQtyPerBoxReached if populated rows is less than required
-      if (populatedRowCount < int.parse(widget.qtyPerBox)) {
-        _isQtyPerBoxReached = false;
-      }
-      // Show dialog and set flag if QTY is reached
-      else if (populatedRowCount == int.parse(widget.qtyPerBox) && !_isQtyPerBoxReached) {
-        _isQtyPerBoxReached = true;
-        _showQtyReachedDialog();
+      // Check if we've reached the QTY per box
+      if (qtyPerBox.isNotEmpty) {
+        int targetQty = int.parse(qtyPerBox);
+        if (populatedRowCount >= targetQty) {
+          _isQtyPerBoxReached = true;
+          if (!widget.resumeData?['isQtyReached'] ?? false) {
+            // Only show dialog if this is a new achievement of the target
+            _showQtyReachedDialog();
+          }
+        } else {
+          _isQtyPerBoxReached = false;
+        }
       }
     });
   }
@@ -272,10 +312,10 @@ class _ScanItemState extends State<ScanItem> {
                     showDialog(
                       context: context,
                       builder: (context) => EmergencyStop(
-                        itemName: widget.itemName,
-                        lotNumber: widget.lotNumber,
-                        content: widget.content,
-                        poNo: widget.poNo,
+                        itemName: widget.resumeData?['itemName'] ?? '',
+                        lotNumber: widget.resumeData?['lotNumber'] ?? '',
+                        content: widget.resumeData?['content'] ?? '',
+                        poNo: widget.resumeData?['poNo'] ?? '',
                         quantity: totalQtyController.text,
                         tableData: _tableData,
                         username: 'operator', // You'll need to pass the actual username here
@@ -344,9 +384,9 @@ class _ScanItemState extends State<ScanItem> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Item Name: ${widget.itemName}', style: const TextStyle(fontSize: 16)),
-                                  Text('P.O No: ${widget.poNo}', style: const TextStyle(fontSize: 16)),
-                                  Text('Lot Number: ${widget.lotNumber}', style: const TextStyle(fontSize: 16)),
+                                  Text('Item Name: ${widget.resumeData?['itemName'] ?? ''}', style: const TextStyle(fontSize: 16)),
+                                  Text('P.O No: ${widget.resumeData?['poNo'] ?? ''}', style: const TextStyle(fontSize: 16)),
+                                  Text('Lot Number: ${widget.resumeData?['lotNumber'] ?? ''}', style: const TextStyle(fontSize: 16)),
                                   const SizedBox(height: 32),
                                   const Text('Content:', style: TextStyle(fontSize: 16)),
                                   const SizedBox(height: 8),
@@ -380,7 +420,7 @@ class _ScanItemState extends State<ScanItem> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          'QTY per box (${widget.qtyPerBox})',
+                                          'QTY per box ($qtyPerBox)',
                                           style: const TextStyle(fontSize: 16),
                                         ),
                                       ),
@@ -554,6 +594,7 @@ class _ScanItemState extends State<ScanItem> {
                                           child: TextField(
                                             textAlign: TextAlign.center,
                                             focusNode: _ensureFocusNode(index),
+                                            controller: TextEditingController(text: data['content']),
                                             onChanged: (value) {
                                               setState(() {
                                                 data['content'] = value;
@@ -568,7 +609,7 @@ class _ScanItemState extends State<ScanItem> {
                                                   // Create new row if this is the last row and QTY not reached
                                                   if (index == _tableData.length - 1 && 
                                                       !_isQtyPerBoxReached && 
-                                                      populatedRows < int.parse(widget.qtyPerBox)) {
+                                                      populatedRows < int.parse(widget.resumeData?['qtyPerBox'] ?? '')) {
                                                     _tableData.add({
                                                       'content': '',
                                                       'result': '',
@@ -730,10 +771,7 @@ class _ScanItemState extends State<ScanItem> {
                                       Navigator.of(context).pushReplacement(
                                         MaterialPageRoute(
                                           builder: (context) => ArticleLabel(
-                                            itemName: widget.itemName,
-                                            poNo: widget.poNo,
-                                            operatorScanId: widget.operatorScanId,
-                                            totalQty: widget.totalQty,
+                                            resumeData: widget.resumeData,
                                           ),
                                         ),
                                       );
