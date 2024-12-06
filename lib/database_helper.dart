@@ -20,26 +20,32 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String documentsDirectory = (await getApplicationDocumentsDirectory()).path;
-    String path = join(documentsDirectory, 'users.db');
+    final Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    final Directory dbDirectory = Directory(join(documentsDirectory.path, 'databases'));
+    if (!await dbDirectory.exists()) {
+      await dbDirectory.create(recursive: true);
+    }
+    
+    final String path = join(dbDirectory.path, 'users.db');
+    print('Database path: $path');
 
     bool shouldCopy = !await File(path).exists();
     
     if (shouldCopy) {
       try {
-        await Directory(dirname(path)).create(recursive: true);
         ByteData data = await rootBundle.load('assets/databases/users.db');
         List<int> bytes = data.buffer.asUint8List();
         await File(path).writeAsBytes(bytes, flush: true);
         print('Database copied from assets successfully');
       } catch (e) {
         print('Error copying database from assets: $e');
+        shouldCopy = false;
       }
     }
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         if (!shouldCopy) {
           await _createTables(db);
@@ -53,6 +59,12 @@ class DatabaseHelper {
         if (oldVersion < 3) {
           await _migrateToVersion3(db);
         }
+        if (oldVersion < 4) {
+          await _createTables(db);
+        }
+      },
+      onOpen: (db) async {
+        print('Database opened successfully');
       },
     );
   }
@@ -114,6 +126,21 @@ class DatabaseHelper {
         content TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS unfinished_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        lotNumber TEXT,
+        date TEXT,
+        content TEXT,
+        poNo TEXT,
+        quantity TEXT,
+        remarks TEXT,
+        tableData TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
   }
@@ -341,7 +368,8 @@ class DatabaseHelper {
   }
 
   Future<String> getDatabasePath() async {
-    String path = join(await getDatabasesPath(), 'users.db');
+    final Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    final String path = join(documentsDirectory.path, 'databases', 'users.db');
     return path;
   }
 

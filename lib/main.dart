@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Import sqflite_common_ffi
+import 'utils/db_path_printer.dart';
 import 'pages/login_page.dart';
 import 'pages/engineer_login.dart';
 import 'pages/account_settings.dart';
@@ -11,16 +12,27 @@ import 'pages/register_item.dart';
 import 'pages/revise_item.dart';
 import 'pages/operator_login.dart';
 import 'database_helper.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize sqflite_common_ffi for desktop platforms
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
-  // Ensure database initialization
-  await DatabaseHelper().database;
+  try {
+    // Initialize database
+    final db = await DatabaseHelper().database;
+    print('Database initialized successfully');
+    
+    // Print database path and contents
+    await DbPathPrinter.printPath();
+  } catch (e) {
+    print('Error initializing database: $e');
+  }
 
   runApp(const MyApp());
 }

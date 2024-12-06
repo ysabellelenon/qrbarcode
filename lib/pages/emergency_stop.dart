@@ -181,36 +181,80 @@ class EmergencySummary extends StatelessWidget {
             _buildResultsTable(),
             const SizedBox(height: 20),
             Center(
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  // TODO: Implement actual printing functionality
-                  print('Printing summary...');
-                  
-                  // Save to unfinished items in database
-                  await DatabaseHelper().insertUnfinishedItem({
-                    'itemName': itemName,
-                    'lotNumber': lotNumber,
-                    'date': date.toIso8601String(),
-                    'content': content,
-                    'poNo': poNo,
-                    'quantity': quantity,
-                    'remarks': remarks,
-                    'tableData': tableData.map((item) => Map<String, dynamic>.from(item)).toList(),
-                  });
-
-                  // Navigate to login page
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                  }
-                },
-                icon: const Icon(Icons.print),
-                label: const Text('Print'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          content: const Text('This will print the summary.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.print),
+                    label: const Text('Print'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        // Save to unfinished items in database
+                        await DatabaseHelper().insertUnfinishedItem({
+                          'itemName': itemName,
+                          'lotNumber': lotNumber,
+                          'date': date.toIso8601String(),
+                          'content': content,
+                          'poNo': poNo,
+                          'quantity': quantity,
+                          'remarks': remarks,
+                          'tableData': tableData.map((item) => Map<String, dynamic>.from(item)).toList(),
+                        });
+
+                        // Navigate to login page
+                        if (context.mounted) {
+                          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Error'),
+                              content: Text('Failed to save unfinished item: $e'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                    ),
+                    child: const Text('Done'),
+                  ),
+                ],
               ),
             ),
           ],
