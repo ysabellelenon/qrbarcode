@@ -47,8 +47,8 @@ class DatabaseHelper {
       path,
       version: 4,
       onCreate: (db, version) async {
-        if (!shouldCopy) {
-          await _createTables(db);
+        await _createTablesIfNotExist(db);
+        if ((await db.query('users')).isEmpty) {
           await _insertDefaultUsers(db);
         }
       },
@@ -60,7 +60,7 @@ class DatabaseHelper {
           await _migrateToVersion3(db);
         }
         if (oldVersion < 4) {
-          await _createTables(db);
+          await _addNewTablesIfNotExist(db);
         }
       },
       onOpen: (db) async {
@@ -69,7 +69,7 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> _createTables(Database db) async {
+  Future<void> _createTablesIfNotExist(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,6 +129,23 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS unfinished_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        lotNumber TEXT,
+        date TEXT,
+        content TEXT,
+        poNo TEXT,
+        quantity TEXT,
+        remarks TEXT,
+        tableData TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+  }
+
+  Future<void> _addNewTablesIfNotExist(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS unfinished_items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,46 +286,62 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getItems() async {
-    final db = await database;
-    final List<Map<String, dynamic>> items = await db.query('items', orderBy: 'id DESC');
-    final List<Map<String, dynamic>> result = [];
-    
-    for (var item in items) {
-      final codes = await db.query(
-        'item_codes',
-        where: 'itemId = ?',
-        whereArgs: [item['id']],
-      );
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> items = await db.query('items', orderBy: 'id DESC');
+      print('Retrieved ${items.length} items from database');
       
-      result.add({
-        ...Map<String, dynamic>.from(item),
-        'codes': codes,
-      });
+      final List<Map<String, dynamic>> result = [];
+      
+      for (var item in items) {
+        final codes = await db.query(
+          'item_codes',
+          where: 'itemId = ?',
+          whereArgs: [item['id']],
+        );
+        print('Retrieved ${codes.length} codes for item ${item['id']}');
+        
+        result.add({
+          ...Map<String, dynamic>.from(item),
+          'codes': codes,
+        });
+      }
+      
+      return result;
+    } catch (e) {
+      print('Error retrieving items: $e');
+      throw e;
     }
-    
-    return result;
   }
 
   Future<void> insertItem(Map<String, dynamic> item) async {
     final db = await database;
     
-    await db.transaction((txn) async {
-      final itemId = await txn.insert('items', {
-        'itemCode': item['itemCode'],
-        'revision': item['revision'],
-        'codeCount': item['codeCount'],
-      });
-
-      for (var code in (item['codes'] as List)) {
-        await txn.insert('item_codes', {
-          'itemId': itemId,
-          'category': code['category'],
-          'content': code['content'],
-          'hasSubLot': code['hasSubLot'] == 1 ? 1 : 0,
-          'serialCount': code['serialCount'],
+    try {
+      await db.transaction((txn) async {
+        final itemId = await txn.insert('items', {
+          'itemCode': item['itemCode'],
+          'revision': item['revision'],
+          'codeCount': item['codeCount'],
         });
-      }
-    });
+        print('Inserted item with ID: $itemId');
+
+        for (var code in (item['codes'] as List)) {
+          final codeId = await txn.insert('item_codes', {
+            'itemId': itemId,
+            'category': code['category'],
+            'content': code['content'],
+            'hasSubLot': code['hasSubLot'] == true ? 1 : 0,
+            'serialCount': code['serialCount'],
+          });
+          print('Inserted code with ID: $codeId for item: $itemId');
+        }
+      });
+      print('Successfully inserted item and all codes');
+    } catch (e) {
+      print('Error inserting item: $e');
+      throw e;
+    }
   }
 
   Future<void> updateItem(int itemId, Map<String, dynamic> item) async {
@@ -441,5 +474,29 @@ class DatabaseHelper {
       where: 'id IN (${List.filled(ids.length, '?').join(',')})',
       whereArgs: ids,
     );
+  }
+
+  Future<void> verifyDatabaseTables() async {
+    final db = await database;
+    try {
+      // Get list of all tables
+      final tables = await db.query('sqlite_master', 
+        where: 'type = ?', 
+        whereArgs: ['table']
+      );
+      
+      print('\nDatabase Tables:');
+      print('---------------');
+      for (var table in tables) {
+        print('Table: ${table['name']}');
+        // Get count of records in each table
+        final count = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM ${table['name']}')
+        );
+        print('Record count: $count');
+      }
+    } catch (e) {
+      print('Error verifying tables: $e');
+    }
   }
 } 

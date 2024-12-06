@@ -13,6 +13,9 @@ class DbPathPrinter {
       if (await dbFile.exists()) {
         print('Database file exists');
         
+        // Verify database tables
+        await DatabaseHelper().verifyDatabaseTables();
+        
         // Print database contents
         final contents = await DatabaseHelper().getAllDatabaseContents();
         
@@ -40,7 +43,7 @@ class DbPathPrinter {
         print('Database file does not exist at the specified location');
       }
     } catch (e) {
-      print('Error accessing database: $e');
+      print('Error in printPath: $e');
     }
   }
 }
