@@ -384,9 +384,9 @@ class _ScanItemState extends State<ScanItem> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Item Name: ${widget.resumeData?['itemName'] ?? ''}', style: const TextStyle(fontSize: 16)),
-                                  Text('P.O No: ${widget.resumeData?['poNo'] ?? ''}', style: const TextStyle(fontSize: 16)),
-                                  Text('Lot Number: ${widget.resumeData?['lotNumber'] ?? ''}', style: const TextStyle(fontSize: 16)),
+                                  Text('Item Name: $itemName', style: const TextStyle(fontSize: 16)),
+                                  Text('P.O No: $poNo', style: const TextStyle(fontSize: 16)),
+                                  Text('Lot Number: $lotNumber', style: const TextStyle(fontSize: 16)),
                                   const SizedBox(height: 32),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
