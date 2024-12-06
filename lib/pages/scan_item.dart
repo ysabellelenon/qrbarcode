@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import the DatabaseHelper
 import 'article_label.dart'; // Add this import
+import 'emergency_stop.dart'; // Add this import
 
 class ScanItem extends StatefulWidget {
   final String itemName;
@@ -263,8 +264,25 @@ class _ScanItemState extends State<ScanItem> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
-                  child: const Text('Logout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => EmergencyStop(
+                        itemName: widget.itemName,
+                        lotNumber: widget.lotNumber,
+                        content: widget.content,
+                        poNo: widget.poNo,
+                        quantity: totalQtyController.text,
+                        tableData: _tableData,
+                        username: 'operator', // You'll need to pass the actual username here
+                      ),
+                    );
+                  },
+                  child: const Text('Emergency'),
                 ),
               ],
             ),
