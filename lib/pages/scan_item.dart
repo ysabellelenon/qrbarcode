@@ -33,10 +33,10 @@ class _ScanItemState extends State<ScanItem> {
   bool _isQtyPerBoxReached = false;
   int currentRowNumber = 1;
 
-  String get itemName => widget.resumeData?['itemName'] ?? widget.scanData?['itemName'] ?? '';
-  String get poNo => widget.resumeData?['poNo'] ?? widget.scanData?['poNo'] ?? '';
-  String get lotNumber => widget.resumeData?['lotNumber'] ?? widget.scanData?['lotNumber'] ?? '';
-  String get content => widget.resumeData?['content'] ?? widget.scanData?['content'] ?? '';
+  String get itemName => widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
+  String get poNo => widget.scanData?['poNo'] ?? widget.resumeData?['poNo'] ?? '';
+  String get lotNumber => widget.scanData?['lotNumber'] ?? widget.resumeData?['lotNumber'] ?? '';
+  String get content => widget.scanData?['content'] ?? widget.resumeData?['content'] ?? '';
   String get qtyPerBox => widget.resumeData?['qtyPerBox'] ?? widget.scanData?['qtyPerBox'] ?? '';
   int get operatorScanId => widget.resumeData?['operatorScanId'] ?? widget.scanData?['operatorScanId'] ?? 0;
   int get totalQty => widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
@@ -329,16 +329,23 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
+                    print('Debug - itemName: $itemName');
+                    print('Debug - lotNumber: $lotNumber');
+                    print('Debug - content: $content');
+                    print('Debug - poNo: $poNo');
+                    
                     showDialog(
                       context: context,
                       builder: (context) => EmergencyStop(
-                        itemName: widget.resumeData?['itemName'] ?? '',
-                        lotNumber: widget.resumeData?['lotNumber'] ?? '',
-                        content: widget.resumeData?['content'] ?? '',
-                        poNo: widget.resumeData?['poNo'] ?? '',
+                        itemName: itemName,
+                        lotNumber: lotNumber,
+                        content: _labelContent ?? content,
+                        poNo: poNo,
                         quantity: totalQtyController.text,
-                        tableData: _tableData,
-                        username: 'operator', // You'll need to pass the actual username here
+                        tableData: _tableData.where((item) => 
+                          item['content']?.isNotEmpty == true
+                        ).map((item) => Map<String, dynamic>.from(item)).toList(),
+                        username: 'operator',
                       ),
                     );
                   },

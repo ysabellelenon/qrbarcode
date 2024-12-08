@@ -59,6 +59,11 @@ class _EmergencyStopState extends State<EmergencyStop> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
+            autofocus: true,
+            onSubmitted: (_) {
+              Navigator.pop(context);
+              _showSummaryPage();
+            },
           ),
           actions: [
             TextButton(
@@ -66,6 +71,7 @@ class _EmergencyStopState extends State<EmergencyStop> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
+              focusNode: FocusNode(),
               onPressed: () {
                 Navigator.pop(context);
                 _showSummaryPage();
@@ -79,6 +85,13 @@ class _EmergencyStopState extends State<EmergencyStop> {
   }
 
   void _showSummaryPage() {
+    print('EmergencyStop - Showing summary with:');
+    print('itemName: ${widget.itemName}');
+    print('lotNumber: ${widget.lotNumber}');
+    print('content: ${widget.content}');
+    print('poNo: ${widget.poNo}');
+    print('quantity: ${widget.quantity}');
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -108,6 +121,10 @@ class _EmergencyStopState extends State<EmergencyStop> {
           TextField(
             controller: _passwordController,
             obscureText: true,
+            autofocus: true,
+            onSubmitted: (_) {
+              _validatePassword();
+            },
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               errorText: _errorMessage.isNotEmpty ? _errorMessage : null,
@@ -151,6 +168,11 @@ class EmergencySummary extends StatelessWidget {
     required this.remarks,
   }) : super(key: key);
 
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+           '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,7 +186,7 @@ class EmergencySummary extends StatelessWidget {
           children: [
             _buildInfoSection('Item Name', itemName),
             _buildInfoSection('Lot Number', lotNumber),
-            _buildInfoSection('Date', date.toString()),
+            _buildInfoSection('Date', _formatDate(date)),
             _buildInfoSection('Content', content),
             _buildInfoSection('P.O Number', poNo),
             _buildInfoSection('Quantity', quantity),
@@ -272,14 +294,14 @@ class EmergencySummary extends StatelessWidget {
           SizedBox(
             width: 120,
             child: Text(
-              label + ':',
+              '$label:',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           Expanded(
-            child: Text(value),
+            child: Text(value.isEmpty ? '-' : value),
           ),
         ],
       ),
