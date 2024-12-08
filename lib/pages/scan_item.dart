@@ -31,6 +31,7 @@ class _ScanItemState extends State<ScanItem> {
   final List<FocusNode> _focusNodes = [];
   final Set<int> selectedRows = {};
   bool _isQtyPerBoxReached = false;
+  int currentRowNumber = 1;
 
   String get itemName => widget.resumeData?['itemName'] ?? widget.scanData?['itemName'] ?? '';
   String get poNo => widget.resumeData?['poNo'] ?? widget.scanData?['poNo'] ?? '';
@@ -135,10 +136,10 @@ class _ScanItemState extends State<ScanItem> {
     }
   }
 
-  String _validateContent(String content, int rowIndex) {
+  void _validateContent(String content, int rowIndex) {
     if (_itemCategory == null || _labelContent == null) {
       print('Category or label content is null');
-      return '';
+      return;
     }
 
     print('Validating content: $content');
@@ -146,52 +147,62 @@ class _ScanItemState extends State<ScanItem> {
     print('Label Content: $_labelContent');
     print('Row Index: $rowIndex');
 
+    String result = '';
+    
     if (_itemCategory == 'Non-Counting') {
-      bool isGood = content == _labelContent;
-      print('Non-Counting result: ${isGood ? "Good" : "No Good"}');
-      return isGood ? 'Good' : 'No Good';
+      result = content == _labelContent ? 'Good' : 'No Good';
+      print('Non-Counting result: $result');
     } else if (_itemCategory == 'Counting') {
       // For first row, content should be different from label content
       if (rowIndex == 0) {
         bool isGood = content != _labelContent;
         if (isGood) {
           _usedContents.add(content);
+          result = 'Good';
+        } else {
+          result = 'No Good';
         }
-        print('Counting first row result: ${isGood ? "Good" : "No Good"}');
-        return isGood ? 'Good' : 'No Good';
-      }
-      
-      // For subsequent rows:
-      // 1. Check if content is already used in previous rows
-      if (_usedContents.contains(content)) {
-        print('Duplicate content found');
-        return 'No Good';
-      }
-      
-      // 2. Content should be different from static content
-      if (content == _labelContent) {
-        print('Content matches static label');
-        return 'No Good';
-      }
-      
-      // 3. Content should be different from all previous contents
-      bool isGood = true;
-      for (var i = 0; i < rowIndex; i++) {
-        if (_tableData[i]['content'] == content) {
-          isGood = false;
-          break;
+        print('Counting first row result: $result');
+      } else {
+        // For subsequent rows
+        if (_usedContents.contains(content)) {
+          print('Duplicate content found');
+          result = 'No Good';
+        } else if (content == _labelContent) {
+          print('Content matches static label');
+          result = 'No Good';
+        } else {
+          result = 'Good';
+          _usedContents.add(content);
         }
       }
-      
-      if (isGood) {
-        _usedContents.add(content);
-      }
-      print('Counting subsequent row result: ${isGood ? "Good" : "No Good"}');
-      return isGood ? 'Good' : 'No Good';
     }
-    
-    print('No category match found');
-    return '';
+
+    setState(() {
+      _tableData[rowIndex]['result'] = result;
+      
+      // Update counts
+      _updateCounts();
+      
+      // Add new row if this is the last row and QTY not reached, regardless of result
+      if (rowIndex == _tableData.length - 1 && !_isQtyPerBoxReached) {
+        String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
+        int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
+        
+        if (targetQty > 0 && _tableData.length < targetQty) {
+          _tableData.add({
+            'content': '',
+            'result': '',
+          });
+          _focusNodes.add(FocusNode());
+          
+          // Focus on the new row after a short delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _focusNodes.last.requestFocus();
+          });
+        }
+      }
+    });
   }
 
   void _addRow() {
@@ -237,17 +248,16 @@ class _ScanItemState extends State<ScanItem> {
       qtyPerBoxController.text = populatedRowCount.toString();
 
       // Check if we've reached the QTY per box
-      if (qtyPerBox.isNotEmpty) {
-        int targetQty = int.parse(qtyPerBox);
-        if (populatedRowCount >= targetQty) {
-          _isQtyPerBoxReached = true;
-          if (!widget.resumeData?['isQtyReached'] ?? false) {
-            // Only show dialog if this is a new achievement of the target
-            _showQtyReachedDialog();
-          }
-        } else {
-          _isQtyPerBoxReached = false;
+      String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
+      int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
+      
+      if (targetQty > 0 && populatedRowCount >= targetQty) {
+        _isQtyPerBoxReached = true;
+        if (!widget.resumeData?['isQtyReached'] ?? false) {
+          _showQtyReachedDialog();
         }
+      } else {
+        _isQtyPerBoxReached = false;
       }
     });
   }
@@ -271,6 +281,16 @@ class _ScanItemState extends State<ScanItem> {
         );
       },
     );
+  }
+
+  void addNewTableRow(String content) {
+    setState(() {
+      _tableData.add({
+        'content': content,
+        'result': 'Good'
+      });
+      currentRowNumber++;
+    });
   }
 
   @override
@@ -610,26 +630,7 @@ class _ScanItemState extends State<ScanItem> {
                                               setState(() {
                                                 data['content'] = value;
                                                 if (value.isNotEmpty) {
-                                                  String result = _validateContent(value, index);
-                                                  data['result'] = result;
-                                                  
-                                                  // Count populated rows
-                                                  int populatedRows = _tableData.where((row) => 
-                                                    row['content']?.isNotEmpty == true).length;
-                                                  
-                                                  // Create new row if this is the last row and QTY not reached
-                                                  if (index == _tableData.length - 1 && 
-                                                      !_isQtyPerBoxReached && 
-                                                      populatedRows < int.parse(widget.resumeData?['qtyPerBox'] ?? '')) {
-                                                    _tableData.add({
-                                                      'content': '',
-                                                      'result': '',
-                                                    });
-                                                    _focusNodes.add(FocusNode());
-                                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                                      _focusNodes.last.requestFocus();
-                                                    });
-                                                  }
+                                                  _validateContent(value, index);
                                                 } else {
                                                   data['result'] = '';
                                                 }
