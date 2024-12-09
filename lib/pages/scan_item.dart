@@ -32,6 +32,7 @@ class _ScanItemState extends State<ScanItem> {
   final Set<int> selectedRows = {};
   bool _isQtyPerBoxReached = false;
   int currentRowNumber = 1;
+  bool _hasShownQtyReachedDialog = false;
 
   String get itemName => widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo => widget.scanData?['poNo'] ?? widget.resumeData?['poNo'] ?? '';
@@ -247,13 +248,20 @@ class _ScanItemState extends State<ScanItem> {
       String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
       
+      bool wasQtyReached = widget.resumeData != null && 
+                          widget.resumeData!.containsKey('isQtyReached') && 
+                          widget.resumeData!['isQtyReached'] == true;
+      
       if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
-        if (!widget.resumeData?['isQtyReached'] ?? false) {
+        // Only show dialog if this is not a resumed item and dialog hasn't been shown yet
+        if (!wasQtyReached && !_hasShownQtyReachedDialog) {
+          _hasShownQtyReachedDialog = true;  // Set flag before showing dialog
           _showQtyReachedDialog();
         }
       } else {
         _isQtyPerBoxReached = false;
+        _hasShownQtyReachedDialog = false;  // Reset flag when qty is no longer reached
       }
     });
   }
@@ -261,7 +269,7 @@ class _ScanItemState extends State<ScanItem> {
   void _showQtyReachedDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false,  // User must tap OK to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Information'),
