@@ -142,46 +142,42 @@ class _ScanItemState extends State<ScanItem> {
       return;
     }
 
+    // Construct the full static content by combining label content and lot number
+    String staticContent = '${_labelContent}_$lotNumber';
+    
     print('Validating content: $content');
     print('Category: $_itemCategory');
-    print('Label Content: $_labelContent');
+    print('Static Content: $staticContent');
     print('Row Index: $rowIndex');
 
     String result = '';
     
     if (_itemCategory == 'Non-Counting') {
-      result = content == _labelContent ? 'Good' : 'No Good';
+      // For Non-Counting, content should match the full static content
+      result = content == staticContent ? 'Good' : 'No Good';
       print('Non-Counting result: $result');
     } else if (_itemCategory == 'Counting') {
-      // For first row, content should be different from label content
-      if (rowIndex == 0) {
-        bool isGood = content != _labelContent;
-        if (isGood) {
-          _usedContents.add(content);
-          result = 'Good';
-        } else {
-          result = 'No Good';
-        }
-        print('Counting first row result: $result');
-      } else {
-        // For subsequent rows
-        if (_usedContents.contains(content)) {
-          print('Duplicate content found');
-          result = 'No Good';
-        } else if (content == _labelContent) {
-          print('Content matches static label');
-          result = 'No Good';
-        } else {
-          result = 'Good';
-          _usedContents.add(content);
-        }
+      // For Counting category:
+      // 1. Content should NOT match the full static content
+      if (content == staticContent) {
+        result = 'No Good';
+        print('Content matches static content - No Good');
+      } 
+      // 2. Content should NOT match any previous content
+      else if (_usedContents.contains(content)) {
+        result = 'No Good';
+        print('Duplicate content found - No Good');
+      }
+      // 3. If it passes both checks, it's Good
+      else {
+        result = 'Good';
+        _usedContents.add(content);
+        print('Content is unique - Good');
       }
     }
 
     setState(() {
       _tableData[rowIndex]['result'] = result;
-      
-      // Update counts
       _updateCounts();
       
       // Add new row if this is the last row and QTY not reached, regardless of result
