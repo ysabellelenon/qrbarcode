@@ -52,15 +52,19 @@ class _OperatorLoginState extends State<OperatorLogin> {
       orElse: () => {},
     );
 
-    setState(() {
-      if (matchingItem.isNotEmpty && matchingItem['codes']?.isNotEmpty == true) {
-        _labelContent = matchingItem['codes'][0]['content'];
-        _isItemFound = true;
-      } else {
-        _labelContent = 'Item not found';
-        _isItemFound = false;
-      }
-    });
+    if (mounted) {  // Check if widget is still mounted
+      setState(() {
+        if (matchingItem.isNotEmpty && matchingItem['codes']?.isNotEmpty == true) {
+          _labelContent = matchingItem['codes'][0]['content'];
+          _isItemFound = true;
+          // Move focus to P.O No. field after confirming item is found
+          FocusScope.of(context).requestFocus(_poNoFocus);
+        } else {
+          _labelContent = 'Item not found';
+          _isItemFound = false;
+        }
+      });
+    }
   }
 
   void _handleSubmit() async {
@@ -194,6 +198,11 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    onChanged: (value) {
+                                      if (value.isNotEmpty) {
+                                        FocusScope.of(context).requestFocus(_qtyFocus);
+                                      }
+                                    },
                                     onFieldSubmitted: (_) {
                                       FocusScope.of(context).requestFocus(_qtyFocus);
                                     },
@@ -208,8 +217,11 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                     keyboardType: TextInputType.number,
                                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    onChanged: (value) {
+                                      // Remove automatic submission
+                                    },
                                     onFieldSubmitted: (_) {
-                                      _handleSubmit();
+                                      _handleSubmit(); // Only submit when Enter is pressed
                                     },
                                   ),
                                   const SizedBox(height: 32),
