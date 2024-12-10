@@ -84,9 +84,12 @@ class _FinishedItemState extends State<FinishedItem> {
             .toList(),
       });
 
-      // Navigate to login page
+      // Navigate to operator login page instead of logging out
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/operator-login',
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
