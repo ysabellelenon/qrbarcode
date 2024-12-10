@@ -263,21 +263,30 @@ class _ScanItemState extends State<ScanItem> {
       String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
 
+      // Check if total QTY has been reached
+      int currentInspectionQty = goodCount + noGoodCount;
+      int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+
       bool wasQtyReached = widget.resumeData != null &&
           widget.resumeData!.containsKey('isQtyReached') &&
           widget.resumeData!['isQtyReached'] == true;
 
-      if (targetQty > 0 && populatedRowCount >= targetQty) {
+      if (currentInspectionQty >= totalTargetQty) {
+        // Show Total QTY reached dialog
+        if (!_hasShownQtyReachedDialog) {
+          _hasShownQtyReachedDialog = true;
+          _showTotalQtyReachedDialog();
+        }
+      } else if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
-        // Only show dialog if this is not a resumed item and dialog hasn't been shown yet
+        // Only show QTY per box dialog if this is not a resumed item and dialog hasn't been shown yet
         if (!wasQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true; // Set flag before showing dialog
+          _hasShownQtyReachedDialog = true;
           _showQtyReachedDialog();
         }
       } else {
         _isQtyPerBoxReached = false;
-        _hasShownQtyReachedDialog =
-            false; // Reset flag when qty is no longer reached
+        _hasShownQtyReachedDialog = false;
       }
     });
   }
@@ -290,6 +299,27 @@ class _ScanItemState extends State<ScanItem> {
         return AlertDialog(
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTotalQtyReachedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must tap OK to dismiss
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Information'),
+          content: const Text('TOTAL QTY has been reached'),
           actions: [
             TextButton(
               onPressed: () {
