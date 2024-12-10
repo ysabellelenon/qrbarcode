@@ -221,6 +221,8 @@ class EmergencySummary extends StatelessWidget {
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
   }
 
+  String get _combinedContent => '${content}_$lotNumber';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,7 +237,7 @@ class EmergencySummary extends StatelessWidget {
             _buildInfoSection('Item Name', itemName),
             _buildInfoSection('Lot Number', lotNumber),
             _buildInfoSection('Date', _formatDate(date)),
-            _buildInfoSection('Content', content),
+            _buildInfoSection('Content', _combinedContent),
             _buildInfoSection('P.O Number', poNo),
             _buildInfoSection('Quantity', quantity),
             _buildInfoSection('Remarks', remarks),
