@@ -86,6 +86,10 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
           ? (codes[0]['content']?.trim() ?? '')
           : '';
 
+      // Check if any code has Sub-Lot rules enabled and if there are any counting codes
+      bool hasCountingCodes = codes.any((code) => code['category'] == 'Counting');
+      bool hasSubLotEnabled = codes.any((code) => code['hasSubLot'] == 1);
+
       for (int i = 0; i < codes.length; i++) {
         var code = codes[i];
         bool isFirstRow = i == 0;
@@ -124,6 +128,21 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                         style: const TextStyle(color: Colors.cyan)),
               ),
               DataCell(Text(code['content'] ?? '')),
+              isFirstRow
+                  ? DataCell(
+                      Text(
+                        hasCountingCodes 
+                            ? (hasSubLotEnabled ? 'Yes' : 'No')
+                            : 'N/A',
+                        style: TextStyle(
+                          color: hasCountingCodes
+                              ? (hasSubLotEnabled ? Colors.green : Colors.red)
+                              : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  : const DataCell(Text('')),
               isFirstRow
                   ? DataCell(
                       OutlinedButton(
@@ -312,6 +331,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                         const DataColumn(label: Text('REV.')),
                                         const DataColumn(label: Text('Category')),
                                         const DataColumn(label: Text('Label Content')),
+                                        const DataColumn(label: Text('Sub-Lot Enabled')),
                                         const DataColumn(label: Text('Actions')),
                                       ],
                                       rows: _buildDataRows(),
