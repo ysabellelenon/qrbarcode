@@ -358,7 +358,7 @@ class _ScanItemState extends State<ScanItem> {
                         lotNumber: lotNumber,
                         content: _labelContent ?? content,
                         poNo: poNo,
-                        quantity: totalQtyController.text,
+                        quantity: qtyPerBoxController.text,
                         tableData: _tableData
                             .where(
                                 (item) => item['content']?.isNotEmpty == true)

@@ -280,7 +280,7 @@ class EmergencySummary extends StatelessWidget {
                           'date': date.toIso8601String(),
                           'content': content,
                           'poNo': poNo,
-                          'quantity': quantity,
+                          'quantity': tableData.length.toString(),
                           'remarks': remarks,
                           'tableData': tableData
                               .map((item) => Map<String, dynamic>.from(item))
