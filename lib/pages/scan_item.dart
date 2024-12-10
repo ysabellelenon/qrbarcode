@@ -3,6 +3,7 @@ import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import the DatabaseHelper
 import 'article_label.dart'; // Add this import
 import 'emergency_stop.dart'; // Add this import
+import 'finished_item.dart'; // Add this import
 
 class ScanItem extends StatefulWidget {
   final Map<String, dynamic>? resumeData;
@@ -345,8 +346,21 @@ class _ScanItemState extends State<ScanItem> {
 
   // Add this method to handle Review Summary button press
   void _handleReviewSummary() {
-    // Add your review summary logic here
-    print('Review Summary button pressed');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FinishedItem(
+          itemName: itemName,
+          lotNumber: lotNumber,
+          content: _labelContent ?? content,
+          poNo: poNo,
+          quantity: qtyPerBoxController.text,
+          tableData: _tableData
+              .where((item) => item['content']?.isNotEmpty == true)
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(),
+        ),
+      ),
+    );
   }
 
   @override
