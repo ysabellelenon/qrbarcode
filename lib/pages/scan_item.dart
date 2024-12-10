@@ -27,20 +27,30 @@ class _ScanItemState extends State<ScanItem> {
   final List<Map<String, dynamic>> _tableData = [];
   String? _labelContent; // New variable to hold the fetched label content
   String? _itemCategory; // To store the item's category
-  final Set<String> _usedContents = {}; // To track used contents for "Counting" category
+  final Set<String> _usedContents =
+      {}; // To track used contents for "Counting" category
   final List<FocusNode> _focusNodes = [];
   final Set<int> selectedRows = {};
   bool _isQtyPerBoxReached = false;
   int currentRowNumber = 1;
   bool _hasShownQtyReachedDialog = false;
 
-  String get itemName => widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
-  String get poNo => widget.scanData?['poNo'] ?? widget.resumeData?['poNo'] ?? '';
-  String get lotNumber => widget.scanData?['lotNumber'] ?? widget.resumeData?['lotNumber'] ?? '';
-  String get content => widget.scanData?['content'] ?? widget.resumeData?['content'] ?? '';
-  String get qtyPerBox => widget.resumeData?['qtyPerBox'] ?? widget.scanData?['qtyPerBox'] ?? '';
-  int get operatorScanId => widget.resumeData?['operatorScanId'] ?? widget.scanData?['operatorScanId'] ?? 0;
-  int get totalQty => widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
+  String get itemName =>
+      widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
+  String get poNo =>
+      widget.scanData?['poNo'] ?? widget.resumeData?['poNo'] ?? '';
+  String get lotNumber =>
+      widget.scanData?['lotNumber'] ?? widget.resumeData?['lotNumber'] ?? '';
+  String get content =>
+      widget.scanData?['content'] ?? widget.resumeData?['content'] ?? '';
+  String get qtyPerBox =>
+      widget.resumeData?['qtyPerBox'] ?? widget.scanData?['qtyPerBox'] ?? '';
+  int get operatorScanId =>
+      widget.resumeData?['operatorScanId'] ??
+      widget.scanData?['operatorScanId'] ??
+      0;
+  int get totalQty =>
+      widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
 
   @override
   void initState() {
@@ -53,10 +63,10 @@ class _ScanItemState extends State<ScanItem> {
       final List<dynamic> savedTableData = widget.resumeData!['tableData'];
       _tableData.clear(); // Clear default empty row
       _tableData.addAll(savedTableData.map((item) => {
-        'content': item['content'] ?? '',
-        'result': item['result'] ?? '',
-      }));
-      
+            'content': item['content'] ?? '',
+            'result': item['result'] ?? '',
+          }));
+
       // Create focus nodes for each row
       for (int i = 0; i < _tableData.length; i++) {
         _focusNodes.add(FocusNode());
@@ -81,11 +91,12 @@ class _ScanItemState extends State<ScanItem> {
       });
       _focusNodes.add(FocusNode());
     }
-    
+
     // Set the total quantity
     if (widget.resumeData != null) {
       // Use the quantity from unfinished item
-      totalQtyController.text = widget.resumeData!['quantity'] ?? totalQty.toString();
+      totalQtyController.text =
+          widget.resumeData!['quantity'] ?? totalQty.toString();
     } else {
       // Use the quantity from operator login or scan data
       totalQtyController.text = totalQty.toString();
@@ -94,7 +105,7 @@ class _ScanItemState extends State<ScanItem> {
     // Initialize with current counts
     goodCountController.text = '0';
     noGoodCountController.text = '0';
-    
+
     // Update counts to reflect restored data
     if (widget.resumeData != null) {
       _updateCounts();
@@ -145,14 +156,14 @@ class _ScanItemState extends State<ScanItem> {
 
     // Construct the full static content by combining label content and lot number
     String staticContent = '${_labelContent}_$lotNumber';
-    
+
     print('Validating content: $content');
     print('Category: $_itemCategory');
     print('Static Content: $staticContent');
     print('Row Index: $rowIndex');
 
     String result = '';
-    
+
     if (_itemCategory == 'Non-Counting') {
       // For Non-Counting, content should match the full static content
       result = content == staticContent ? 'Good' : 'No Good';
@@ -163,7 +174,7 @@ class _ScanItemState extends State<ScanItem> {
       if (content == staticContent) {
         result = 'No Good';
         print('Content matches static content - No Good');
-      } 
+      }
       // 2. Content should NOT match any previous content
       else if (_usedContents.contains(content)) {
         result = 'No Good';
@@ -180,19 +191,19 @@ class _ScanItemState extends State<ScanItem> {
     setState(() {
       _tableData[rowIndex]['result'] = result;
       _updateCounts();
-      
+
       // Add new row if this is the last row and QTY not reached, regardless of result
       if (rowIndex == _tableData.length - 1 && !_isQtyPerBoxReached) {
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-        
+
         if (targetQty > 0 && _tableData.length < targetQty) {
           _tableData.add({
             'content': '',
             'result': '',
           });
           _focusNodes.add(FocusNode());
-          
+
           // Focus on the new row after a short delay
           Future.delayed(const Duration(milliseconds: 100), () {
             _focusNodes.last.requestFocus();
@@ -247,21 +258,22 @@ class _ScanItemState extends State<ScanItem> {
       // Check if we've reached the QTY per box
       String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-      
-      bool wasQtyReached = widget.resumeData != null && 
-                          widget.resumeData!.containsKey('isQtyReached') && 
-                          widget.resumeData!['isQtyReached'] == true;
-      
+
+      bool wasQtyReached = widget.resumeData != null &&
+          widget.resumeData!.containsKey('isQtyReached') &&
+          widget.resumeData!['isQtyReached'] == true;
+
       if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
         // Only show dialog if this is not a resumed item and dialog hasn't been shown yet
         if (!wasQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;  // Set flag before showing dialog
+          _hasShownQtyReachedDialog = true; // Set flag before showing dialog
           _showQtyReachedDialog();
         }
       } else {
         _isQtyPerBoxReached = false;
-        _hasShownQtyReachedDialog = false;  // Reset flag when qty is no longer reached
+        _hasShownQtyReachedDialog =
+            false; // Reset flag when qty is no longer reached
       }
     });
   }
@@ -269,7 +281,7 @@ class _ScanItemState extends State<ScanItem> {
   void _showQtyReachedDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,  // User must tap OK to dismiss
+      barrierDismissible: false, // User must tap OK to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Information'),
@@ -289,10 +301,7 @@ class _ScanItemState extends State<ScanItem> {
 
   void addNewTableRow(String content) {
     setState(() {
-      _tableData.add({
-        'content': content,
-        'result': 'Good'
-      });
+      _tableData.add({'content': content, 'result': 'Good'});
       currentRowNumber++;
     });
   }
@@ -337,7 +346,7 @@ class _ScanItemState extends State<ScanItem> {
                     print('Debug - lotNumber: $lotNumber');
                     print('Debug - content: $content');
                     print('Debug - poNo: $poNo');
-                    
+
                     showDialog(
                       context: context,
                       builder: (context) => EmergencyStop(
@@ -346,9 +355,11 @@ class _ScanItemState extends State<ScanItem> {
                         content: _labelContent ?? content,
                         poNo: poNo,
                         quantity: totalQtyController.text,
-                        tableData: _tableData.where((item) => 
-                          item['content']?.isNotEmpty == true
-                        ).map((item) => Map<String, dynamic>.from(item)).toList(),
+                        tableData: _tableData
+                            .where(
+                                (item) => item['content']?.isNotEmpty == true)
+                            .map((item) => Map<String, dynamic>.from(item))
+                            .toList(),
                         username: 'operator',
                       ),
                     );
@@ -391,7 +402,8 @@ class _ScanItemState extends State<ScanItem> {
               padding: const EdgeInsets.all(20),
               child: Center(
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 1200), // Increased from 900
+                  constraints: const BoxConstraints(
+                      maxWidth: 1200), // Increased from 900
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -415,12 +427,16 @@ class _ScanItemState extends State<ScanItem> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Item Name: $itemName', style: const TextStyle(fontSize: 16)),
-                                  Text('P.O No: $poNo', style: const TextStyle(fontSize: 16)),
-                                  Text('Lot Number: $lotNumber', style: const TextStyle(fontSize: 16)),
+                                  Text('Item Name: $itemName',
+                                      style: const TextStyle(fontSize: 16)),
+                                  Text('P.O No: $poNo',
+                                      style: const TextStyle(fontSize: 16)),
+                                  Text('Lot Number: $lotNumber',
+                                      style: const TextStyle(fontSize: 16)),
                                   const SizedBox(height: 32),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Content:',
@@ -445,13 +461,15 @@ class _ScanItemState extends State<ScanItem> {
                                   Row(
                                     children: [
                                       const Expanded(
-                                        child: Text('Total QTY', style: TextStyle(fontSize: 16)),
+                                        child: Text('Total QTY',
+                                            style: TextStyle(fontSize: 16)),
                                       ),
                                       Expanded(
                                         flex: 1,
                                         child: TextField(
                                           controller: totalQtyController,
-                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(
+                                              border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
                                         ),
                                       ),
@@ -470,7 +488,8 @@ class _ScanItemState extends State<ScanItem> {
                                         flex: 1,
                                         child: TextField(
                                           controller: qtyPerBoxController,
-                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(
+                                              border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
                                           readOnly: true, // Make it read-only
                                         ),
@@ -481,13 +500,15 @@ class _ScanItemState extends State<ScanItem> {
                                   Row(
                                     children: [
                                       const Expanded(
-                                        child: Text('Inspection QTY', style: TextStyle(fontSize: 16)),
+                                        child: Text('Inspection QTY',
+                                            style: TextStyle(fontSize: 16)),
                                       ),
                                       Expanded(
                                         flex: 1,
                                         child: TextField(
                                           controller: inspectionQtyController,
-                                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(
+                                              border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
                                           readOnly: true, // Make it read-only
                                         ),
@@ -524,7 +545,8 @@ class _ScanItemState extends State<ScanItem> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16), // Reduced spacing between inputs
+                              const SizedBox(
+                                  width: 16), // Reduced spacing between inputs
                               SizedBox(
                                 width: 200,
                                 child: TextField(
@@ -556,28 +578,39 @@ class _ScanItemState extends State<ScanItem> {
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               // Calculate dynamic widths based on container width
-                              final double checkboxWidth = constraints.maxWidth * 0.05;  // 5%
-                              final double numberWidth = constraints.maxWidth * 0.05;    // 5%
-                              final double contentWidth = constraints.maxWidth * 0.35;   // 35%
-                              final double resultWidth = constraints.maxWidth * 0.25;    // 25%
+                              final double checkboxWidth =
+                                  constraints.maxWidth * 0.05; // 5%
+                              final double numberWidth =
+                                  constraints.maxWidth * 0.05; // 5%
+                              final double contentWidth =
+                                  constraints.maxWidth * 0.35; // 35%
+                              final double resultWidth =
+                                  constraints.maxWidth * 0.25; // 25%
 
                               return SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: DataTable(
                                   dividerThickness: 1,
                                   border: TableBorder(
-                                    verticalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                                    horizontalInside: BorderSide(width: 1, color: Colors.grey.shade300),
-                                    left: BorderSide(width: 1, color: Colors.grey.shade300),
-                                    right: BorderSide(width: 1, color: Colors.grey.shade300),
-                                    top: BorderSide(width: 1, color: Colors.grey.shade300),
-                                    bottom: BorderSide(width: 1, color: Colors.grey.shade300),
+                                    verticalInside: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
+                                    horizontalInside: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
+                                    left: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
+                                    right: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
+                                    top: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
+                                    bottom: BorderSide(
+                                        width: 1, color: Colors.grey.shade300),
                                   ),
                                   columns: [
                                     DataColumn(
                                       label: SizedBox(
                                         width: checkboxWidth,
-                                        child: const Center(child: Text('')), // For checkbox
+                                        child: const Center(
+                                            child: Text('')), // For checkbox
                                       ),
                                     ),
                                     DataColumn(
@@ -589,13 +622,15 @@ class _ScanItemState extends State<ScanItem> {
                                     DataColumn(
                                       label: SizedBox(
                                         width: contentWidth,
-                                        child: const Center(child: Text('Content')),
+                                        child: const Center(
+                                            child: Text('Content')),
                                       ),
                                     ),
                                     DataColumn(
                                       label: SizedBox(
                                         width: resultWidth,
-                                        child: const Center(child: Text('Result')),
+                                        child:
+                                            const Center(child: Text('Result')),
                                       ),
                                     ),
                                   ],
@@ -608,7 +643,8 @@ class _ScanItemState extends State<ScanItem> {
                                           width: checkboxWidth,
                                           child: Center(
                                             child: Checkbox(
-                                              value: selectedRows.contains(index),
+                                              value:
+                                                  selectedRows.contains(index),
                                               onChanged: (bool? value) {
                                                 setState(() {
                                                   if (value == true) {
@@ -636,12 +672,14 @@ class _ScanItemState extends State<ScanItem> {
                                           child: TextField(
                                             textAlign: TextAlign.center,
                                             focusNode: _ensureFocusNode(index),
-                                            controller: TextEditingController(text: data['content']),
+                                            controller: TextEditingController(
+                                                text: data['content']),
                                             onChanged: (value) {
                                               setState(() {
                                                 data['content'] = value;
                                                 if (value.isNotEmpty) {
-                                                  _validateContent(value, index);
+                                                  _validateContent(
+                                                      value, index);
                                                 } else {
                                                   data['result'] = '';
                                                 }
@@ -650,7 +688,9 @@ class _ScanItemState extends State<ScanItem> {
                                             },
                                             decoration: const InputDecoration(
                                               border: InputBorder.none,
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                      horizontal: 8),
                                             ),
                                           ),
                                         ),
@@ -662,9 +702,12 @@ class _ScanItemState extends State<ScanItem> {
                                             child: Text(
                                               data['result'] ?? '',
                                               style: TextStyle(
-                                                color: data['result'] == 'Good' ? Colors.green : 
-                                                       data['result'] == 'No Good' ? Colors.red : 
-                                                       Colors.black,
+                                                color: data['result'] == 'Good'
+                                                    ? Colors.green
+                                                    : data['result'] ==
+                                                            'No Good'
+                                                        ? Colors.red
+                                                        : Colors.black,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -686,7 +729,7 @@ class _ScanItemState extends State<ScanItem> {
                           left: 20,
                           right: 20,
                           top: 10,
-                          bottom: 30,  // Increased bottom padding
+                          bottom: 30, // Increased bottom padding
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
@@ -715,7 +758,9 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                       _focusNodes.add(FocusNode());
                                       // Focus on the new row after a short delay
-                                      Future.delayed(const Duration(milliseconds: 100), () {
+                                      Future.delayed(
+                                          const Duration(milliseconds: 100),
+                                          () {
                                         _focusNodes.last.requestFocus();
                                       });
                                     });
@@ -723,7 +768,7 @@ class _ScanItemState extends State<ScanItem> {
                                   child: const Text('Add Row'),
                                 ),
                               ),
-                            
+
                             // Delete Selected button
                             if (selectedRows.isNotEmpty)
                               ElevatedButton(
@@ -741,7 +786,8 @@ class _ScanItemState extends State<ScanItem> {
                                 onPressed: () {
                                   setState(() {
                                     // Sort indices in descending order to avoid index shifting issues
-                                    final sortedIndices = selectedRows.toList()..sort((a, b) => b.compareTo(a));
+                                    final sortedIndices = selectedRows.toList()
+                                      ..sort((a, b) => b.compareTo(a));
                                     for (final index in sortedIndices) {
                                       if (index < _focusNodes.length) {
                                         _focusNodes[index].dispose();
@@ -750,7 +796,7 @@ class _ScanItemState extends State<ScanItem> {
                                       _tableData.removeAt(index);
                                     }
                                     selectedRows.clear();
-                                    
+
                                     // Add a new row if table is empty
                                     if (_tableData.isEmpty) {
                                       _tableData.add({
@@ -759,7 +805,7 @@ class _ScanItemState extends State<ScanItem> {
                                       });
                                       _focusNodes.add(FocusNode());
                                     }
-                                    
+
                                     _updateCounts();
                                   });
                                 },
@@ -772,7 +818,8 @@ class _ScanItemState extends State<ScanItem> {
                       // Add Scan New Article Label button when QTY is reached
                       if (_isQtyPerBoxReached)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 30, vertical: 10),
                           child: Column(
                             children: [
                               Row(
@@ -794,6 +841,10 @@ class _ScanItemState extends State<ScanItem> {
                                       Navigator.of(context).pushReplacement(
                                         MaterialPageRoute(
                                           builder: (context) => ArticleLabel(
+                                            itemName: itemName,
+                                            poNo: poNo,
+                                            operatorScanId: operatorScanId,
+                                            totalQty: totalQty,
                                             resumeData: widget.resumeData,
                                           ),
                                         ),

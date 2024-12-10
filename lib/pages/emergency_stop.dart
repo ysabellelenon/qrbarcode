@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../database_helper.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class EmergencyStop extends StatefulWidget {
   final String itemName;
@@ -91,7 +94,7 @@ class _EmergencyStopState extends State<EmergencyStop> {
     print('content: ${widget.content}');
     print('poNo: ${widget.poNo}');
     print('quantity: ${widget.quantity}');
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -104,8 +107,51 @@ class _EmergencyStopState extends State<EmergencyStop> {
           quantity: widget.quantity,
           tableData: widget.tableData,
           remarks: _remarksController.text,
+          onPrint: _printSummary,
         ),
       ),
+    );
+  }
+
+  void _printSummary() async {
+    // Create a PDF document
+    final pdf = pw.Document();
+
+    // Add a page to the PDF
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            children: [
+              pw.Text('Emergency Stop Summary',
+                  style: pw.TextStyle(fontSize: 24)),
+              pw.SizedBox(height: 20),
+              pw.Text('Item Name: ${widget.itemName}'),
+              pw.Text('Lot Number: ${widget.lotNumber}'),
+              pw.Text('Content: ${widget.content}'),
+              pw.Text('P.O Number: ${widget.poNo}'),
+              pw.Text('Quantity: ${widget.quantity}'),
+              pw.Text('Remarks: ${_remarksController.text}'),
+              pw.SizedBox(height: 20),
+              pw.Text('Results Table:', style: pw.TextStyle(fontSize: 18)),
+              // Add your table data here
+              for (var entry in widget.tableData.asMap().entries)
+                pw.Row(
+                  children: [
+                    pw.Text((entry.key + 1).toString()),
+                    pw.Text(entry.value['content'] ?? ''),
+                    pw.Text(entry.value['result'] ?? ''),
+                  ],
+                ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Print the PDF
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
     );
   }
 
@@ -155,6 +201,7 @@ class EmergencySummary extends StatelessWidget {
   final String quantity;
   final List<Map<String, dynamic>> tableData;
   final String remarks;
+  final VoidCallback onPrint;
 
   const EmergencySummary({
     Key? key,
@@ -166,11 +213,12 @@ class EmergencySummary extends StatelessWidget {
     required this.quantity,
     required this.tableData,
     required this.remarks,
+    required this.onPrint,
   }) : super(key: key);
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-           '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -208,18 +256,7 @@ class EmergencySummary extends StatelessWidget {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          content: const Text('This will print the summary.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('OK'),
-                            ),
-                          ],
-                        ),
-                      );
+                      onPrint();
                     },
                     icon: const Icon(Icons.print),
                     label: const Text('Print'),
@@ -243,12 +280,15 @@ class EmergencySummary extends StatelessWidget {
                           'poNo': poNo,
                           'quantity': quantity,
                           'remarks': remarks,
-                          'tableData': tableData.map((item) => Map<String, dynamic>.from(item)).toList(),
+                          'tableData': tableData
+                              .map((item) => Map<String, dynamic>.from(item))
+                              .toList(),
                         });
 
                         // Navigate to login page
                         if (context.mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/login', (route) => false);
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -256,7 +296,8 @@ class EmergencySummary extends StatelessWidget {
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Error'),
-                              content: Text('Failed to save unfinished item: $e'),
+                              content:
+                                  Text('Failed to save unfinished item: $e'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
@@ -375,4 +416,4 @@ class EmergencySummary extends StatelessWidget {
       ],
     );
   }
-} 
+}

@@ -29,9 +29,11 @@ class _ArticleLabelState extends State<ArticleLabel> {
   final TextEditingController qtyController = TextEditingController();
   bool isError = false; // Track if there's an error
 
-  String get itemName => widget.resumeData?['itemName'] ?? widget.itemName ?? '';
+  String get itemName =>
+      widget.resumeData?['itemName'] ?? widget.itemName ?? '';
   String get poNo => widget.resumeData?['poNo'] ?? widget.poNo ?? '';
-  int get operatorScanId => widget.resumeData?['operatorScanId'] ?? widget.operatorScanId ?? 0;
+  int get operatorScanId =>
+      widget.resumeData?['operatorScanId'] ?? widget.operatorScanId ?? 0;
   int get totalQty => widget.resumeData?['totalQty'] ?? widget.totalQty ?? 0;
 
   void _validateArticleLabel(String articleLabel) {
@@ -45,7 +47,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
 
         String extractedPoNo = '';
         if (parts.length > 3) {
-          extractedPoNo = parts[3].substring(0, 10); // First 10 digits after the third space
+          extractedPoNo = parts[3]
+              .substring(0, 10); // First 10 digits after the third space
         } else {
           setState(() {
             isError = true; // Set error flag
@@ -65,10 +68,14 @@ class _ArticleLabelState extends State<ArticleLabel> {
           String lotNumber = parts.last; // Last part after space
           String qtyPerBox = '';
           if (parts.length > 2) {
-            String qtyPart = parts.sublist(2).join(' '); // Join the remaining parts after the second space
+            String qtyPart = parts
+                .sublist(2)
+                .join(' '); // Join the remaining parts after the second space
             RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
             Match? match = qtyRegExp.firstMatch(qtyPart);
-            qtyPerBox = match != null ? match.group(1) ?? '' : ''; // Get the first match of digits
+            qtyPerBox = match != null
+                ? match.group(1) ?? ''
+                : ''; // Get the first match of digits
           }
 
           lotNumberController.text = lotNumber;
@@ -118,7 +125,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () =>
+                      Navigator.of(context).pushReplacementNamed('/login'),
                   child: const Text('Logout'),
                 ),
               ],
@@ -177,11 +185,13 @@ class _ArticleLabelState extends State<ArticleLabel> {
                       children: [
                         Text(
                           'Item Name: $itemName',
-                          style: const TextStyle(fontSize: 18), // Adjusted font size
+                          style: const TextStyle(
+                              fontSize: 18), // Adjusted font size
                         ),
                         Text(
                           'P.O No: $poNo',
-                          style: const TextStyle(fontSize: 18), // Adjusted font size
+                          style: const TextStyle(
+                              fontSize: 18), // Adjusted font size
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
@@ -242,36 +252,45 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
-                            onPressed: isError ? null : () async {  // Disable button when isError is true
-                              // Save the article label data to database
-                              await DatabaseHelper().insertArticleLabel({
-                                'operatorScanId': operatorScanId,
-                                'articleLabel': articleLabelController.text,
-                                'lotNumber': lotNumberController.text,
-                                'qtyPerBox': qtyController.text,
-                                'content': articleLabelController.text,
-                                'createdAt': DateTime.now().toIso8601String(),
-                              });
-
-                              // Navigate to ScanItem page
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ScanItem(
-                                    scanData: {
-                                      'itemName': itemName,
-                                      'poNo': poNo,
-                                      'lotNumber': lotNumberController.text,
-                                      'content': articleLabelController.text,
-                                      'qtyPerBox': qtyController.text,
+                            onPressed: isError
+                                ? null
+                                : () async {
+                                    // Disable button when isError is true
+                                    // Save the article label data to database
+                                    await DatabaseHelper().insertArticleLabel({
                                       'operatorScanId': operatorScanId,
-                                      'totalQty': totalQty,
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
+                                      'articleLabel':
+                                          articleLabelController.text,
+                                      'lotNumber': lotNumberController.text,
+                                      'qtyPerBox': qtyController.text,
+                                      'content': articleLabelController.text,
+                                      'createdAt':
+                                          DateTime.now().toIso8601String(),
+                                    });
+
+                                    // Navigate to ScanItem page
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => ScanItem(
+                                          scanData: {
+                                            'itemName': itemName,
+                                            'poNo': poNo,
+                                            'lotNumber':
+                                                lotNumberController.text,
+                                            'content':
+                                                articleLabelController.text,
+                                            'qtyPerBox': qtyController.text,
+                                            'operatorScanId': operatorScanId,
+                                            'totalQty': totalQty,
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isError ? Colors.grey : Colors.deepPurple, // Grey when disabled
+                              backgroundColor: isError
+                                  ? Colors.grey
+                                  : Colors.deepPurple, // Grey when disabled
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 32,
@@ -295,4 +314,4 @@ class _ArticleLabelState extends State<ArticleLabel> {
       ),
     );
   }
-} 
+}
