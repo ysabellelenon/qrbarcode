@@ -69,44 +69,11 @@ class _FinishedItemState extends State<FinishedItem> {
   }
 
   void _saveAndNavigate() async {
-    try {
-      // Save to database
-      await DatabaseHelper().insertUnfinishedItem({
-        'itemName': widget.itemName,
-        'lotNumber': widget.lotNumber,
-        'date': DateTime.now().toIso8601String(),
-        'content': widget.content,
-        'poNo': widget.poNo,
-        'quantity': widget.quantity,
-        'remarks': _remarksController.text,
-        'tableData': widget.tableData
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList(),
-      });
-
-      // Navigate to operator login page instead of logging out
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/operator-login',
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text('Failed to save item: $e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/operator-login',
+        (route) => false,
+      );
     }
   }
 
