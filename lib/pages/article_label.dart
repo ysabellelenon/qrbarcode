@@ -29,6 +29,9 @@ class _ArticleLabelState extends State<ArticleLabel> {
   final TextEditingController qtyController = TextEditingController();
   bool isError = false; // Track if there's an error
 
+  // Add FocusNode for the Article Label field
+  final FocusNode _articleLabelFocus = FocusNode();
+
   String get itemName =>
       widget.resumeData?['itemName'] ?? widget.itemName ?? '';
   String get poNo => widget.resumeData?['poNo'] ?? widget.poNo ?? '';
@@ -92,6 +95,25 @@ class _ArticleLabelState extends State<ArticleLabel> {
         isError = true; // Set error flag
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Request focus for the article label field after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_articleLabelFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Clean up the focus node when the widget is disposed
+    _articleLabelFocus.dispose();
+    articleLabelController.dispose();
+    lotNumberController.dispose();
+    qtyController.dispose();
+    super.dispose();
   }
 
   @override
@@ -196,6 +218,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         const SizedBox(height: 32),
                         TextFormField(
                           controller: articleLabelController,
+                          focusNode: _articleLabelFocus,
                           decoration: const InputDecoration(
                             labelText: 'Article Label',
                             border: OutlineInputBorder(),
