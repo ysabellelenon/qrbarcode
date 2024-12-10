@@ -25,6 +25,15 @@ class _OperatorLoginState extends State<OperatorLogin> {
   final _qtyFocus = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    // Request focus for the item name field after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_itemNameFocus);
+    });
+  }
+
+  @override
   void dispose() {
     _itemNameController.dispose();
     _poNoController.dispose();
