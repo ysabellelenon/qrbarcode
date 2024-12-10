@@ -16,7 +16,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
   final _itemNameController = TextEditingController();
   final _poNoController = TextEditingController();
   final _qtyController = TextEditingController();
-  String? _labelContent; // New variable to hold the fetched label content
+  String? _labelContent;
+  bool _isItemFound = false;
 
   // Add FocusNode for each text field
   final _itemNameFocus = FocusNode();
@@ -36,28 +37,25 @@ class _OperatorLoginState extends State<OperatorLogin> {
   }
 
   void _fetchLabelContent(String itemName) async {
-    // Fetch the label content from the database
-    final itemData = await DatabaseHelper().getItems(); // Fetch all items
+    final itemData = await DatabaseHelper().getItems();
     final matchingItem = itemData.firstWhere(
       (item) => item['itemCode'] == itemName,
-      orElse: () => {}, // Return an empty map instead of null
+      orElse: () => {},
     );
 
-    if (matchingItem.isNotEmpty) { // Check if matchingItem is not empty
-      setState(() {
-        _labelContent = matchingItem['codes'].isNotEmpty
-            ? matchingItem['codes'][0]['content'] // Get the first code content
-            : 'No content available';
-      });
-    } else {
-      setState(() {
+    setState(() {
+      if (matchingItem.isNotEmpty && matchingItem['codes']?.isNotEmpty == true) {
+        _labelContent = matchingItem['codes'][0]['content'];
+        _isItemFound = true;
+      } else {
         _labelContent = 'Item not found';
-      });
-    }
+        _isItemFound = false;
+      }
+    });
   }
 
   void _handleSubmit() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _isItemFound) {
       final itemName = _itemNameController.text;
       final poNo = _poNoController.text;
       final totalQty = int.parse(_qtyController.text);
@@ -72,7 +70,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
       });
 
       if (mounted) {
-        // Navigate to ArticleLabel page with all required parameters
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => ArticleLabel(
@@ -165,12 +162,18 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       labelText: 'Item Name',
                                       border: OutlineInputBorder(),
                                     ),
-                                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    validator: (value) {
+                                      if (value!.isEmpty) return 'Required';
+                                      if (!_isItemFound) return 'Item not found';
+                                      return null;
+                                    },
                                     onChanged: (value) {
                                       _fetchLabelContent(value);
                                     },
                                     onFieldSubmitted: (_) {
-                                      FocusScope.of(context).requestFocus(_poNoFocus);
+                                      if (_isItemFound) {
+                                        FocusScope.of(context).requestFocus(_poNoFocus);
+                                      }
                                     },
                                   ),
                                   const SizedBox(height: 16),
@@ -216,7 +219,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                   Text(_labelContent ?? 'No content available'), // Display the label content
                                   const SizedBox(height: 20),
                                   ElevatedButton(
-                                    onPressed: _handleSubmit,
+                                    onPressed: _isItemFound ? _handleSubmit : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.deepPurple,
                                       foregroundColor: Colors.white,
@@ -227,6 +230,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
+                                      disabledBackgroundColor: Colors.grey,
                                     ),
                                     child: const Text('Ok'),
                                   ),
