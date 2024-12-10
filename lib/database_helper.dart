@@ -45,7 +45,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -61,6 +61,27 @@ class DatabaseHelper {
         }
         if (oldVersion < 4) {
           await _addNewTablesIfNotExist(db);
+        }
+        if (oldVersion < 5) {
+          await db.execute('DROP TABLE IF EXISTS item_codes_backup');
+          await db.execute('ALTER TABLE item_codes RENAME TO item_codes_backup');
+          await db.execute('''
+            CREATE TABLE item_codes(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              itemId INTEGER,
+              category TEXT,
+              content TEXT,
+              hasSubLot INTEGER NOT NULL DEFAULT 0,
+              serialCount TEXT,
+              FOREIGN KEY (itemId) REFERENCES items (id) ON DELETE CASCADE
+            )
+          ''');
+          await db.execute('''
+            INSERT INTO item_codes(id, itemId, category, content, hasSubLot, serialCount)
+            SELECT id, itemId, category, content, hasSubLot, serialCount
+            FROM item_codes_backup
+          ''');
+          await db.execute('DROP TABLE item_codes_backup');
         }
       },
       onOpen: (db) async {
@@ -99,7 +120,7 @@ class DatabaseHelper {
         itemId INTEGER,
         category TEXT,
         content TEXT,
-        hasSubLot INTEGER,
+        hasSubLot INTEGER NOT NULL DEFAULT 0,
         serialCount TEXT,
         FOREIGN KEY (itemId) REFERENCES items (id) ON DELETE CASCADE
       )
@@ -299,7 +320,7 @@ class DatabaseHelper {
           where: 'itemId = ?',
           whereArgs: [item['id']],
         );
-        print('Retrieved ${codes.length} codes for item ${item['id']}');
+        print('Retrieved codes for item ${item['id']}: $codes');
         
         result.add({
           ...Map<String, dynamic>.from(item),
@@ -327,14 +348,16 @@ class DatabaseHelper {
         print('Inserted item with ID: $itemId');
 
         for (var code in (item['codes'] as List)) {
+          print('Inserting code: $code');
+          final hasSubLot = (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
           final codeId = await txn.insert('item_codes', {
             'itemId': itemId,
             'category': code['category'],
             'content': code['content'],
-            'hasSubLot': code['hasSubLot'] == true ? 1 : 0,
+            'hasSubLot': hasSubLot,
             'serialCount': code['serialCount'],
           });
-          print('Inserted code with ID: $codeId for item: $itemId');
+          print('Inserted code with ID: $codeId, hasSubLot value: $hasSubLot');
         }
       });
       print('Successfully inserted item and all codes');
@@ -366,11 +389,12 @@ class DatabaseHelper {
       );
 
       for (var code in (item['codes'] as List)) {
+        final hasSubLot = (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
         await txn.insert('item_codes', {
           'itemId': itemId,
           'category': code['category'],
           'content': code['content'],
-          'hasSubLot': code['hasSubLot'] == 1 ? 1 : 0,
+          'hasSubLot': hasSubLot,
           'serialCount': code['serialCount'],
         });
       }

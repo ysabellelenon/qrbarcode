@@ -179,7 +179,7 @@ class _SublotConfigState extends State<SublotConfig> {
                       onPressed: () {
                         // Create a list of codes with their configurations
                         final configuredCodes = widget.countingCodes.map((code) {
-                          return {
+                          final config = {
                             'code': code['code'],
                             'content': code['content'],
                             'category': 'Counting',
@@ -188,7 +188,11 @@ class _SublotConfigState extends State<SublotConfig> {
                                 ? selectedSerialCounts[code['content']] 
                                 : '0',
                           };
+                          print('Configured code: $config'); // Debug print
+                          return config;
                         }).toList();
+
+                        print('All configured codes: $configuredCodes'); // Debug print
 
                         Navigator.push(
                           context,
@@ -199,13 +203,15 @@ class _SublotConfigState extends State<SublotConfig> {
                               revision: widget.revision ?? '1',
                               codeCount: widget.allCodes?.length ?? widget.countingCodes.length,
                               codes: configuredCodes + (widget.allCodes?.where((code) => code['category'] != 'Counting').map((code) {
-                                return {
+                                final nonCountingCode = {
                                   'code': code['code'],
                                   'content': code['content'],
                                   'category': code['category'],
                                   'hasSubLot': false,
                                   'serialCount': '0',
                                 };
+                                print('Non-counting code: $nonCountingCode'); // Debug print
+                                return nonCountingCode;
                               }).toList() ?? []),
                               isUpdate: widget.isUpdate,
                             ),

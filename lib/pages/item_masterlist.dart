@@ -30,6 +30,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
 
   Future<void> _loadItems() async {
     final data = await DatabaseHelper().getItems();
+    print('Loaded items from database: $data');
     setState(() {
       items = data;
       filteredItems = data;
@@ -81,14 +82,20 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     for (var item in filteredItems) {
       List<Map<String, dynamic>> codes =
           (item['codes'] as List<dynamic>).cast<Map<String, dynamic>>();
+      print('Item ${item['itemCode']} codes: $codes');
+
       bool isSelected = selectedItems.contains(item['id']);
       String firstLabel = codes.isNotEmpty
           ? (codes[0]['content']?.trim() ?? '')
           : '';
 
-      // Check if any code has Sub-Lot rules enabled and if there are any counting codes
       bool hasCountingCodes = codes.any((code) => code['category'] == 'Counting');
-      bool hasSubLotEnabled = codes.any((code) => code['hasSubLot'] == 1);
+      bool hasSubLotEnabled = codes.any((code) {
+        print('Checking hasSubLot for code: ${code['content']}, hasSubLot value: ${code['hasSubLot']}, type: ${code['hasSubLot'].runtimeType}');
+        return code['hasSubLot'] == 1 || code['hasSubLot'] == true;
+      });
+
+      print('Item ${item['itemCode']}: hasCountingCodes=$hasCountingCodes, hasSubLotEnabled=$hasSubLotEnabled');
 
       for (int i = 0; i < codes.length; i++) {
         var code = codes[i];
