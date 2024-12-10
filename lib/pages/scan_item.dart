@@ -34,6 +34,7 @@ class _ScanItemState extends State<ScanItem> {
   bool _isQtyPerBoxReached = false;
   int currentRowNumber = 1;
   bool _hasShownQtyReachedDialog = false;
+  bool _isTotalQtyReached = false; // Add this flag
 
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
@@ -267,11 +268,14 @@ class _ScanItemState extends State<ScanItem> {
       int currentInspectionQty = goodCount + noGoodCount;
       int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
 
+      // Update the total QTY reached flag
+      _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
+
       bool wasQtyReached = widget.resumeData != null &&
           widget.resumeData!.containsKey('isQtyReached') &&
           widget.resumeData!['isQtyReached'] == true;
 
-      if (currentInspectionQty >= totalTargetQty) {
+      if (_isTotalQtyReached) {
         // Show Total QTY reached dialog
         if (!_hasShownQtyReachedDialog) {
           _hasShownQtyReachedDialog = true;
@@ -279,7 +283,6 @@ class _ScanItemState extends State<ScanItem> {
         }
       } else if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
-        // Only show QTY per box dialog if this is not a resumed item and dialog hasn't been shown yet
         if (!wasQtyReached && !_hasShownQtyReachedDialog) {
           _hasShownQtyReachedDialog = true;
           _showQtyReachedDialog();
@@ -338,6 +341,12 @@ class _ScanItemState extends State<ScanItem> {
       _tableData.add({'content': content, 'result': 'Good'});
       currentRowNumber++;
     });
+  }
+
+  // Add this method to handle Review Summary button press
+  void _handleReviewSummary() {
+    // Add your review summary logic here
+    print('Review Summary button pressed');
   }
 
   @override
@@ -763,44 +772,44 @@ class _ScanItemState extends State<ScanItem> {
                           left: 20,
                           right: 20,
                           top: 10,
-                          bottom: 30, // Increased bottom padding
+                          bottom: 30,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            // Add Row button - only show if QTY not reached
-                            if (!_isQtyPerBoxReached)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 32,
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                            if (_isTotalQtyReached)
+                              // Show Review Summary button
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 16,
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _tableData.add({
-                                        'content': '',
-                                        'result': '',
-                                      });
-                                      _focusNodes.add(FocusNode());
-                                      // Focus on the new row after a short delay
-                                      Future.delayed(
-                                          const Duration(milliseconds: 100),
-                                          () {
-                                        _focusNodes.last.requestFocus();
-                                      });
-                                    });
-                                  },
-                                  child: const Text('Add Row'),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
+                                onPressed: _handleReviewSummary,
+                                child: const Text('Review Summary'),
+                              )
+                            else
+                              // Show Add Row button
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: _addRow,
+                                child: const Text('Add Row'),
                               ),
 
                             // Delete Selected button
