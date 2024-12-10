@@ -165,26 +165,30 @@ class _ScanItemState extends State<ScanItem> {
     String result = '';
 
     if (_itemCategory == 'Non-Counting') {
-      // For Non-Counting, content should match the full static content
+      // For Non-Counting items:
+      // Content MUST match the static content exactly to be Good
       result = content == staticContent ? 'Good' : 'No Good';
-      print('Non-Counting result: $result');
+      print('Non-Counting validation - Content matches static: ${content == staticContent}');
     } else if (_itemCategory == 'Counting') {
-      // For Counting category:
-      // 1. Content should NOT match the full static content
+      // For Counting items:
+      // 1. Content must NOT match the static content
       if (content == staticContent) {
         result = 'No Good';
-        print('Content matches static content - No Good');
-      }
-      // 2. Content should NOT match any previous content
-      else if (_usedContents.contains(content)) {
-        result = 'No Good';
-        print('Duplicate content found - No Good');
-      }
-      // 3. If it passes both checks, it's Good
-      else {
-        result = 'Good';
-        _usedContents.add(content);
-        print('Content is unique - Good');
+        print('Counting validation - Content matches static (No Good)');
+      } else {
+        // 2. Content must be unique (not used in any other row)
+        bool isDuplicate = false;
+        for (int i = 0; i < _tableData.length; i++) {
+          if (i != rowIndex && // Skip current row
+              _tableData[i]['content'] == content && // Check if content matches
+              content.isNotEmpty) { // Only check non-empty contents
+            isDuplicate = true;
+            break;
+          }
+        }
+        
+        result = isDuplicate ? 'No Good' : 'Good';
+        print('Counting validation - Content is ${isDuplicate ? 'duplicate' : 'unique'} (${result})');
       }
     }
 
@@ -192,7 +196,7 @@ class _ScanItemState extends State<ScanItem> {
       _tableData[rowIndex]['result'] = result;
       _updateCounts();
 
-      // Add new row if this is the last row and QTY not reached, regardless of result
+      // Add new row if this is the last row and QTY not reached
       if (rowIndex == _tableData.length - 1 && !_isQtyPerBoxReached) {
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
