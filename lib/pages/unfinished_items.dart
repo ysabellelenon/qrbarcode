@@ -252,59 +252,94 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
   void _showDetailsDialog(Map<String, dynamic> item) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Item Details'),
-        content: SingleChildScrollView(
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600), // Reduced width
+          padding: const EdgeInsets.all(24), // Add padding for better spacing
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildDetailRow('Item Name', item['itemName']),
-              _buildDetailRow('Lot Number', item['lotNumber']),
-              _buildDetailRow('P.O Number', item['poNo']),
-              _buildDetailRow('Date', DateTime.parse(item['date']).toString()),
-              _buildDetailRow('Content', item['content']),
-              _buildDetailRow('Quantity', item['quantity']),
-              _buildDetailRow('Remarks', item['remarks']),
-              const SizedBox(height: 16),
-              const Text('Results Table:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildResultsTable(item['tableData'] as List),
+              // Title
+              const Text(
+                'Item Details',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow('Item Name', item['itemName']),
+                      _buildDetailRow('Lot Number', item['lotNumber']),
+                      _buildDetailRow('P.O Number', item['poNo']),
+                      _buildDetailRow('Date', DateTime.parse(item['date']).toString()),
+                      _buildDetailRow('Content', item['content']),
+                      _buildDetailRow('Quantity', item['quantity']),
+                      _buildDetailRow('Remarks', item['remarks']),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Results Table:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildResultsTable(item['tableData'] as List),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Actions
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ScanItem(
+                            resumeData: {
+                              'itemName': item['itemName'],
+                              'lotNumber': item['lotNumber'],
+                              'poNo': item['poNo'],
+                              'content': item['content'],
+                              'quantity': item['quantity'],
+                              'tableData': item['tableData'],
+                              'unfinishedItemId': item['id'],
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Continue Process'),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // Close the dialog
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ScanItem(
-                    resumeData: {
-                      'itemName': item['itemName'],
-                      'lotNumber': item['lotNumber'],
-                      'poNo': item['poNo'],
-                      'content': item['content'],
-                      'quantity': item['quantity'],
-                      'tableData': item['tableData'],
-                      'unfinishedItemId': item['id'], // Pass the ID to delete it later
-                    },
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Continue Process'),
-          ),
-        ],
       ),
     );
   }
@@ -316,71 +351,110 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
-            child: Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold)),
+            width: 120, // Slightly wider for labels
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildResultsTable(List tableData) {
-    return Table(
-      border: TableBorder.all(),
-      columnWidths: const {
-        0: FlexColumnWidth(1),
-        1: FlexColumnWidth(2),
-        2: FlexColumnWidth(2),
-      },
-      children: [
-        const TableRow(
-          children: [
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('No.', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(50),  // No. column
+          1: FlexColumnWidth(2),    // Content column
+          2: FlexColumnWidth(1),    // Result column
+        },
+        children: [
+          TableRow(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             ),
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Content', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Result', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-        ...tableData.asMap().entries.map((entry) {
-          return TableRow(
-            children: [
+            children: const [
               TableCell(
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text((entry.key + 1).toString()),
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'No.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               TableCell(
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(entry.value['content'] ?? ''),
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'Content',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               TableCell(
                 child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(entry.value['result'] ?? ''),
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'Result',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
-          );
-        }).toList(),
-      ],
+          ),
+          ...tableData.asMap().entries.map((entry) {
+            return TableRow(
+              children: [
+                TableCell(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text((entry.key + 1).toString()),
+                  ),
+                ),
+                TableCell(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(entry.value['content'] ?? ''),
+                  ),
+                ),
+                TableCell(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      entry.value['result'] ?? '',
+                      style: TextStyle(
+                        color: entry.value['result'] == 'Good' 
+                            ? Colors.green 
+                            : entry.value['result'] == 'No Good' 
+                                ? Colors.red 
+                                : Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
     );
   }
 } 
