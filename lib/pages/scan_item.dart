@@ -36,6 +36,7 @@ class _ScanItemState extends State<ScanItem> {
   int currentRowNumber = 1;
   bool _hasShownQtyReachedDialog = false;
   bool _isTotalQtyReached = false; // Add this flag
+  bool _hasSubLotRules = false; // Add this variable
 
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
@@ -54,11 +55,41 @@ class _ScanItemState extends State<ScanItem> {
   int get totalQty =>
       widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
 
+  // Add this method to convert sub-lot numbers
+  String _convertSubLotNumber(String lotNumber) {
+    if (!_hasSubLotRules || lotNumber.isEmpty) return lotNumber;
+
+    // Split the lot number at the dash
+    final parts = lotNumber.split('-');
+    if (parts.length != 2) return lotNumber;
+
+    final mainPart = parts[0];
+    final subLotPart = parts[1];
+
+    // Try to parse the sub-lot number
+    try {
+      final subLotNum = int.parse(subLotPart);
+      // Only convert if it's between 10 and 20
+      if (subLotNum >= 10 && subLotNum <= 20) {
+        // Convert number to letter (10=0, 11=A, 12=B, etc.)
+        final convertedChar = subLotNum == 10 ? '0' : 
+                            String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+        return '$mainPart$convertedChar'; // Combine without dash
+      }
+    } catch (e) {
+      print('Error converting sub-lot number: $e');
+    }
+
+    // Return original format without dash if conversion fails or not needed
+    return parts.join('');
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchLabelContent(itemName);
-
+    _checkSubLotRules();
+    
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
       // Restore table data from resumeData
@@ -111,6 +142,28 @@ class _ScanItemState extends State<ScanItem> {
     // Update counts to reflect restored data
     if (widget.resumeData != null) {
       _updateCounts();
+    }
+  }
+
+  Future<void> _checkSubLotRules() async {
+    try {
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == itemName,
+        orElse: () => {},
+      );
+
+      if (matchingItem.isNotEmpty) {
+        final codes = matchingItem['codes'] as List;
+        setState(() {
+          _hasSubLotRules = codes.any((code) => 
+            code['category'] == 'Counting' && 
+            (code['hasSubLot'] == 1 || code['hasSubLot'] == true)
+          );
+        });
+      }
+    } catch (e) {
+      print('Error checking sub-lot rules: $e');
     }
   }
 
@@ -501,7 +554,7 @@ class _ScanItemState extends State<ScanItem> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '${_labelContent ?? ''}${_labelContent != null && lotNumber.isNotEmpty ? '_' : ''}${lotNumber}',
+                                        '${_labelContent ?? ''}${_labelContent != null ? '_' : ''}${_convertSubLotNumber(lotNumber)}',
                                         style: const TextStyle(fontSize: 16),
                                       ),
                                     ],
