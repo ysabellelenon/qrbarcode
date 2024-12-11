@@ -210,7 +210,7 @@ class _ScanItemState extends State<ScanItem> {
     }
 
     // Construct the full static content by combining label content and lot number
-    String staticContent = '${_labelContent}_$lotNumber';
+    String staticContent = '${_labelContent}_${_convertSubLotNumber(lotNumber)}';
 
     print('Validating content: $content');
     print('Category: $_itemCategory');
@@ -235,15 +235,30 @@ class _ScanItemState extends State<ScanItem> {
         bool isDuplicate = false;
         for (int i = 0; i < _tableData.length; i++) {
           if (i != rowIndex && // Skip current row
-              _tableData[i]['content'] == content && // Check if content matches
-              content.isNotEmpty) { // Only check non-empty contents
+              _tableData[i]['content']?.isNotEmpty == true && // Check non-empty contents
+              _tableData[i]['content'] == content) { // Check if content matches
             isDuplicate = true;
+            print('Found duplicate content in row $i');
             break;
           }
         }
         
-        result = isDuplicate ? 'No Good' : 'Good';
-        print('Counting validation - Content is ${isDuplicate ? 'duplicate' : 'unique'} (${result})');
+        if (isDuplicate) {
+          result = 'No Good';
+          print('Counting validation - Duplicate content found (No Good)');
+        } else {
+          // 3. Additional check: Content must not match any converted lot number format
+          String unconvertedContent = content;
+          String convertedContent = _convertSubLotNumber(content);
+          
+          if (unconvertedContent == staticContent || convertedContent == staticContent) {
+            result = 'No Good';
+            print('Counting validation - Content matches static in either format (No Good)');
+          } else {
+            result = 'Good';
+            print('Counting validation - Content is unique and doesn\'t match static (Good)');
+          }
+        }
       }
     }
 
