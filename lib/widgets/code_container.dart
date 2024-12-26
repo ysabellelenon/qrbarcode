@@ -36,7 +36,7 @@ class _CodeContainerState extends State<CodeContainer> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F0FF),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,22 +50,10 @@ class _CodeContainerState extends State<CodeContainer> {
           ),
           const SizedBox(height: 16),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Category ${widget.codeNumber}'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildCategoryButton('Counting'),
-                      const SizedBox(width: 8),
-                      _buildCategoryButton('Non-Counting'),
-                    ],
-                  ),
-                ],
-              ),
+              _buildCategoryButton('Counting'),
+              const SizedBox(width: 8),
+              _buildCategoryButton('Non-Counting'),
               const SizedBox(width: 16),
               Expanded(
                 child: TextFormField(
