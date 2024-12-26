@@ -283,11 +283,29 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                   children: [
                     // Back Button
                     OutlinedButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => const EngineerLogin(),
-                        ),
-                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const EngineerLogin(),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              const begin = Offset(-1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
+                            transitionDuration:
+                                const Duration(milliseconds: 300),
+                          ),
+                        );
+                      },
                       child: const Text('Back'),
                     ),
                     const SizedBox(height: 20),

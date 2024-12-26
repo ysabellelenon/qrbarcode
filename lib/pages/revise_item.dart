@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qrbarcode/pages/item_masterlist.dart';
 import '../constants.dart';
 import '../database_helper.dart';
 import 'sublot_config.dart';
@@ -23,7 +24,8 @@ class _ReviseItemState extends State<ReviseItem> {
   Map<int, String> selectedCategories = {};
 
   // Lists for dropdown items
-  final List<String> _revisionNumbers = List.generate(10, (i) => (i + 1).toString());
+  final List<String> _revisionNumbers =
+      List.generate(10, (i) => (i + 1).toString());
   final List<String> _codeCounts = List.generate(20, (i) => (i + 1).toString());
 
   @override
@@ -137,11 +139,31 @@ class _ReviseItemState extends State<ReviseItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/item-masterlist'),
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const ItemMasterlist(),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(-1.0, 0.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeInOut;
+                            var tween = Tween(begin: begin, end: end)
+                                .chain(CurveTween(curve: curve));
+                            return SlideTransition(
+                              position: animation.drive(tween),
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 300),
+                        ),
+                      );
+                    },
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
-
                   const Center(
                     child: Text(
                       'Revise Item',
@@ -153,7 +175,6 @@ class _ReviseItemState extends State<ReviseItem> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
                   Card(
                     color: Colors.white,
                     elevation: 4,
@@ -167,21 +188,27 @@ class _ReviseItemState extends State<ReviseItem> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            const SizedBox(height: 16),
                             TextFormField(
                               controller: _itemNameController,
                               decoration: const InputDecoration(
                                 labelText: 'Item Name',
                                 border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 20),
                               ),
-                              validator: (value) => value!.isEmpty ? 'Required' : null,
+                              validator: (value) =>
+                                  value!.isEmpty ? 'Required' : null,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 24),
 
                             DropdownButtonFormField<String>(
                               value: _selectedRevision,
                               decoration: const InputDecoration(
                                 labelText: 'Rev No.',
                                 border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 20),
                               ),
                               items: _revisionNumbers.map((String value) {
                                 return DropdownMenuItem<String>(
@@ -194,9 +221,10 @@ class _ReviseItemState extends State<ReviseItem> {
                                   _selectedRevision = newValue;
                                 });
                               },
-                              validator: (value) => value == null ? 'Required' : null,
+                              validator: (value) =>
+                                  value == null ? 'Required' : null,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 24),
 
                             Row(
                               children: [
@@ -206,6 +234,8 @@ class _ReviseItemState extends State<ReviseItem> {
                                     decoration: const InputDecoration(
                                       labelText: 'No. of Code',
                                       border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 20),
                                     ),
                                     hint: const Text('Select Number of Codes'),
                                     items: _codeCounts.map((String value) {
@@ -220,17 +250,24 @@ class _ReviseItemState extends State<ReviseItem> {
                                         _updateCodeContainers(newValue);
                                       });
                                     },
-                                    validator: (value) => value == null ? 'Required' : null,
+                                    validator: (value) =>
+                                        value == null ? 'Required' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 20),
                               ],
                             ),
+                            const SizedBox(height: 32),
 
                             // Dynamic Code Containers
-                            ...codeContainers,
+                            ...codeContainers
+                                .map((container) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 24),
+                                      child: container,
+                                    ))
+                                .toList(),
 
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 16),
 
                             Align(
                               alignment: Alignment.centerRight,
@@ -239,8 +276,8 @@ class _ReviseItemState extends State<ReviseItem> {
                                   backgroundColor: Colors.grey[800],
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
+                                    horizontal: 40,
+                                    vertical: 20,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -255,21 +292,29 @@ class _ReviseItemState extends State<ReviseItem> {
                                       'codeCount': _selectedCodeCount,
                                       'codes': codeContainers.map((container) {
                                         return {
-                                          'category': container.selectedCategory,
-                                          'content': container.labelController.text,
-                                          'hasSubLot': false, // Adjust as needed
-                                          'serialCount': '0', // Adjust as needed
+                                          'category':
+                                              container.selectedCategory,
+                                          'content':
+                                              container.labelController.text,
+                                          'hasSubLot':
+                                              false, // Adjust as needed
+                                          'serialCount':
+                                              '0', // Adjust as needed
                                         };
                                       }).toList(),
                                     };
 
                                     // Call the update method
-                                    await DatabaseHelper().updateItem(widget.item['id'], updatedItem);
+                                    await DatabaseHelper().updateItem(
+                                        widget.item['id'], updatedItem);
 
                                     // Optionally navigate back or show a success message
-                                    Navigator.of(context).pop(); // Go back to the previous screen
+                                    Navigator.of(context)
+                                        .pop(); // Go back to the previous screen
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Item updated successfully')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'Item updated successfully')),
                                     );
                                   }
                                 },
