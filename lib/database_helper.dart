@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -98,6 +98,65 @@ class DatabaseHelper {
             )
           ''');
         }
+        if (oldVersion < 7) {
+          // First create new tables with the new structure
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS scanning_sessions(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              itemName TEXT,
+              poNo TEXT,
+              totalQty INTEGER,
+              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS box_labels(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              sessionId INTEGER,
+              labelNumber TEXT,
+              lotNumber TEXT,
+              qtyPerBox TEXT,
+              content TEXT,
+              createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS individual_scans(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              sessionId INTEGER,
+              content TEXT,
+              result TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
+            )
+          ''');
+
+          // Copy data from old tables to new ones
+          await db.execute('''
+            INSERT INTO scanning_sessions (id, itemName, poNo, totalQty, createdAt)
+            SELECT id, itemName, poNo, totalQty, createdAt FROM operator_scans
+          ''');
+
+          await db.execute('''
+            INSERT INTO box_labels (id, sessionId, labelNumber, lotNumber, qtyPerBox, content, createdAt)
+            SELECT id, operatorScanId, articleLabel, lotNumber, qtyPerBox, content, createdAt 
+            FROM article_labels
+          ''');
+
+          await db.execute('''
+            INSERT INTO individual_scans (id, sessionId, content, result, created_at)
+            SELECT id, operator_scan_id, content, result, created_at 
+            FROM scan_contents
+          ''');
+
+          // Drop old tables
+          await db.execute('DROP TABLE IF EXISTS operator_scans');
+          await db.execute('DROP TABLE IF EXISTS article_labels');
+          await db.execute('DROP TABLE IF EXISTS scan_contents');
+        }
       },
       onOpen: (db) async {
         print('Database opened successfully');
@@ -142,7 +201,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS operator_scans(
+      CREATE TABLE IF NOT EXISTS scanning_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         itemName TEXT,
         poNo TEXT,
@@ -152,15 +211,26 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS article_labels(
+      CREATE TABLE IF NOT EXISTS box_labels(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        operatorScanId INTEGER,
-        articleLabel TEXT,
+        sessionId INTEGER,
+        labelNumber TEXT,
         lotNumber TEXT,
         qtyPerBox TEXT,
         content TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+        FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS individual_scans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sessionId INTEGER,
+        content TEXT,
+        result TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
       )
     ''');
 
@@ -176,17 +246,6 @@ class DatabaseHelper {
         remarks TEXT,
         tableData TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS scan_contents(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        operator_scan_id INTEGER,
-        content TEXT,
-        result TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (operator_scan_id) REFERENCES operator_scans (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -270,7 +329,7 @@ class DatabaseHelper {
 
   Future<void> _migrateToVersion3(Database db) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS operator_scans(
+      CREATE TABLE IF NOT EXISTS scanning_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         itemName TEXT,
         poNo TEXT,
@@ -280,20 +339,20 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS article_labels(
+      CREATE TABLE IF NOT EXISTS box_labels(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        operatorScanId INTEGER,
-        articleLabel TEXT,
+        sessionId INTEGER,
+        labelNumber TEXT,
         lotNumber TEXT,
         qtyPerBox TEXT,
         content TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+        FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
       )
     ''');
 
     print(
-        'Migrated database to version 3: Added operator_scans and article_labels tables');
+        'Migrated database to version 3: Added scanning_sessions and box_labels tables');
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS unfinished_items(
@@ -478,7 +537,7 @@ class DatabaseHelper {
 
   Future<int> insertOperatorScan(Map<String, dynamic> scan) async {
     final db = await database;
-    return await db.insert('operator_scans', {
+    return await db.insert('scanning_sessions', {
       'itemName': scan['itemName'],
       'poNo': scan['poNo'],
       'totalQty': scan['totalQty'],
@@ -488,20 +547,26 @@ class DatabaseHelper {
 
   Future<int> insertArticleLabel(Map<String, dynamic> label) async {
     final db = await database;
-    return await db.insert('article_labels', label);
+    return await db.insert('box_labels', {
+      'sessionId': label['operatorScanId'],
+      'labelNumber': label['articleLabel'],
+      'lotNumber': label['lotNumber'],
+      'qtyPerBox': label['qtyPerBox'],
+      'content': label['content'],
+      'createdAt': label['createdAt'] ?? DateTime.now().toIso8601String(),
+    });
   }
 
   Future<List<Map<String, dynamic>>> getOperatorScans() async {
     final db = await database;
-    return await db.query('operator_scans', orderBy: 'createdAt DESC');
+    return await db.query('scanning_sessions', orderBy: 'createdAt DESC');
   }
 
-  Future<List<Map<String, dynamic>>> getArticleLabels(
-      int operatorScanId) async {
+  Future<List<Map<String, dynamic>>> getArticleLabels(int sessionId) async {
     final db = await database;
-    return await db.query('article_labels',
-        where: 'operatorScanId = ?',
-        whereArgs: [operatorScanId],
+    return await db.query('box_labels',
+        where: 'sessionId = ?',
+        whereArgs: [sessionId],
         orderBy: 'createdAt DESC');
   }
 
@@ -568,16 +633,16 @@ class DatabaseHelper {
 
     return await db.rawQuery('''
       SELECT 
-        sc.id,
-        sc.content,
-        sc.result,
-        sc.created_at,
-        os.itemName,
-        os.poNo,
-        os.totalQty
-      FROM scan_contents sc
-      JOIN operator_scans os ON sc.operator_scan_id = os.id
-      ORDER BY sc.created_at DESC
+        s.id,
+        s.content,
+        s.result,
+        s.created_at,
+        ss.itemName,
+        ss.poNo,
+        ss.totalQty
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
     ''', [pageSize, offset]);
   }
@@ -586,30 +651,30 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.rawQuery('''
       SELECT COUNT(*) as count 
-      FROM scan_contents sc
-      JOIN operator_scans os ON sc.operator_scan_id = os.id
-      WHERE os.itemName = ?
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
     ''', [itemName]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> insertScanContent(
-      int operatorScanId, String content, String result) async {
+      int sessionId, String content, String result) async {
     final db = await database;
-    return await db.insert('scan_contents', {
-      'operator_scan_id': operatorScanId,
+    return await db.insert('individual_scans', {
+      'sessionId': sessionId,
       'content': content,
       'result': result,
       'created_at': DateTime.now().toIso8601String(),
     });
   }
 
-  Future<List<Map<String, dynamic>>> getScanContents(int operatorScanId) async {
+  Future<List<Map<String, dynamic>>> getScanContents(int sessionId) async {
     final db = await database;
     return await db.query(
-      'scan_contents',
-      where: 'operator_scan_id = ?',
-      whereArgs: [operatorScanId],
+      'individual_scans',
+      where: 'sessionId = ?',
+      whereArgs: [sessionId],
       orderBy: 'created_at ASC',
     );
   }
