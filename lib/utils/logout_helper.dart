@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qrbarcode/constants.dart';
 import '../pages/login_page.dart';
 
 class LogoutHelper {
@@ -51,9 +52,12 @@ class LogoutHelper {
                 ),
               ),
             ],
+            shape: RoundedRectangleBorder(
+              borderRadius: kBorderRadiusSmallAll,
+            ),
           ),
         );
       },
     ).then((_) => logoutFocusNode.dispose());
   }
-} 
+}

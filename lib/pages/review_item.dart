@@ -148,8 +148,7 @@ class ReviewItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context)
-                        .pushReplacementNamed('/sublot-config'),
+                    onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),

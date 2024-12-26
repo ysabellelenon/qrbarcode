@@ -153,8 +153,7 @@ class _SublotConfigState extends State<SublotConfig> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context)
-                        .pushReplacementNamed('/register-item'),
+                    onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
