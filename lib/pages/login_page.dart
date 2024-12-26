@@ -87,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Card(
           elevation: 8,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: kBorderRadiusSmallAll,
           ),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -103,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
                     height: 100,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Username field
                   TextFormField(
                     controller: _usernameController,
@@ -111,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
                       labelText: 'Username',
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: kBorderRadiusSmallAll,
                       ),
                     ),
                     validator: (value) {
@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Password field
                   TextFormField(
                     controller: _passwordController,
@@ -133,9 +133,9 @@ class _LoginPageState extends State<LoginPage> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible 
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                          _isPasswordVisible
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: () {
                           setState(() {
@@ -144,7 +144,7 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: kBorderRadiusSmallAll,
                       ),
                     ),
                     validator: (value) {
@@ -155,7 +155,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Login button
                   SizedBox(
                     width: double.infinity,
@@ -166,19 +166,20 @@ class _LoginPageState extends State<LoginPage> {
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: kBorderRadiusSmallAll,
                         ),
                       ),
-                      child: _isLoading 
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white),
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
+                            )
+                          : const Text(
+                              'Login',
+                              style: TextStyle(fontSize: 16),
+                            ),
                     ),
                   ),
                 ],
@@ -189,4 +190,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-} 
+}

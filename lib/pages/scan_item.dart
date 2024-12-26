@@ -380,6 +380,9 @@ class _ScanItemState extends State<ScanItem> {
       barrierDismissible: false, // User must tap OK to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
@@ -401,6 +404,9 @@ class _ScanItemState extends State<ScanItem> {
       barrierDismissible: false, // User must tap OK to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
           title: const Text('Information'),
           content: const Text('TOTAL QTY has been reached'),
           actions: [
@@ -518,9 +524,22 @@ class _ScanItemState extends State<ScanItem> {
                   });
                 }
               },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ),
@@ -645,7 +664,7 @@ class _ScanItemState extends State<ScanItem> {
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: kBorderRadiusSmallAll,
                             border: Border.all(color: Colors.grey.shade300),
                           ),
                           child: Row(
@@ -776,7 +795,7 @@ class _ScanItemState extends State<ScanItem> {
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: kBorderRadiusSmallAll,
                             border: Border.all(color: Colors.grey.shade300),
                           ),
                           child: Row(
@@ -841,7 +860,7 @@ class _ScanItemState extends State<ScanItem> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: kBorderRadiusSmallAll,
                             border: Border.all(color: Colors.grey.shade300),
                           ),
                           child: SingleChildScrollView(
@@ -883,7 +902,7 @@ class _ScanItemState extends State<ScanItem> {
                                       vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: kBorderRadiusSmallAll,
                                     ),
                                   ),
                                   onPressed: _handleReviewSummary,
@@ -900,7 +919,7 @@ class _ScanItemState extends State<ScanItem> {
                                       vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: kBorderRadiusSmallAll,
                                     ),
                                   ),
                                   onPressed: _addRow,
@@ -918,7 +937,7 @@ class _ScanItemState extends State<ScanItem> {
                                       vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: kBorderRadiusSmallAll,
                                     ),
                                   ),
                                   onPressed: () {
@@ -959,7 +978,7 @@ class _ScanItemState extends State<ScanItem> {
                                       vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: kBorderRadiusSmallAll,
                                     ),
                                   ),
                                   onPressed: () {
@@ -989,7 +1008,7 @@ class _ScanItemState extends State<ScanItem> {
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: kBorderRadiusSmallAll,
                             border: Border.all(color: Colors.grey.shade300),
                           ),
                           child: Column(

@@ -44,7 +44,7 @@ class EngineerLogin extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Main Content
           Expanded(
             child: Center(
@@ -53,7 +53,7 @@ class EngineerLogin extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: kBorderRadiusSmallAll,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -105,7 +105,7 @@ class EngineerLogin extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Colors.black),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: kBorderRadiusSmallAll,
           ),
         ),
         child: Text(
@@ -118,4 +118,4 @@ class EngineerLogin extends StatelessWidget {
       ),
     );
   }
-} 
+}

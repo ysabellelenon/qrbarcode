@@ -28,7 +28,8 @@ class SublotConfig extends StatefulWidget {
 class _SublotConfigState extends State<SublotConfig> {
   final Map<String, bool> enableRules = {};
   final Map<String, String> selectedSerialCounts = {};
-  final List<String> _serialCounts = List.generate(20, (i) => (i + 1).toString());
+  final List<String> _serialCounts =
+      List.generate(20, (i) => (i + 1).toString());
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _SublotConfigState extends State<SublotConfig> {
       color: Colors.white,
       elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: kBorderRadiusSmallAll,
       ),
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -70,9 +71,22 @@ class _SublotConfigState extends State<SublotConfig> {
                 width: 120,
                 child: DropdownButtonFormField<String>(
                   value: selectedSerialCounts[labelContent],
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: kBorderRadiusSmallAll,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: kBorderRadiusSmallAll,
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: kBorderRadiusSmallAll,
+                      borderSide: const BorderSide(color: Colors.blue),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   items: _serialCounts.map((String value) {
                     return DropdownMenuItem<String>(
@@ -139,7 +153,8 @@ class _SublotConfigState extends State<SublotConfig> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/register-item'),
+                    onPressed: () => Navigator.of(context)
+                        .pushReplacementNamed('/register-item'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
@@ -157,12 +172,10 @@ class _SublotConfigState extends State<SublotConfig> {
                   const SizedBox(height: 30),
 
                   // Generate a container for each counting code
-                  ...widget.countingCodes.map((code) => 
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildConfigContainer(code['content']!),
-                    )
-                  ),
+                  ...widget.countingCodes.map((code) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildConfigContainer(code['content']!),
+                      )),
 
                   const SizedBox(height: 16),
                   Align(
@@ -175,24 +188,29 @@ class _SublotConfigState extends State<SublotConfig> {
                           horizontal: 32,
                           vertical: 16,
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: kBorderRadiusSmallAll,
+                        ),
                       ),
                       onPressed: () {
                         // Create a list of codes with their configurations
-                        final configuredCodes = widget.countingCodes.map((code) {
+                        final configuredCodes =
+                            widget.countingCodes.map((code) {
                           final config = {
                             'code': code['code'],
                             'content': code['content'],
                             'category': 'Counting',
                             'hasSubLot': enableRules[code['content']] ?? false,
-                            'serialCount': enableRules[code['content']] ?? false 
-                                ? selectedSerialCounts[code['content']] 
+                            'serialCount': enableRules[code['content']] ?? false
+                                ? selectedSerialCounts[code['content']]
                                 : '0',
                           };
                           print('Configured code: $config'); // Debug print
                           return config;
                         }).toList();
 
-                        print('All configured codes: $configuredCodes'); // Debug print
+                        print(
+                            'All configured codes: $configuredCodes'); // Debug print
 
                         Navigator.push(
                           context,
@@ -201,18 +219,25 @@ class _SublotConfigState extends State<SublotConfig> {
                               itemId: widget.itemId,
                               itemName: widget.itemName,
                               revision: widget.revision ?? '1',
-                              codeCount: widget.allCodes?.length ?? widget.countingCodes.length,
-                              codes: configuredCodes + (widget.allCodes?.where((code) => code['category'] != 'Counting').map((code) {
-                                final nonCountingCode = {
-                                  'code': code['code'],
-                                  'content': code['content'],
-                                  'category': code['category'],
-                                  'hasSubLot': false,
-                                  'serialCount': '0',
-                                };
-                                print('Non-counting code: $nonCountingCode'); // Debug print
-                                return nonCountingCode;
-                              }).toList() ?? []),
+                              codeCount: widget.allCodes?.length ??
+                                  widget.countingCodes.length,
+                              codes: configuredCodes +
+                                  (widget.allCodes
+                                          ?.where((code) =>
+                                              code['category'] != 'Counting')
+                                          .map((code) {
+                                        final nonCountingCode = {
+                                          'code': code['code'],
+                                          'content': code['content'],
+                                          'category': code['category'],
+                                          'hasSubLot': false,
+                                          'serialCount': '0',
+                                        };
+                                        print(
+                                            'Non-counting code: $nonCountingCode'); // Debug print
+                                        return nonCountingCode;
+                                      }).toList() ??
+                                      []),
                               isUpdate: widget.isUpdate,
                             ),
                           ),
@@ -229,4 +254,4 @@ class _SublotConfigState extends State<SublotConfig> {
       ),
     );
   }
-} 
+}

@@ -21,7 +21,8 @@ class _RegisterItemState extends State<RegisterItem> {
   List<CodeContainer> codeContainers = [];
   Map<int, String> selectedCategories = {};
 
-  final List<String> _revisionNumbers = List.generate(10, (i) => (i + 1).toString());
+  final List<String> _revisionNumbers =
+      List.generate(10, (i) => (i + 1).toString());
   final List<String> _codeCounts = List.generate(20, (i) => (i + 1).toString());
 
   void _updateCodeContainers(String? count) {
@@ -97,11 +98,11 @@ class _RegisterItemState extends State<RegisterItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/item-masterlist'),
+                    onPressed: () => Navigator.of(context)
+                        .pushReplacementNamed('/item-masterlist'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
-
                   const Center(
                     child: Text(
                       'Register New Item',
@@ -113,12 +114,11 @@ class _RegisterItemState extends State<RegisterItem> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
                   Card(
                     color: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: kBorderRadiusSmallAll,
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -129,11 +129,24 @@ class _RegisterItemState extends State<RegisterItem> {
                           children: [
                             TextFormField(
                               controller: _itemNameController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Item Name',
-                                border: OutlineInputBorder(),
+                                border: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                  borderSide:
+                                      const BorderSide(color: Colors.blue),
+                                ),
                               ),
-                              validator: (value) => value!.isEmpty ? 'Required' : null,
+                              validator: (value) =>
+                                  value!.isEmpty ? 'Required' : null,
                             ),
                             const SizedBox(height: 20),
 
@@ -142,9 +155,21 @@ class _RegisterItemState extends State<RegisterItem> {
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
                                     value: _selectedRevision,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'Rev No.',
-                                      border: OutlineInputBorder(),
+                                      border: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: const BorderSide(
+                                            color: Colors.blue),
+                                      ),
                                     ),
                                     hint: const Text('Select Revision Number'),
                                     items: _revisionNumbers.map((String value) {
@@ -158,16 +183,29 @@ class _RegisterItemState extends State<RegisterItem> {
                                         _selectedRevision = newValue;
                                       });
                                     },
-                                    validator: (value) => value == null ? 'Required' : null,
+                                    validator: (value) =>
+                                        value == null ? 'Required' : null,
                                   ),
                                 ),
                                 const SizedBox(width: 20),
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
                                     value: _selectedCodeCount,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       labelText: 'No. of Code',
-                                      border: OutlineInputBorder(),
+                                      border: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: const BorderSide(
+                                            color: Colors.blue),
+                                      ),
                                     ),
                                     hint: const Text('Select Number of Codes'),
                                     items: _codeCounts.map((String value) {
@@ -182,7 +220,8 @@ class _RegisterItemState extends State<RegisterItem> {
                                         _updateCodeContainers(newValue);
                                       });
                                     },
-                                    validator: (value) => value == null ? 'Required' : null,
+                                    validator: (value) =>
+                                        value == null ? 'Required' : null,
                                   ),
                                 ),
                               ],
@@ -199,18 +238,26 @@ class _RegisterItemState extends State<RegisterItem> {
                               child: ElevatedButton(
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    final allCodes = codeContainers.map((container) => {
-                                      'category': selectedCategories[container.codeNumber] ?? '',
-                                      'content': container.labelController.text,
-                                      'hasSubLot': false,
-                                      'serialCount': '0',
-                                    }).toList();
+                                    final allCodes = codeContainers
+                                        .map((container) => {
+                                              'category': selectedCategories[
+                                                      container.codeNumber] ??
+                                                  '',
+                                              'content': container
+                                                  .labelController.text,
+                                              'hasSubLot': false,
+                                              'serialCount': '0',
+                                            })
+                                        .toList();
 
                                     final countingCodes = allCodes
-                                        .where((code) => code['category'] == 'Counting')
+                                        .where((code) =>
+                                            code['category'] == 'Counting')
                                         .map((code) => {
-                                              'category': code['category'].toString(),
-                                              'content': code['content'].toString(),
+                                              'category':
+                                                  code['category'].toString(),
+                                              'content':
+                                                  code['content'].toString(),
                                             })
                                         .toList();
 
@@ -220,7 +267,8 @@ class _RegisterItemState extends State<RegisterItem> {
                                         MaterialPageRoute(
                                           builder: (context) => SublotConfig(
                                             itemName: _itemNameController.text,
-                                            countingCodes: countingCodes as List<Map<String, String>>,
+                                            countingCodes: countingCodes
+                                                as List<Map<String, String>>,
                                           ),
                                         ),
                                       );
@@ -240,6 +288,17 @@ class _RegisterItemState extends State<RegisterItem> {
                                   }
                                 },
                                 child: const Text('Next'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: kBorderRadiusSmallAll,
+                                  ),
+                                ),
                               ),
                             ),
                           ],

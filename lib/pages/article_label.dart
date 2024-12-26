@@ -190,7 +190,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                   constraints: const BoxConstraints(maxWidth: 600),
                   decoration: BoxDecoration(
                     color: Colors.white, // White background for the container
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: kBorderRadiusSmallAll,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black12,
@@ -219,9 +219,20 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         TextFormField(
                           controller: articleLabelController,
                           focusNode: _articleLabelFocus,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Article Label',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide: const BorderSide(color: Colors.blue),
+                            ),
                           ),
                           onChanged: _validateArticleLabel,
                           onFieldSubmitted: (_) {
@@ -255,18 +266,40 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: lotNumberController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Lot Number',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide: const BorderSide(color: Colors.blue),
+                            ),
                           ),
                           enabled: !isError, // Disable if there's an error
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: qtyController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'QTY per box',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                              borderSide: const BorderSide(color: Colors.blue),
+                            ),
                           ),
                           keyboardType: TextInputType.number,
                           enabled: !isError, // Disable if there's an error
@@ -320,7 +353,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                 vertical: 16,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: kBorderRadiusSmallAll,
                               ),
                             ),
                             child: const Text('Proceed'),
