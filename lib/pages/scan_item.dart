@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import the DatabaseHelper
 import 'article_label.dart'; // Add this import
@@ -382,22 +383,67 @@ class _ScanItemState extends State<ScanItem> {
   void _showQtyReachedDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap OK to dismiss
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
-          title: const Text('Information'),
-          content: const Text('QTY per box has been reached'),
-          actions: [
-            TextButton(
-              onPressed: () {
+        return FocusScope(
+          autofocus: true,
+          child: KeyboardListener(
+            focusNode: FocusNode(),
+            onKeyEvent: (event) {
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.enter) {
                 Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => ArticleLabel(
+                      itemName: itemName,
+                      poNo: poNo,
+                      operatorScanId: operatorScanId,
+                      totalQty: totalQty,
+                      resumeData: widget.resumeData,
+                    ),
+                  ),
+                );
+              }
+            },
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: kBorderRadiusSmallAll,
+              ),
+              title: const Text('Information'),
+              content: const Text('QTY per box has been reached'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+                ElevatedButton(
+                  autofocus: true,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => ArticleLabel(
+                          itemName: itemName,
+                          poNo: poNo,
+                          operatorScanId: operatorScanId,
+                          totalQty: totalQty,
+                          resumeData: widget.resumeData,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Scan New Article Label'),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
