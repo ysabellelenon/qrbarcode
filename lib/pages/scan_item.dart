@@ -45,6 +45,11 @@ class _ScanItemState extends State<ScanItem> {
   int _totalItems = 0;
   bool _isLoadingHistory = false;
 
+  // Add these variables for sorting and searching
+  String _searchQuery = '';
+  String _sortColumn = 'created_at';
+  bool _sortAscending = false;
+
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo =>
@@ -561,6 +566,51 @@ class _ScanItemState extends State<ScanItem> {
     }).toList();
   }
 
+  // Add this method to handle sorting
+  void _sort<T>(
+      String column, Comparable<T> Function(Map<String, dynamic>) getField) {
+    setState(() {
+      if (_sortColumn == column) {
+        _sortAscending = !_sortAscending;
+      } else {
+        _sortColumn = column;
+        _sortAscending = true;
+      }
+
+      // Create a mutable copy of the data before sorting
+      final mutableData = List<Map<String, dynamic>>.from(_historicalData);
+      mutableData.sort((a, b) {
+        final aValue = getField(a);
+        final bValue = getField(b);
+        return _sortAscending
+            ? Comparable.compare(aValue, bValue)
+            : Comparable.compare(bValue, aValue);
+      });
+      _historicalData = mutableData;
+    });
+  }
+
+  // Add this method to filter data based on search query
+  List<Map<String, dynamic>> _getFilteredData() {
+    if (_searchQuery.isEmpty) return _historicalData;
+
+    // Create a mutable copy for filtering
+    return List<Map<String, dynamic>>.from(_historicalData).where((item) {
+      final searchLower = _searchQuery.toLowerCase();
+      final itemName = (item['itemName'] ?? '').toLowerCase();
+      final poNo = (item['poNo'] ?? '').toLowerCase();
+      final content = (item['content'] ?? '').toLowerCase();
+      final result = (item['result'] ?? '').toLowerCase();
+      final date = DateTime.parse(item['created_at']).toString().toLowerCase();
+
+      return itemName.contains(searchLower) ||
+          poNo.contains(searchLower) ||
+          content.contains(searchLower) ||
+          result.contains(searchLower) ||
+          date.contains(searchLower);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1025,6 +1075,22 @@ class _ScanItemState extends State<ScanItem> {
                                 ),
                               ),
                               const SizedBox(height: 16),
+                              // Add search field
+                              TextField(
+                                decoration: InputDecoration(
+                                  hintText: 'Search in previous scans...',
+                                  prefixIcon: const Icon(Icons.search),
+                                  border: OutlineInputBorder(
+                                    borderRadius: kBorderRadiusSmallAll,
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _searchQuery = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
                               if (_isLoadingHistory)
                                 const Center(child: CircularProgressIndicator())
                               else if (_historicalData.isEmpty)
@@ -1043,22 +1109,58 @@ class _ScanItemState extends State<ScanItem> {
                                           headingRowColor:
                                               MaterialStateProperty.all(
                                                   Colors.grey.shade100),
-                                          columns: const [
+                                          sortColumnIndex: [
+                                            'created_at',
+                                            'itemName',
+                                            'poNo',
+                                            'content',
+                                            'result'
+                                          ].indexOf(_sortColumn),
+                                          sortAscending: _sortAscending,
+                                          columns: [
                                             DataColumn(
-                                                label: SelectableText('Date')),
+                                              label:
+                                                  const SelectableText('Date'),
+                                              onSort: (_, __) => _sort<String>(
+                                                'created_at',
+                                                (item) => item['created_at'],
+                                              ),
+                                            ),
                                             DataColumn(
-                                                label: SelectableText(
-                                                    'Item Name')),
+                                              label: const SelectableText(
+                                                  'Item Name'),
+                                              onSort: (_, __) => _sort<String>(
+                                                'itemName',
+                                                (item) =>
+                                                    item['itemName'] ?? '',
+                                              ),
+                                            ),
                                             DataColumn(
-                                                label: SelectableText('PO No')),
+                                              label:
+                                                  const SelectableText('PO No'),
+                                              onSort: (_, __) => _sort<String>(
+                                                'poNo',
+                                                (item) => item['poNo'] ?? '',
+                                              ),
+                                            ),
                                             DataColumn(
-                                                label:
-                                                    SelectableText('Content')),
+                                              label: const SelectableText(
+                                                  'Content'),
+                                              onSort: (_, __) => _sort<String>(
+                                                'content',
+                                                (item) => item['content'] ?? '',
+                                              ),
+                                            ),
                                             DataColumn(
-                                                label:
-                                                    SelectableText('Result')),
+                                              label: const SelectableText(
+                                                  'Result'),
+                                              onSort: (_, __) => _sort<String>(
+                                                'result',
+                                                (item) => item['result'] ?? '',
+                                              ),
+                                            ),
                                           ],
-                                          rows: _historicalData.map((item) {
+                                          rows: _getFilteredData().map((item) {
                                             final DateTime createdAt =
                                                 DateTime.parse(
                                                     item['created_at']);
