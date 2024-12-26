@@ -63,6 +63,50 @@ class _ManageAccountsState extends State<ManageAccounts> {
     });
   }
 
+  Future<void> _deleteSelectedUsers() async {
+    try {
+      // Get the IDs of selected users
+      final selectedIds = selectedUsers.toList();
+      
+      // Delete from database
+      final db = await DatabaseHelper().database;
+      await db.delete(
+        'users',
+        where: 'id IN (${List.filled(selectedIds.length, '?').join(',')})',
+        whereArgs: selectedIds,
+      );
+
+      // Refresh the users list from database
+      final updatedUsers = await DatabaseHelper().getUsers();
+      
+      // Update state with new data
+      setState(() {
+        users = updatedUsers;
+        filteredUsers = updatedUsers;
+        selectedUsers.clear();
+        selectAll = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Users deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting users: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,11 +294,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     onPressed: selectedUsers.isEmpty
                                         ? null
                                         : () {
-                                            setState(() {
-                                              filteredUsers.removeWhere(
-                                                  (user) => selectedUsers.contains(user['id'] as int));
-                                              selectedUsers.clear();
-                                            });
+                                            _deleteSelectedUsers();
                                           },
                                     child: const Text('Delete Selected'),
                                   ),
