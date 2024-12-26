@@ -285,37 +285,57 @@ class _ReviseItemState extends State<ReviseItem> {
                                 ),
                                 onPressed: () async {
                                   if (_formKey.currentState!.validate()) {
-                                    // Gather data to update
-                                    final updatedItem = {
-                                      'itemCode': _itemNameController.text,
-                                      'revision': _selectedRevision,
-                                      'codeCount': _selectedCodeCount,
-                                      'codes': codeContainers.map((container) {
-                                        return {
-                                          'category':
-                                              container.selectedCategory,
-                                          'content':
-                                              container.labelController.text,
-                                          'hasSubLot':
-                                              false, // Adjust as needed
-                                          'serialCount':
-                                              '0', // Adjust as needed
-                                        };
-                                      }).toList(),
-                                    };
+                                    try {
+                                      // Gather data to update
+                                      final updatedItem = {
+                                        'itemCode': _itemNameController.text,
+                                        'revision': _selectedRevision,
+                                        'codeCount': _selectedCodeCount,
+                                        'codes': codeContainers.map((container) {
+                                          return {
+                                            'category':
+                                                container.selectedCategory,
+                                            'content':
+                                                container.labelController.text,
+                                            'hasSubLot':
+                                                container.hasSubLot,
+                                            'serialCount': '0',
+                                          };
+                                        }).toList(),
+                                      };
 
-                                    // Call the update method
-                                    await DatabaseHelper().updateItem(
-                                        widget.item['id'], updatedItem);
+                                      // Call the update method
+                                      await DatabaseHelper().updateItem(
+                                          widget.item['id'], updatedItem);
 
-                                    // Optionally navigate back or show a success message
-                                    Navigator.of(context)
-                                        .pop(); // Go back to the previous screen
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Item updated successfully')),
-                                    );
+                                      if (mounted) {
+                                        // Show success message
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Item updated successfully'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+
+                                        // Navigate back to ItemMasterlist with refresh flag
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ItemMasterlist(),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // Show error message if update fails
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error updating item: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   }
                                 },
                                 child: const Text('Save Changes'),
