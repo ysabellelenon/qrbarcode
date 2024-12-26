@@ -114,194 +114,199 @@ class _RegisterItemState extends State<RegisterItem> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  Card(
-                    color: Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: kBorderRadiusSmallAll,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextFormField(
-                              controller: _itemNameController,
-                              decoration: InputDecoration(
-                                labelText: 'Item Name',
-                                border: OutlineInputBorder(
-                                  borderRadius: kBorderRadiusSmallAll,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: kBorderRadiusSmallAll,
-                                  borderSide: BorderSide(
-                                      color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: kBorderRadiusSmallAll,
-                                  borderSide: const BorderSide(
-                                      color: kPrimaryColor),
-                                ),
-                              ),
-                              validator: (value) =>
-                                  value!.isEmpty ? 'Required' : null,
-                            ),
-                            const SizedBox(height: 20),
-
-                            Row(
+                  Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 1000),
+                      child: Card(
+                        color: Colors.white,
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: kBorderRadiusSmallAll,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedRevision,
-                                    decoration: InputDecoration(
-                                      labelText: 'Rev No.',
-                                      border: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                        borderSide: BorderSide(
-                                            color: Colors.grey.shade300),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                        borderSide: const BorderSide(
-                                            color: kPrimaryColor),
-                                      ),
+                                TextFormField(
+                                  controller: _itemNameController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Item Name',
+                                    border: OutlineInputBorder(
+                                      borderRadius: kBorderRadiusSmallAll,
                                     ),
-                                    hint: const Text('Select Revision Number'),
-                                    items: _revisionNumbers.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        _selectedRevision = newValue;
-                                      });
-                                    },
-                                    validator: (value) =>
-                                        value == null ? 'Required' : null,
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: kBorderRadiusSmallAll,
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: kBorderRadiusSmallAll,
+                                      borderSide: const BorderSide(
+                                          color: kPrimaryColor),
+                                    ),
                                   ),
+                                  validator: (value) =>
+                                      value!.isEmpty ? 'Required' : null,
                                 ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedCodeCount,
-                                    decoration: InputDecoration(
-                                      labelText: 'No. of Code',
-                                      border: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                        borderSide: BorderSide(
-                                            color: Colors.grey.shade300),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: kBorderRadiusSmallAll,
-                                        borderSide: const BorderSide(
-                                            color: kPrimaryColor),
+                                const SizedBox(height: 20),
+
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: _selectedRevision,
+                                        decoration: InputDecoration(
+                                          labelText: 'Rev No.',
+                                          border: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                            borderSide: BorderSide(
+                                                color: Colors.grey.shade300),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                            borderSide: const BorderSide(
+                                                color: kPrimaryColor),
+                                          ),
+                                        ),
+                                        hint: const Text('Select Revision Number'),
+                                        items: _revisionNumbers.map((String value) {
+                                          return DropdownMenuItem<String>(
+                                            value: value,
+                                            child: Text(value),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            _selectedRevision = newValue;
+                                          });
+                                        },
+                                        validator: (value) =>
+                                            value == null ? 'Required' : null,
                                       ),
                                     ),
-                                    hint: const Text('Select Number of Codes'),
-                                    items: _codeCounts.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        _selectedCodeCount = newValue;
-                                        _updateCodeContainers(newValue);
-                                      });
+                                    const SizedBox(width: 20),
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: _selectedCodeCount,
+                                        decoration: InputDecoration(
+                                          labelText: 'No. of Code',
+                                          border: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                            borderSide: BorderSide(
+                                                color: Colors.grey.shade300),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: kBorderRadiusSmallAll,
+                                            borderSide: const BorderSide(
+                                                color: kPrimaryColor),
+                                          ),
+                                        ),
+                                        hint: const Text('Select Number of Codes'),
+                                        items: _codeCounts.map((String value) {
+                                          return DropdownMenuItem<String>(
+                                            value: value,
+                                            child: Text(value),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            _selectedCodeCount = newValue;
+                                            _updateCodeContainers(newValue);
+                                          });
+                                        },
+                                        validator: (value) =>
+                                            value == null ? 'Required' : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+
+                                // Dynamic Code Containers
+                                ...codeContainers,
+
+                                const SizedBox(height: 32),
+
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        final allCodes = codeContainers
+                                            .map((container) => {
+                                                  'category': selectedCategories[
+                                                          container.codeNumber] ??
+                                                      '',
+                                                  'content': container
+                                                      .labelController.text,
+                                                  'hasSubLot': false,
+                                                  'serialCount': '0',
+                                                })
+                                            .toList();
+
+                                        final countingCodes = allCodes
+                                            .where((code) =>
+                                                code['category'] == 'Counting')
+                                            .map((code) => {
+                                                  'category':
+                                                      code['category'].toString(),
+                                                  'content':
+                                                      code['content'].toString(),
+                                                })
+                                            .toList();
+
+                                        if (countingCodes.isNotEmpty) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => SublotConfig(
+                                                itemName: _itemNameController.text,
+                                                countingCodes: countingCodes
+                                                    as List<Map<String, String>>,
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ReviewItem(
+                                                itemName: _itemNameController.text,
+                                                revision: _selectedRevision!,
+                                                codeCount: allCodes.length,
+                                                codes: allCodes,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
                                     },
-                                    validator: (value) =>
-                                        value == null ? 'Required' : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: kPrimaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                      ),
+                                    ),
+                                    child: const Text('Next'),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
-
-                            // Dynamic Code Containers
-                            ...codeContainers,
-
-                            const SizedBox(height: 32),
-
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (_formKey.currentState!.validate()) {
-                                    final allCodes = codeContainers
-                                        .map((container) => {
-                                              'category': selectedCategories[
-                                                      container.codeNumber] ??
-                                                  '',
-                                              'content': container
-                                                  .labelController.text,
-                                              'hasSubLot': false,
-                                              'serialCount': '0',
-                                            })
-                                        .toList();
-
-                                    final countingCodes = allCodes
-                                        .where((code) =>
-                                            code['category'] == 'Counting')
-                                        .map((code) => {
-                                              'category':
-                                                  code['category'].toString(),
-                                              'content':
-                                                  code['content'].toString(),
-                                            })
-                                        .toList();
-
-                                    if (countingCodes.isNotEmpty) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => SublotConfig(
-                                            itemName: _itemNameController.text,
-                                            countingCodes: countingCodes
-                                                as List<Map<String, String>>,
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ReviewItem(
-                                            itemName: _itemNameController.text,
-                                            revision: _selectedRevision!,
-                                            codeCount: allCodes.length,
-                                            codes: allCodes,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: kPrimaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: kBorderRadiusSmallAll,
-                                  ),
-                                ),
-                                child: const Text('Next'),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
