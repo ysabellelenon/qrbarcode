@@ -271,45 +271,8 @@ class EmergencySummary extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        // Save to unfinished items in database
-                        await DatabaseHelper().insertUnfinishedItem({
-                          'itemName': itemName,
-                          'lotNumber': lotNumber,
-                          'date': date.toIso8601String(),
-                          'content': content,
-                          'poNo': poNo,
-                          'quantity': tableData.length.toString(),
-                          'remarks': remarks,
-                          'tableData': tableData
-                              .map((item) => Map<String, dynamic>.from(item))
-                              .toList(),
-                        });
-
-                        // Navigate to login page
-                        if (context.mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                              '/login', (route) => false);
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Error'),
-                              content:
-                                  Text('Failed to save unfinished item: $e'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      }
+                    onPressed: () {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(

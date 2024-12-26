@@ -233,21 +233,6 @@ class DatabaseHelper {
         FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
       )
     ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS unfinished_items(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        itemName TEXT,
-        lotNumber TEXT,
-        date TEXT,
-        content TEXT,
-        poNo TEXT,
-        quantity TEXT,
-        remarks TEXT,
-        tableData TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
   }
 
   Future<void> _addNewTablesIfNotExist(Database db) async {
@@ -568,38 +553,6 @@ class DatabaseHelper {
         where: 'sessionId = ?',
         whereArgs: [sessionId],
         orderBy: 'createdAt DESC');
-  }
-
-  Future<void> insertUnfinishedItem(Map<String, dynamic> item) async {
-    final db = await database;
-    await db.insert(
-      'unfinished_items',
-      {
-        ...item,
-        'tableData': jsonEncode(item['tableData']),
-      },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getUnfinishedItems() async {
-    final db = await database;
-    final List<Map<String, dynamic>> items =
-        await db.query('unfinished_items', orderBy: 'date DESC');
-    return items.map((item) {
-      return {
-        ...item,
-        'tableData': jsonDecode(item['tableData']),
-      };
-    }).toList();
-  }
-
-  Future<void> deleteUnfinishedItems(List<int> ids) async {
-    final db = await database;
-    await db.delete(
-      'unfinished_items',
-      where: 'id IN (${List.filled(ids.length, '?').join(',')})',
-      whereArgs: ids,
-    );
   }
 
   Future<void> verifyDatabaseTables() async {

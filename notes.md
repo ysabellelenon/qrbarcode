@@ -113,7 +113,9 @@ K1HY02YY0012_240528A
 
 # Debug and View the database in Finder:
 ```bash
-rm "/Users/rickylenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db"
-flutter run -d macos
-rm users.db && cp "/Users/rickylenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db" users.db
+# Remove the database from the project directory
+rm "/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db"
+
+# Copy the database to the project directory
+rm users.db && cp "/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db" users.db
 ```
