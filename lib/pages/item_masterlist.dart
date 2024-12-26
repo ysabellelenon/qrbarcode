@@ -20,6 +20,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> filteredItems = [];
   final TextEditingController searchController = TextEditingController();
+  Set<int> expandedItems = {};
 
   @override
   void initState() {
@@ -76,106 +77,162 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     }
   }
 
-  List<DataRow> _buildDataRows() {
-    List<DataRow> dataRows = [];
-    int index = 1;
-    for (var item in filteredItems) {
-      List<Map<String, dynamic>> codes =
-          (item['codes'] as List<dynamic>).cast<Map<String, dynamic>>();
-      print('Item ${item['itemCode']} codes: $codes');
+  Widget _buildItemRow(Map<String, dynamic> item, int index) {
+    List<Map<String, dynamic>> codes =
+        (item['codes'] as List<dynamic>).cast<Map<String, dynamic>>();
+    bool isSelected = selectedItems.contains(item['id']);
+    bool isExpanded = expandedItems.contains(item['id']);
 
-      bool isSelected = selectedItems.contains(item['id']);
-      String firstLabel = codes.isNotEmpty
-          ? (codes[0]['content']?.trim() ?? '')
-          : '';
+    bool hasCountingCodes = codes.any((code) => code['category'] == 'Counting');
+    bool hasSubLotEnabled = codes.any((code) {
+      return code['hasSubLot'] == 1 || code['hasSubLot'] == true;
+    });
 
-      bool hasCountingCodes = codes.any((code) => code['category'] == 'Counting');
-      bool hasSubLotEnabled = codes.any((code) {
-        print('Checking hasSubLot for code: ${code['content']}, hasSubLot value: ${code['hasSubLot']}, type: ${code['hasSubLot'].runtimeType}');
-        return code['hasSubLot'] == 1 || code['hasSubLot'] == true;
-      });
-
-      print('Item ${item['itemCode']}: hasCountingCodes=$hasCountingCodes, hasSubLotEnabled=$hasSubLotEnabled');
-
-      for (int i = 0; i < codes.length; i++) {
-        var code = codes[i];
-        bool isFirstRow = i == 0;
-
-        dataRows.add(
-          DataRow(
-            cells: [
-              DataCell(
-                Checkbox(
-                  value: isSelected,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      if (value == true) {
-                        selectedItems.add(item['id']);
-                      } else {
-                        selectedItems.remove(item['id']);
-                      }
-                    });
-                  },
-                ),
-              ),
-              isFirstRow
-                  ? DataCell(Text(index.toString()))
-                  : const DataCell(Text('')),
-              isFirstRow
-                  ? DataCell(Text(item['itemCode'] ?? ''))
-                  : const DataCell(Text('')),
-              isFirstRow
-                  ? DataCell(Text(item['revision'] ?? ''))
-                  : const DataCell(Text('')),
-              DataCell(
-                code['category'] == 'Counting'
-                    ? Text('Counting',
-                        style: const TextStyle(color: Colors.blue))
-                    : Text('Non-Counting',
-                        style: const TextStyle(color: Colors.cyan)),
-              ),
-              DataCell(Text(code['content'] ?? '')),
-              isFirstRow
-                  ? DataCell(
-                      Text(
-                        hasCountingCodes 
-                            ? (hasSubLotEnabled ? 'Yes' : 'No')
-                            : 'N/A',
-                        style: TextStyle(
-                          color: hasCountingCodes
-                              ? (hasSubLotEnabled ? Colors.green : Colors.red)
-                              : Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
+    return Column(
+      children: [
+        Material(
+          color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                if (expandedItems.contains(item['id'])) {
+                  expandedItems.remove(item['id']);
+                } else {
+                  expandedItems.add(item['id']);
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        if (value == true) {
+                          selectedItems.add(item['id']);
+                        } else {
+                          selectedItems.remove(item['id']);
+                        }
+                      });
+                    },
+                  ),
+                  SizedBox(width: 50, child: Text(index.toString())),
+                  Expanded(
+                    flex: 2,
+                    child: Text(item['itemCode'] ?? ''),
+                  ),
+                  Expanded(
+                    child: Text(item['revision'] ?? ''),
+                  ),
+                  Expanded(
+                    child: Text(
+                      hasCountingCodes ? 'Counting' : 'Non-Counting',
+                      style: TextStyle(
+                        color: hasCountingCodes ? Colors.blue : Colors.cyan,
                       ),
-                    )
-                  : const DataCell(Text('')),
-              isFirstRow
-                  ? DataCell(
-                      OutlinedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReviseItem(item: item),
-                            ),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.deepPurple,
-                          side: const BorderSide(color: Colors.deepPurple),
-                        ),
-                        child: const Text('Revise'),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      hasCountingCodes
+                          ? (hasSubLotEnabled ? 'Yes' : 'No')
+                          : 'N/A',
+                      style: TextStyle(
+                        color: hasCountingCodes
+                            ? (hasSubLotEnabled ? Colors.green : Colors.red)
+                            : Colors.grey,
+                        fontWeight: FontWeight.bold,
                       ),
-                    )
-                  : const DataCell(Text('')),
-            ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 100,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ReviseItem(item: item),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.deepPurple,
+                        side: const BorderSide(color: Colors.deepPurple),
+                      ),
+                      child: const Text('Revise'),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        if (expandedItems.contains(item['id'])) {
+                          expandedItems.remove(item['id']);
+                        } else {
+                          expandedItems.add(item['id']);
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
-      }
-      index++;
-    }
-    return dataRows;
+        ),
+        if (isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 50.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: codes.map((code) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 8.0, horizontal: 16.0),
+                  margin: const EdgeInsets.symmetric(vertical: 4.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4.0),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          code['category'] ?? '',
+                          style: TextStyle(
+                            color: code['category'] == 'Counting'
+                                ? Colors.blue
+                                : Colors.cyan,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(code['content'] ?? ''),
+                      ),
+                      if (code['category'] == 'Counting')
+                        Expanded(
+                          child: Text(
+                            'Serial Count: ${code['serialCount'] ?? '0'}',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -226,12 +283,11 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                   children: [
                     // Back Button
                     OutlinedButton(
-                      onPressed: () =>
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) => const EngineerLogin(),
-                            ),
-                          ),
+                      onPressed: () => Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => const EngineerLogin(),
+                        ),
+                      ),
                       child: const Text('Back'),
                     ),
                     const SizedBox(height: 20),
@@ -252,7 +308,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                     // Table Section with Search and Buttons
                     Center(
                       child: Container(
-                        constraints: const BoxConstraints(maxWidth: 1000),
+                        constraints: const BoxConstraints(maxWidth: 1200),
                         child: Card(
                           color: Colors.white,
                           elevation: 4,
@@ -271,7 +327,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                           filled: true,
                                           fillColor: Colors.grey[50],
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                             borderSide: BorderSide.none,
                                           ),
                                           prefixIcon: const Icon(Icons.search),
@@ -288,62 +345,79 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                           vertical: 16,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                       ),
-                                      onPressed: () =>
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => const RegisterItem(),
-                                            ),
-                                          ),
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const RegisterItem(),
+                                        ),
+                                      ),
                                       child: const Text('New Register'),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),
 
-                                // Table
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.vertical,
-                                    child: DataTable(
-                                      dataRowMinHeight: 50,
-                                      dataRowMaxHeight: 100,
-                                      columnSpacing: 20,
-                                      horizontalMargin: 20,
-                                      columns: [
-                                        DataColumn(
-                                          label: Checkbox(
-                                            value: selectAll,
-                                            onChanged: (bool? value) {
-                                              setState(() {
-                                                selectAll = value ?? false;
-                                                if (selectAll) {
-                                                  selectedItems.clear();
-                                                  for (var item in items) {
-                                                    selectedItems.add(item['id'] as int);
-                                                  }
-                                                } else {
-                                                  selectedItems.clear();
-                                                }
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        const DataColumn(label: Text('No.')),
-                                        const DataColumn(label: Text('Item Name')),
-                                        const DataColumn(label: Text('REV.')),
-                                        const DataColumn(label: Text('Category')),
-                                        const DataColumn(label: Text('Label Content')),
-                                        const DataColumn(label: Text('Sub-Lot Enabled')),
-                                        const DataColumn(label: Text('Actions')),
-                                      ],
-                                      rows: _buildDataRows(),
+                                // Header Row
+                                Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8.0),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
                                     ),
                                   ),
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        value: selectAll,
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            selectAll = value ?? false;
+                                            if (selectAll) {
+                                              selectedItems.clear();
+                                              for (var item in items) {
+                                                selectedItems
+                                                    .add(item['id'] as int);
+                                              }
+                                            } else {
+                                              selectedItems.clear();
+                                            }
+                                          });
+                                        },
+                                      ),
+                                      const SizedBox(
+                                          width: 50, child: Text('No.')),
+                                      const Expanded(
+                                        flex: 2,
+                                        child: Text('Item Name'),
+                                      ),
+                                      const Expanded(child: Text('REV.')),
+                                      const Expanded(child: Text('Category')),
+                                      const Expanded(child: Text('Sub-Lot')),
+                                      const SizedBox(
+                                          width: 100, child: Text('Actions')),
+                                      const SizedBox(
+                                          width: 48), // For expand icon
+                                    ],
+                                  ),
+                                ),
+
+                                // Item Rows
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: filteredItems.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildItemRow(
+                                        filteredItems[index], index + 1);
+                                  },
                                 ),
 
                                 // Delete Button
@@ -361,7 +435,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                             vertical: 16,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                         ),
                                         onPressed: _deleteSelectedItems,
