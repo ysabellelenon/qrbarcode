@@ -229,7 +229,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: kBorderRadiusSmallAll,
-                              borderSide: const BorderSide(color: Colors.blue),
+                              borderSide: const BorderSide(color: kPrimaryColor),
                             ),
                           ),
                           onChanged: _validateArticleLabel,
@@ -276,7 +276,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: kBorderRadiusSmallAll,
-                              borderSide: const BorderSide(color: Colors.blue),
+                              borderSide: const BorderSide(color: kPrimaryColor),
                             ),
                           ),
                           enabled: !isError, // Disable if there's an error
@@ -296,7 +296,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: kBorderRadiusSmallAll,
-                              borderSide: const BorderSide(color: Colors.blue),
+                              borderSide: const BorderSide(color: kPrimaryColor),
                             ),
                           ),
                           keyboardType: TextInputType.number,
