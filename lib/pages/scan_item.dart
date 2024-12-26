@@ -717,9 +717,9 @@ class _ScanItemState extends State<ScanItem> {
           ),
 
           // Back Button and Title
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -727,12 +727,13 @@ class _ScanItemState extends State<ScanItem> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Back'), // Keeping Text widget for button
+                  child: const Text('Back'),
                 ),
+                const Expanded(child: SizedBox()),
                 const SelectableText(
                   'Scan Item',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2C3E50),
                   ),
@@ -1011,7 +1012,7 @@ class _ScanItemState extends State<ScanItem> {
                                 // Show Add Row button
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
+                                    backgroundColor: Colors.deepPurple,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 24,
