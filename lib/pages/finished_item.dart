@@ -43,7 +43,6 @@ class _FinishedItemState extends State<FinishedItem> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
-            autofocus: true,
             onSubmitted: (_) {
               Navigator.pop(context);
               _saveAndNavigate();
@@ -54,13 +53,20 @@ class _FinishedItemState extends State<FinishedItem> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              focusNode: FocusNode(),
-              onPressed: () {
-                Navigator.pop(context);
-                _saveAndNavigate();
-              },
-              child: const Text('Done'),
+            FocusScope(
+              autofocus: true,
+              child: ElevatedButton(
+                autofocus: true,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _saveAndNavigate();
+                },
+                child: const Text('Done'),
+              ),
             ),
           ],
         );
