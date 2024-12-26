@@ -365,7 +365,29 @@ class _ScanItemState extends State<ScanItem> {
         // Show Total QTY reached dialog
         if (!_hasShownQtyReachedDialog) {
           _hasShownQtyReachedDialog = true;
-          _showTotalQtyReachedDialog();
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Information'),
+              content: const Text('TOTAL QTY has been reached'),
+              actions: [
+                FocusScope(
+                  autofocus: true,
+                  child: ElevatedButton(
+                    autofocus: true,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('OK'),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
       } else if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
