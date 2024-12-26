@@ -273,7 +273,7 @@ class _ReviseItemState extends State<ReviseItem> {
                               alignment: Alignment.centerRight,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey[800],
+                                  backgroundColor: Colors.deepPurple,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 40,
