@@ -446,7 +446,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                       padding: const EdgeInsets.only(top: 16),
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
+                                          backgroundColor: Colors.deepPurple,
                                           foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 32,
@@ -457,7 +457,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                                 BorderRadius.circular(8),
                                           ),
                                         ),
-                                        onPressed: _deleteSelectedItems,
+                                        onPressed: selectedItems.isEmpty ? null : _deleteSelectedItems,
                                         child: const Text('Delete Selected'),
                                       ),
                                     ),

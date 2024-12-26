@@ -275,31 +275,28 @@ class _ManageAccountsState extends State<ManageAccounts> {
                               ),
 
                               // Delete Selected Button
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepPurple,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 16,
+                              if (selectedUsers.isNotEmpty)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 32),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.deepPurple,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 32,
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
+                                      onPressed: _deleteSelectedUsers,
+                                      child: const Text('Delete Selected'),
                                     ),
-                                    onPressed: selectedUsers.isEmpty
-                                        ? null
-                                        : () {
-                                            _deleteSelectedUsers();
-                                          },
-                                    child: const Text('Delete Selected'),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
