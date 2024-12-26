@@ -103,8 +103,7 @@ class _RegisterItemState extends State<RegisterItem> {
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
+                  const Center(
                     child: Text(
                       'Register New Item',
                       style: TextStyle(
