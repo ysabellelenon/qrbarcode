@@ -136,13 +136,13 @@ class _RegisterItemState extends State<RegisterItem> {
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: kBorderRadiusSmallAll,
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
+                                  borderSide: BorderSide(
+                                      color: Colors.grey.shade300),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: kBorderRadiusSmallAll,
-                                  borderSide:
-                                      const BorderSide(color: Colors.blue),
+                                  borderSide: const BorderSide(
+                                      color: kPrimaryColor),
                                 ),
                               ),
                               validator: (value) =>
@@ -168,7 +168,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: kBorderRadiusSmallAll,
                                         borderSide: const BorderSide(
-                                            color: Colors.blue),
+                                            color: kPrimaryColor),
                                       ),
                                     ),
                                     hint: const Text('Select Revision Number'),
@@ -204,7 +204,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: kBorderRadiusSmallAll,
                                         borderSide: const BorderSide(
-                                            color: Colors.blue),
+                                            color: kPrimaryColor),
                                       ),
                                     ),
                                     hint: const Text('Select Number of Codes'),
@@ -287,9 +287,8 @@ class _RegisterItemState extends State<RegisterItem> {
                                     }
                                   }
                                 },
-                                child: const Text('Next'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
+                                  backgroundColor: kPrimaryColor,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 32,
@@ -299,6 +298,7 @@ class _RegisterItemState extends State<RegisterItem> {
                                     borderRadius: kBorderRadiusSmallAll,
                                   ),
                                 ),
+                                child: const Text('Next'),
                               ),
                             ),
                           ],
