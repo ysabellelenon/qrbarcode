@@ -141,7 +141,8 @@ class _NewAccountState extends State<NewAccount> {
                     ),
                     const SizedBox(height: 20),
                     
-                    const Center(
+                    Align(
+                      alignment: Alignment.centerRight,
                       child: Text(
                         'New Account Registration',
                         style: TextStyle(

@@ -132,7 +132,8 @@ class _EditUserState extends State<EditUser> {
                   ),
                   const SizedBox(height: 20),
                   
-                  const Center(
+                  Align(
+                    alignment: Alignment.centerRight,
                     child: Text(
                       'Edit Account',
                       style: TextStyle(
