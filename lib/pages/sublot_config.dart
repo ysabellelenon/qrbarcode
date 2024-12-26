@@ -60,12 +60,12 @@ class _SublotConfigState extends State<SublotConfig> {
                 });
               },
             ),
-            Text('Enable Sub-Lot number rules for "$labelContent"'),
+            SelectableText('Enable Sub-Lot number rules for "$labelContent"'),
             const Spacer(),
             if (enableRules[labelContent] ?? false) ...[
-              const Text('Number of serial no. for'),
+              const SelectableText('Number of serial no. for'),
               const SizedBox(width: 8),
-              Text('"$labelContent"'),
+              SelectableText('"$labelContent"'),
               const SizedBox(width: 8),
               SizedBox(
                 width: 120,

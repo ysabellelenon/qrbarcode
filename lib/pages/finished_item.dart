@@ -128,7 +128,8 @@ class _FinishedItemState extends State<FinishedItem> {
             _buildInfoSection('Item Name', widget.itemName),
             _buildInfoSection('Lot Number', widget.lotNumber),
             _buildInfoSection('Date', _formatDate(DateTime.now())),
-            _buildInfoSection('Content', '${widget.content}_${widget.lotNumber}'),
+            _buildInfoSection(
+                'Content', '${widget.content}_${widget.lotNumber}'),
             _buildInfoSection('P.O Number', widget.poNo),
             _buildInfoSection('Quantity', widget.quantity),
             const SizedBox(height: 20),
@@ -198,7 +199,7 @@ class _FinishedItemState extends State<FinishedItem> {
             ),
           ),
           Expanded(
-            child: Text(value.isEmpty ? '-' : value),
+            child: SelectableText(value.isEmpty ? '-' : value),
           ),
         ],
       ),
@@ -272,4 +273,4 @@ class _FinishedItemState extends State<FinishedItem> {
       ],
     );
   }
-} 
+}

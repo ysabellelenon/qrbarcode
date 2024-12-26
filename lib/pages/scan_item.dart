@@ -631,9 +631,9 @@ class _ScanItemState extends State<ScanItem> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Back'),
+                  child: const Text('Back'), // Keeping Text widget for button
                 ),
-                const Text(
+                const SelectableText(
                   'Scan Item',
                   style: TextStyle(
                     fontSize: 32,
@@ -676,25 +676,25 @@ class _ScanItemState extends State<ScanItem> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Item Name: $itemName',
+                                    SelectableText('Item Name: $itemName',
                                         style: const TextStyle(fontSize: 16)),
                                     const SizedBox(height: 12),
-                                    Text('P.O No: $poNo',
+                                    SelectableText('P.O No: $poNo',
                                         style: const TextStyle(fontSize: 16)),
                                     const SizedBox(height: 12),
-                                    Text('Lot Number: $lotNumber',
+                                    SelectableText('Lot Number: $lotNumber',
                                         style: const TextStyle(fontSize: 16)),
                                     const SizedBox(height: 24),
                                     Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        const SelectableText(
                                           'Content:',
                                           style: TextStyle(fontSize: 16),
                                         ),
                                         const SizedBox(height: 8),
-                                        Text(
+                                        SelectableText(
                                           '${_labelContent ?? ''}${_labelContent != null ? '_' : ''}${_convertSubLotNumber(lotNumber)}',
                                           style: const TextStyle(fontSize: 16),
                                         ),
@@ -713,7 +713,8 @@ class _ScanItemState extends State<ScanItem> {
                                       children: [
                                         SizedBox(
                                           width: maxWidth * 0.15,
-                                          child: const Text('Total QTY',
+                                          child: const SelectableText(
+                                              'Total QTY',
                                               style: TextStyle(fontSize: 16)),
                                         ),
                                         SizedBox(
@@ -738,7 +739,8 @@ class _ScanItemState extends State<ScanItem> {
                                       children: [
                                         SizedBox(
                                           width: maxWidth * 0.15,
-                                          child: const Text('QTY per box (05)',
+                                          child: const SelectableText(
+                                              'QTY per box (05)',
                                               style: TextStyle(fontSize: 16)),
                                         ),
                                         SizedBox(
@@ -762,7 +764,8 @@ class _ScanItemState extends State<ScanItem> {
                                       children: [
                                         SizedBox(
                                           width: maxWidth * 0.15,
-                                          child: const Text('Inspection QTY',
+                                          child: const SelectableText(
+                                              'Inspection QTY',
                                               style: TextStyle(fontSize: 16)),
                                         ),
                                         SizedBox(
@@ -1041,12 +1044,19 @@ class _ScanItemState extends State<ScanItem> {
                                               MaterialStateProperty.all(
                                                   Colors.grey.shade100),
                                           columns: const [
-                                            DataColumn(label: Text('Date')),
                                             DataColumn(
-                                                label: Text('Item Name')),
-                                            DataColumn(label: Text('PO No')),
-                                            DataColumn(label: Text('Content')),
-                                            DataColumn(label: Text('Result')),
+                                                label: SelectableText('Date')),
+                                            DataColumn(
+                                                label: SelectableText(
+                                                    'Item Name')),
+                                            DataColumn(
+                                                label: SelectableText('PO No')),
+                                            DataColumn(
+                                                label:
+                                                    SelectableText('Content')),
+                                            DataColumn(
+                                                label:
+                                                    SelectableText('Result')),
                                           ],
                                           rows: _historicalData.map((item) {
                                             final DateTime createdAt =
@@ -1057,15 +1067,16 @@ class _ScanItemState extends State<ScanItem> {
 
                                             return DataRow(
                                               cells: [
-                                                DataCell(Text(formattedDate)),
-                                                DataCell(Text(
+                                                DataCell(SelectableText(
+                                                    formattedDate)),
+                                                DataCell(SelectableText(
                                                     item['itemName'] ?? '')),
-                                                DataCell(
-                                                    Text(item['poNo'] ?? '')),
-                                                DataCell(Text(
+                                                DataCell(SelectableText(
+                                                    item['poNo'] ?? '')),
+                                                DataCell(SelectableText(
                                                     item['content'] ?? '')),
                                                 DataCell(
-                                                  Text(
+                                                  SelectableText(
                                                     item['result'] ?? '',
                                                     style: TextStyle(
                                                       color: item['result'] ==

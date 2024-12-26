@@ -336,7 +336,7 @@ class EmergencySummary extends StatelessWidget {
         children: [
           SizedBox(
             width: 120,
-            child: Text(
+            child: SelectableText(
               '$label:',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
@@ -344,7 +344,7 @@ class EmergencySummary extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(value.isEmpty ? '-' : value),
+            child: SelectableText(value.isEmpty ? '-' : value),
           ),
         ],
       ),

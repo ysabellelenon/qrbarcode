@@ -139,7 +139,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                const SelectableText(
                   'QR Barcode System',
                   style: TextStyle(
                     fontSize: 24,
@@ -169,8 +169,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
           const SizedBox(height: 20),
 
           // Heading
-          const Center(
-            child: Text(
+          Center(
+            child: SelectableText(
               'Article Label',
               style: TextStyle(
                 fontSize: 32,
@@ -205,15 +205,13 @@ class _ArticleLabelState extends State<ArticleLabel> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        SelectableText(
                           'Item Name: $itemName',
-                          style: const TextStyle(
-                              fontSize: 18), // Adjusted font size
+                          style: const TextStyle(fontSize: 18),
                         ),
-                        Text(
+                        SelectableText(
                           'P.O No: $poNo',
-                          style: const TextStyle(
-                              fontSize: 18), // Adjusted font size
+                          style: const TextStyle(fontSize: 18),
                         ),
                         const SizedBox(height: 32),
                         TextFormField(

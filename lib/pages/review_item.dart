@@ -52,12 +52,14 @@ class ReviewItem extends StatelessWidget {
         'itemCode': itemName,
         'revision': revision,
         'codeCount': codeCount.toString(),
-        'codes': codes.map((code) => {
-              'category': code['category'],
-              'content': code['content'],
-              'hasSubLot': code['hasSubLot'] ? 1 : 0,
-              'serialCount': code['serialCount'] ?? '0',
-            }).toList(),
+        'codes': codes
+            .map((code) => {
+                  'category': code['category'],
+                  'content': code['content'],
+                  'hasSubLot': code['hasSubLot'] ? 1 : 0,
+                  'serialCount': code['serialCount'] ?? '0',
+                })
+            .toList(),
       };
 
       if (isUpdate && itemId != null) {
@@ -146,7 +148,8 @@ class ReviewItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/sublot-config'),
+                    onPressed: () => Navigator.of(context)
+                        .pushReplacementNamed('/sublot-config'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
@@ -170,7 +173,7 @@ class ReviewItem extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Item Details Section
-                        const Text(
+                        const SelectableText(
                           'Item Details',
                           style: TextStyle(
                             fontSize: 20,
@@ -185,7 +188,8 @@ class ReviewItem extends StatelessWidget {
                               child: _buildInfoRow('Rev No.', revision),
                             ),
                             Expanded(
-                              child: _buildInfoRow('No. of Code', codeCount.toString()),
+                              child: _buildInfoRow(
+                                  'No. of Code', codeCount.toString()),
                             ),
                           ],
                         ),
@@ -275,7 +279,8 @@ class ReviewItem extends StatelessWidget {
               if (code['hasSubLot']) ...[
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildInfoRow('Number of Serial No.', code['serialCount']),
+                  child: _buildInfoRow(
+                      'Number of Serial No.', code['serialCount']),
                 ),
               ],
             ],
@@ -285,4 +290,4 @@ class ReviewItem extends StatelessWidget {
       ],
     );
   }
-} 
+}

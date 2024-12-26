@@ -235,7 +235,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                   const SizedBox(height: 32),
                                   const Align(
                                     alignment: Alignment.centerLeft,
-                                    child: Text(
+                                    child: SelectableText(
                                       'Content:',
                                       style: TextStyle(
                                         fontSize: 18,
@@ -245,7 +245,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  Text(_labelContent ??
+                                  SelectableText(_labelContent ??
                                       'No content available'), // Display the label content
                                   const SizedBox(height: 20),
                                   ElevatedButton(

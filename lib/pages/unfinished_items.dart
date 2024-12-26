@@ -37,8 +37,8 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
     setState(() {
       filteredItems = items.where((item) {
         return item['itemName'].toLowerCase().contains(query) ||
-               item['lotNumber'].toLowerCase().contains(query) ||
-               item['poNo'].toLowerCase().contains(query);
+            item['lotNumber'].toLowerCase().contains(query) ||
+            item['poNo'].toLowerCase().contains(query);
       }).toList();
     });
   }
@@ -73,7 +73,8 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                  onPressed: () =>
+                      Navigator.of(context).pushReplacementNamed('/login'),
                   child: const Text('Logout'),
                 ),
               ],
@@ -153,8 +154,9 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                                                 selectAll = value ?? false;
                                                 if (selectAll) {
                                                   selectedItems.addAll(
-                                                    filteredItems.map((item) => item['id'] as int)
-                                                  );
+                                                      filteredItems.map(
+                                                          (item) => item['id']
+                                                              as int));
                                                 } else {
                                                   selectedItems.clear();
                                                 }
@@ -162,26 +164,35 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                                             },
                                           ),
                                         ),
-                                        const DataColumn(label: Text('Item Name')),
-                                        const DataColumn(label: Text('Lot Number')),
-                                        const DataColumn(label: Text('P.O Number')),
+                                        const DataColumn(
+                                            label: Text('Item Name')),
+                                        const DataColumn(
+                                            label: Text('Lot Number')),
+                                        const DataColumn(
+                                            label: Text('P.O Number')),
                                         const DataColumn(label: Text('Date')),
-                                        const DataColumn(label: Text('Actions')),
+                                        const DataColumn(
+                                            label: Text('Actions')),
                                       ],
                                       rows: filteredItems.map((item) {
                                         return DataRow(
                                           cells: [
                                             DataCell(
                                               Checkbox(
-                                                value: selectedItems.contains(item['id']),
+                                                value: selectedItems
+                                                    .contains(item['id']),
                                                 onChanged: (bool? value) {
                                                   setState(() {
                                                     if (value == true) {
-                                                      selectedItems.add(item['id'] as int);
+                                                      selectedItems.add(
+                                                          item['id'] as int);
                                                     } else {
-                                                      selectedItems.remove(item['id']);
+                                                      selectedItems
+                                                          .remove(item['id']);
                                                     }
-                                                    selectAll = selectedItems.length == filteredItems.length;
+                                                    selectAll = selectedItems
+                                                            .length ==
+                                                        filteredItems.length;
                                                   });
                                                 },
                                               ),
@@ -189,14 +200,17 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                                             DataCell(Text(item['itemName'])),
                                             DataCell(Text(item['lotNumber'])),
                                             DataCell(Text(item['poNo'])),
-                                            DataCell(Text(DateTime.parse(item['date']).toString())),
+                                            DataCell(Text(
+                                                DateTime.parse(item['date'])
+                                                    .toString())),
                                             DataCell(
                                               OutlinedButton(
                                                 onPressed: () {
                                                   // Show details dialog
                                                   _showDetailsDialog(item);
                                                 },
-                                                child: const Text('View Details'),
+                                                child:
+                                                    const Text('View Details'),
                                               ),
                                             ),
                                           ],
@@ -219,9 +233,9 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                                             foregroundColor: Colors.white,
                                           ),
                                           onPressed: () async {
-                                            await DatabaseHelper().deleteUnfinishedItems(
-                                              selectedItems.toList()
-                                            );
+                                            await DatabaseHelper()
+                                                .deleteUnfinishedItems(
+                                                    selectedItems.toList());
                                             _loadItems();
                                             setState(() {
                                               selectedItems.clear();
@@ -280,7 +294,8 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                       _buildDetailRow('Item Name', item['itemName']),
                       _buildDetailRow('Lot Number', item['lotNumber']),
                       _buildDetailRow('P.O Number', item['poNo']),
-                      _buildDetailRow('Date', DateTime.parse(item['date']).toString()),
+                      _buildDetailRow(
+                          'Date', DateTime.parse(item['date']).toString()),
                       _buildDetailRow('Content', item['content']),
                       _buildDetailRow('Quantity', item['quantity']),
                       _buildDetailRow('Remarks', item['remarks']),
@@ -361,7 +376,7 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
             ),
           ),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value,
               style: const TextStyle(fontSize: 14),
             ),
@@ -379,15 +394,16 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
       ),
       child: Table(
         columnWidths: const {
-          0: FixedColumnWidth(50),  // No. column
-          1: FlexColumnWidth(2),    // Content column
-          2: FlexColumnWidth(1),    // Result column
+          0: FixedColumnWidth(50), // No. column
+          1: FlexColumnWidth(2), // Content column
+          2: FlexColumnWidth(1), // Result column
         },
         children: [
           TableRow(
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
             ),
             children: const [
               TableCell(
@@ -440,10 +456,10 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
                     child: Text(
                       entry.value['result'] ?? '',
                       style: TextStyle(
-                        color: entry.value['result'] == 'Good' 
-                            ? Colors.green 
-                            : entry.value['result'] == 'No Good' 
-                                ? Colors.red 
+                        color: entry.value['result'] == 'Good'
+                            ? Colors.green
+                            : entry.value['result'] == 'No Good'
+                                ? Colors.red
                                 : Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
@@ -457,4 +473,4 @@ class _UnfinishedItemsState extends State<UnfinishedItems> {
       ),
     );
   }
-} 
+}
