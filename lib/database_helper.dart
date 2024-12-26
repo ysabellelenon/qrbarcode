@@ -20,17 +20,19 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    final Directory dbDirectory = Directory(join(documentsDirectory.path, 'databases'));
+    final Directory documentsDirectory =
+        await getApplicationDocumentsDirectory();
+    final Directory dbDirectory =
+        Directory(join(documentsDirectory.path, 'databases'));
     if (!await dbDirectory.exists()) {
       await dbDirectory.create(recursive: true);
     }
-    
+
     final String path = join(dbDirectory.path, 'users.db');
     print('Database path: $path');
 
     bool shouldCopy = !await File(path).exists();
-    
+
     if (shouldCopy) {
       try {
         ByteData data = await rootBundle.load('assets/databases/users.db');
@@ -45,7 +47,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -64,7 +66,8 @@ class DatabaseHelper {
         }
         if (oldVersion < 5) {
           await db.execute('DROP TABLE IF EXISTS item_codes_backup');
-          await db.execute('ALTER TABLE item_codes RENAME TO item_codes_backup');
+          await db
+              .execute('ALTER TABLE item_codes RENAME TO item_codes_backup');
           await db.execute('''
             CREATE TABLE item_codes(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +85,18 @@ class DatabaseHelper {
             FROM item_codes_backup
           ''');
           await db.execute('DROP TABLE item_codes_backup');
+        }
+        if (oldVersion < 6) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS scan_contents(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              operator_scan_id INTEGER,
+              content TEXT,
+              result TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (operator_scan_id) REFERENCES operator_scans (id) ON DELETE CASCADE
+            )
+          ''');
         }
       },
       onOpen: (db) async {
@@ -132,7 +147,6 @@ class DatabaseHelper {
         itemName TEXT,
         poNo TEXT,
         totalQty INTEGER,
-        content TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -162,6 +176,17 @@ class DatabaseHelper {
         remarks TEXT,
         tableData TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS scan_contents(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operator_scan_id INTEGER,
+        content TEXT,
+        result TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (operator_scan_id) REFERENCES operator_scans (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -250,7 +275,6 @@ class DatabaseHelper {
         itemName TEXT,
         poNo TEXT,
         totalQty INTEGER,
-        content TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -267,8 +291,9 @@ class DatabaseHelper {
         FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
       )
     ''');
-    
-    print('Migrated database to version 3: Added operator_scans and article_labels tables');
+
+    print(
+        'Migrated database to version 3: Added operator_scans and article_labels tables');
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS unfinished_items(
@@ -293,7 +318,8 @@ class DatabaseHelper {
 
   Future<void> insertUser(Map<String, dynamic> user) async {
     final db = await database;
-    await db.insert('users', user, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('users', user,
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> updateUser(Map<String, dynamic> user) async {
@@ -309,11 +335,12 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getItems() async {
     try {
       final db = await database;
-      final List<Map<String, dynamic>> items = await db.query('items', orderBy: 'id DESC');
+      final List<Map<String, dynamic>> items =
+          await db.query('items', orderBy: 'id DESC');
       print('Retrieved ${items.length} items from database');
-      
+
       final List<Map<String, dynamic>> result = [];
-      
+
       for (var item in items) {
         final codes = await db.query(
           'item_codes',
@@ -321,13 +348,13 @@ class DatabaseHelper {
           whereArgs: [item['id']],
         );
         print('Retrieved codes for item ${item['id']}: $codes');
-        
+
         result.add({
           ...Map<String, dynamic>.from(item),
           'codes': codes,
         });
       }
-      
+
       return result;
     } catch (e) {
       print('Error retrieving items: $e');
@@ -337,7 +364,7 @@ class DatabaseHelper {
 
   Future<void> insertItem(Map<String, dynamic> item) async {
     final db = await database;
-    
+
     try {
       await db.transaction((txn) async {
         final itemId = await txn.insert('items', {
@@ -349,7 +376,8 @@ class DatabaseHelper {
 
         for (var code in (item['codes'] as List)) {
           print('Inserting code: $code');
-          final hasSubLot = (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
+          final hasSubLot =
+              (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
           final codeId = await txn.insert('item_codes', {
             'itemId': itemId,
             'category': code['category'],
@@ -389,7 +417,8 @@ class DatabaseHelper {
       );
 
       for (var code in (item['codes'] as List)) {
-        final hasSubLot = (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
+        final hasSubLot =
+            (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
         await txn.insert('item_codes', {
           'itemId': itemId,
           'category': code['category'],
@@ -410,7 +439,8 @@ class DatabaseHelper {
     );
   }
 
-  Future<Map<String, dynamic>?> getUserByUsernameAndPassword(String username, String password) async {
+  Future<Map<String, dynamic>?> getUserByUsernameAndPassword(
+      String username, String password) async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
       'users',
@@ -425,28 +455,35 @@ class DatabaseHelper {
   }
 
   Future<String> getDatabasePath() async {
-    final Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    final Directory documentsDirectory =
+        await getApplicationDocumentsDirectory();
     final String path = join(documentsDirectory.path, 'databases', 'users.db');
     return path;
   }
 
-  Future<Map<String, List<Map<String, dynamic>>>> getAllDatabaseContents() async {
+  Future<Map<String, List<Map<String, dynamic>>>>
+      getAllDatabaseContents() async {
     final db = await database;
-    
+
     final users = await db.query('users');
     final items = await db.query('items');
     final itemCodes = await db.query('item_codes');
 
     return {
       'users': users,
-      'items': items, 
+      'items': items,
       'item_codes': itemCodes,
     };
   }
 
   Future<int> insertOperatorScan(Map<String, dynamic> scan) async {
     final db = await database;
-    return await db.insert('operator_scans', scan);
+    return await db.insert('operator_scans', {
+      'itemName': scan['itemName'],
+      'poNo': scan['poNo'],
+      'totalQty': scan['totalQty'],
+      'createdAt': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<int> insertArticleLabel(Map<String, dynamic> label) async {
@@ -459,14 +496,13 @@ class DatabaseHelper {
     return await db.query('operator_scans', orderBy: 'createdAt DESC');
   }
 
-  Future<List<Map<String, dynamic>>> getArticleLabels(int operatorScanId) async {
+  Future<List<Map<String, dynamic>>> getArticleLabels(
+      int operatorScanId) async {
     final db = await database;
-    return await db.query(
-      'article_labels',
-      where: 'operatorScanId = ?',
-      whereArgs: [operatorScanId],
-      orderBy: 'createdAt DESC'
-    );
+    return await db.query('article_labels',
+        where: 'operatorScanId = ?',
+        whereArgs: [operatorScanId],
+        orderBy: 'createdAt DESC');
   }
 
   Future<void> insertUnfinishedItem(Map<String, dynamic> item) async {
@@ -482,7 +518,8 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getUnfinishedItems() async {
     final db = await database;
-    final List<Map<String, dynamic>> items = await db.query('unfinished_items', orderBy: 'date DESC');
+    final List<Map<String, dynamic>> items =
+        await db.query('unfinished_items', orderBy: 'date DESC');
     return items.map((item) {
       return {
         ...item,
@@ -504,23 +541,76 @@ class DatabaseHelper {
     final db = await database;
     try {
       // Get list of all tables
-      final tables = await db.query('sqlite_master', 
-        where: 'type = ?', 
-        whereArgs: ['table']
-      );
-      
+      final tables = await db
+          .query('sqlite_master', where: 'type = ?', whereArgs: ['table']);
+
       print('\nDatabase Tables:');
       print('---------------');
       for (var table in tables) {
         print('Table: ${table['name']}');
         // Get count of records in each table
         final count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM ${table['name']}')
-        );
+            await db.rawQuery('SELECT COUNT(*) FROM ${table['name']}'));
         print('Record count: $count');
       }
     } catch (e) {
       print('Error verifying tables: $e');
     }
   }
-} 
+
+  Future<List<Map<String, dynamic>>> getHistoricalScans({
+    required String itemName,
+    int page = 1,
+    int pageSize = 10,
+  }) async {
+    final db = await database;
+    final offset = (page - 1) * pageSize;
+
+    return await db.rawQuery('''
+      SELECT 
+        sc.id,
+        sc.content,
+        sc.result,
+        sc.created_at,
+        os.itemName,
+        os.poNo,
+        os.totalQty
+      FROM scan_contents sc
+      JOIN operator_scans os ON sc.operator_scan_id = os.id
+      ORDER BY sc.created_at DESC
+      LIMIT ? OFFSET ?
+    ''', [pageSize, offset]);
+  }
+
+  Future<int> getHistoricalScansCount(String itemName) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM scan_contents sc
+      JOIN operator_scans os ON sc.operator_scan_id = os.id
+      WHERE os.itemName = ?
+    ''', [itemName]);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> insertScanContent(
+      int operatorScanId, String content, String result) async {
+    final db = await database;
+    return await db.insert('scan_contents', {
+      'operator_scan_id': operatorScanId,
+      'content': content,
+      'result': result,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getScanContents(int operatorScanId) async {
+    final db = await database;
+    return await db.query(
+      'scan_contents',
+      where: 'operator_scan_id = ?',
+      whereArgs: [operatorScanId],
+      orderBy: 'created_at ASC',
+    );
+  }
+}

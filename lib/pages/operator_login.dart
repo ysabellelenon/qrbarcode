@@ -52,9 +52,11 @@ class _OperatorLoginState extends State<OperatorLogin> {
       orElse: () => {},
     );
 
-    if (mounted) {  // Check if widget is still mounted
+    if (mounted) {
+      // Check if widget is still mounted
       setState(() {
-        if (matchingItem.isNotEmpty && matchingItem['codes']?.isNotEmpty == true) {
+        if (matchingItem.isNotEmpty &&
+            matchingItem['codes']?.isNotEmpty == true) {
           _labelContent = matchingItem['codes'][0]['content'];
           _isItemFound = true;
           // Move focus to P.O No. field after confirming item is found
@@ -78,7 +80,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
         'itemName': itemName,
         'poNo': poNo,
         'totalQty': totalQty,
-        'content': _labelContent ?? '',
         'createdAt': DateTime.now().toIso8601String(),
       });
 
@@ -129,7 +130,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                    onPressed: () =>
+                        Navigator.of(context).pushReplacementNamed('/login'),
                     child: const Text('Logout'),
                   ),
                 ],
@@ -177,7 +179,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                     validator: (value) {
                                       if (value!.isEmpty) return 'Required';
-                                      if (!_isItemFound) return 'Item not found';
+                                      if (!_isItemFound)
+                                        return 'Item not found';
                                       return null;
                                     },
                                     onChanged: (value) {
@@ -185,7 +188,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     },
                                     onFieldSubmitted: (_) {
                                       if (_isItemFound) {
-                                        FocusScope.of(context).requestFocus(_poNoFocus);
+                                        FocusScope.of(context)
+                                            .requestFocus(_poNoFocus);
                                       }
                                     },
                                   ),
@@ -197,14 +201,17 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       labelText: 'P.O No.',
                                       border: OutlineInputBorder(),
                                     ),
-                                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    validator: (value) =>
+                                        value!.isEmpty ? 'Required' : null,
                                     onChanged: (value) {
                                       if (value.isNotEmpty) {
-                                        FocusScope.of(context).requestFocus(_qtyFocus);
+                                        FocusScope.of(context)
+                                            .requestFocus(_qtyFocus);
                                       }
                                     },
                                     onFieldSubmitted: (_) {
-                                      FocusScope.of(context).requestFocus(_qtyFocus);
+                                      FocusScope.of(context)
+                                          .requestFocus(_qtyFocus);
                                     },
                                   ),
                                   const SizedBox(height: 16),
@@ -216,7 +223,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                       border: OutlineInputBorder(),
                                     ),
                                     keyboardType: TextInputType.number,
-                                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                                    validator: (value) =>
+                                        value!.isEmpty ? 'Required' : null,
                                     onChanged: (value) {
                                       // Remove automatic submission
                                     },
@@ -237,10 +245,12 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  Text(_labelContent ?? 'No content available'), // Display the label content
+                                  Text(_labelContent ??
+                                      'No content available'), // Display the label content
                                   const SizedBox(height: 20),
                                   ElevatedButton(
-                                    onPressed: _isItemFound ? _handleSubmit : null,
+                                    onPressed:
+                                        _isItemFound ? _handleSubmit : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.deepPurple,
                                       foregroundColor: Colors.white,
@@ -291,4 +301,4 @@ class _OperatorLoginState extends State<OperatorLogin> {
       ),
     );
   }
-} 
+}

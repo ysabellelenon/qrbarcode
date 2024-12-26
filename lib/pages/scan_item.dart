@@ -38,6 +38,13 @@ class _ScanItemState extends State<ScanItem> {
   bool _isTotalQtyReached = false; // Add this flag
   bool _hasSubLotRules = false; // Add this variable
 
+  // Add variables for historical data
+  List<Map<String, dynamic>> _historicalData = [];
+  int _currentPage = 1;
+  static const int _pageSize = 10;
+  int _totalItems = 0;
+  bool _isLoadingHistory = false;
+
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo =>
@@ -72,8 +79,9 @@ class _ScanItemState extends State<ScanItem> {
       // Only convert if it's between 10 and 20
       if (subLotNum >= 10 && subLotNum <= 20) {
         // Convert number to letter (10=0, 11=A, 12=B, etc.)
-        final convertedChar = subLotNum == 10 ? '0' : 
-                            String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+        final convertedChar = subLotNum == 10
+            ? '0'
+            : String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
         return '$mainPart$convertedChar'; // Combine without dash
       }
     } catch (e) {
@@ -87,20 +95,23 @@ class _ScanItemState extends State<ScanItem> {
   @override
   void initState() {
     super.initState();
+
     _fetchLabelContent(itemName);
     _checkSubLotRules();
-    
+    _loadHistoricalData();
+
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
       // Restore table data from resumeData
       final List<dynamic> savedTableData = widget.resumeData!['tableData'];
-      _tableData.clear(); // Clear default empty row
+      _tableData.clear();
       _tableData.addAll(savedTableData.map((item) => {
             'content': item['content'] ?? '',
             'result': item['result'] ?? '',
           }));
 
       // Create focus nodes for each row
+      _focusNodes.clear();
       for (int i = 0; i < _tableData.length; i++) {
         _focusNodes.add(FocusNode());
       }
@@ -117,7 +128,9 @@ class _ScanItemState extends State<ScanItem> {
       // Update counts
       _updateCounts();
     } else {
-      // Normal initialization for new scan
+      // Initialize with a single empty row for new scan
+      _tableData.clear();
+      _focusNodes.clear();
       _tableData.add({
         'content': '',
         'result': '',
@@ -127,22 +140,27 @@ class _ScanItemState extends State<ScanItem> {
 
     // Set the total quantity
     if (widget.resumeData != null) {
-      // Use the quantity from unfinished item
       totalQtyController.text =
           widget.resumeData!['quantity'] ?? totalQty.toString();
     } else {
-      // Use the quantity from operator login or scan data
       totalQtyController.text = totalQty.toString();
     }
 
-    // Initialize with current counts
+    // Initialize counters
     goodCountController.text = '0';
     noGoodCountController.text = '0';
 
-    // Update counts to reflect restored data
+    // Update counts for restored data
     if (widget.resumeData != null) {
       _updateCounts();
     }
+
+    // Set focus to the first content field after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_focusNodes.isNotEmpty) {
+        _focusNodes[0].requestFocus();
+      }
+    });
   }
 
   Future<void> _checkSubLotRules() async {
@@ -156,14 +174,60 @@ class _ScanItemState extends State<ScanItem> {
       if (matchingItem.isNotEmpty) {
         final codes = matchingItem['codes'] as List;
         setState(() {
-          _hasSubLotRules = codes.any((code) => 
-            code['category'] == 'Counting' && 
-            (code['hasSubLot'] == 1 || code['hasSubLot'] == true)
-          );
+          _hasSubLotRules = codes.any((code) =>
+              code['category'] == 'Counting' &&
+              (code['hasSubLot'] == 1 || code['hasSubLot'] == true));
         });
       }
     } catch (e) {
       print('Error checking sub-lot rules: $e');
+    }
+  }
+
+  Future<void> _loadHistoricalData() async {
+    if (_isLoadingHistory) return;
+
+    setState(() {
+      _isLoadingHistory = true;
+    });
+
+    try {
+      final data = await DatabaseHelper().getHistoricalScans(
+        itemName: itemName,
+        page: _currentPage,
+        pageSize: _pageSize,
+      );
+
+      final total = await DatabaseHelper().getHistoricalScansCount(itemName);
+
+      setState(() {
+        _historicalData = data;
+        _totalItems = total;
+        _isLoadingHistory = false;
+      });
+    } catch (e) {
+      print('Error loading historical data: $e');
+      setState(() {
+        _isLoadingHistory = false;
+      });
+    }
+  }
+
+  void _loadNextPage() {
+    if (_currentPage * _pageSize < _totalItems) {
+      setState(() {
+        _currentPage++;
+      });
+      _loadHistoricalData();
+    }
+  }
+
+  void _loadPreviousPage() {
+    if (_currentPage > 1) {
+      setState(() {
+        _currentPage--;
+      });
+      _loadHistoricalData();
     }
   }
 
@@ -203,88 +267,35 @@ class _ScanItemState extends State<ScanItem> {
     }
   }
 
-  void _validateContent(String content, int rowIndex) {
-    if (_itemCategory == null || _labelContent == null) {
-      print('Category or label content is null');
-      return;
+  void _validateContent(String value, int index) async {
+    final expectedContent =
+        '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
+
+    if (value == expectedContent) {
+      setState(() {
+        _tableData[index]['result'] = 'Good';
+      });
+
+      // Save the individual scan content
+      await DatabaseHelper().insertScanContent(
+        operatorScanId,
+        value,
+        'Good',
+      );
+    } else {
+      setState(() {
+        _tableData[index]['result'] = 'No Good';
+      });
+
+      // Save the failed scan
+      await DatabaseHelper().insertScanContent(
+        operatorScanId,
+        value,
+        'No Good',
+      );
     }
 
-    // Construct the full static content by combining label content and lot number
-    String staticContent = '${_labelContent}_${_convertSubLotNumber(lotNumber)}';
-
-    print('Validating content: $content');
-    print('Category: $_itemCategory');
-    print('Static Content: $staticContent');
-    print('Row Index: $rowIndex');
-
-    String result = '';
-
-    if (_itemCategory == 'Non-Counting') {
-      // For Non-Counting items:
-      // Content MUST match the static content exactly to be Good
-      result = content == staticContent ? 'Good' : 'No Good';
-      print('Non-Counting validation - Content matches static: ${content == staticContent}');
-    } else if (_itemCategory == 'Counting') {
-      // For Counting items:
-      // 1. Content must NOT match the static content
-      if (content == staticContent) {
-        result = 'No Good';
-        print('Counting validation - Content matches static (No Good)');
-      } else {
-        // 2. Content must be unique (not used in any other row)
-        bool isDuplicate = false;
-        for (int i = 0; i < _tableData.length; i++) {
-          if (i != rowIndex && // Skip current row
-              _tableData[i]['content']?.isNotEmpty == true && // Check non-empty contents
-              _tableData[i]['content'] == content) { // Check if content matches
-            isDuplicate = true;
-            print('Found duplicate content in row $i');
-            break;
-          }
-        }
-        
-        if (isDuplicate) {
-          result = 'No Good';
-          print('Counting validation - Duplicate content found (No Good)');
-        } else {
-          // 3. Additional check: Content must not match any converted lot number format
-          String unconvertedContent = content;
-          String convertedContent = _convertSubLotNumber(content);
-          
-          if (unconvertedContent == staticContent || convertedContent == staticContent) {
-            result = 'No Good';
-            print('Counting validation - Content matches static in either format (No Good)');
-          } else {
-            result = 'Good';
-            print('Counting validation - Content is unique and doesn\'t match static (Good)');
-          }
-        }
-      }
-    }
-
-    setState(() {
-      _tableData[rowIndex]['result'] = result;
-      _updateCounts();
-
-      // Add new row if this is the last row and QTY not reached
-      if (rowIndex == _tableData.length - 1 && !_isQtyPerBoxReached) {
-        String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
-        int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-
-        if (targetQty > 0 && _tableData.length < targetQty) {
-          _tableData.add({
-            'content': '',
-            'result': '',
-          });
-          _focusNodes.add(FocusNode());
-
-          // Focus on the new row after a short delay
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _focusNodes.last.requestFocus();
-          });
-        }
-      }
-    });
+    _updateCounts();
   }
 
   void _addRow() {
@@ -431,6 +442,106 @@ class _ScanItemState extends State<ScanItem> {
     );
   }
 
+  List<DataRow> _buildTableRows() {
+    return _tableData.asMap().entries.map((entry) {
+      int index = entry.key;
+      Map<String, dynamic> data = entry.value;
+
+      // Create a TextEditingController for this row
+      final contentController = TextEditingController(text: data['content']);
+
+      return DataRow(
+        cells: [
+          DataCell(
+            Checkbox(
+              value: selectedRows.contains(index),
+              onChanged: (bool? value) {
+                setState(() {
+                  if (value == true) {
+                    selectedRows.add(index);
+                  } else {
+                    selectedRows.remove(index);
+                  }
+                });
+              },
+            ),
+          ),
+          DataCell(Text((index + 1).toString())),
+          DataCell(
+            TextField(
+              focusNode: _ensureFocusNode(index),
+              controller: contentController,
+              autofocus: index == 0, // Autofocus the first row
+              onChanged: (value) {
+                // Update the content immediately but don't validate yet
+                setState(() {
+                  data['content'] = value;
+                });
+              },
+              onSubmitted: (value) {
+                // Validate when Enter is pressed (scanner device) or field is submitted
+                if (value.isNotEmpty) {
+                  setState(() {
+                    _validateContent(value, index);
+                    _updateCounts();
+
+                    // If validation passed and we're not at the last row, add a new row
+                    if (data['result'] == 'Good' &&
+                        index == _tableData.length - 1 &&
+                        !_isTotalQtyReached) {
+                      _addRow();
+                      // Focus the new row after a short delay
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _ensureFocusNode(_tableData.length - 1).requestFocus();
+                      });
+                    }
+                  });
+                }
+              },
+              onEditingComplete: () {
+                // This is called when Enter is pressed
+                String value = data['content'] ?? '';
+                if (value.isNotEmpty) {
+                  setState(() {
+                    _validateContent(value, index);
+                    _updateCounts();
+                  });
+                }
+              },
+              onTapOutside: (event) {
+                // Validate when clicking outside (for manual input)
+                String value = data['content'] ?? '';
+                if (value.isNotEmpty) {
+                  setState(() {
+                    _validateContent(value, index);
+                    _updateCounts();
+                  });
+                }
+              },
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+          ),
+          DataCell(
+            Text(
+              data['result'] ?? '',
+              style: TextStyle(
+                color: data['result'] == 'Good'
+                    ? Colors.green
+                    : data['result'] == 'No Good'
+                        ? Colors.red
+                        : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -467,11 +578,6 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    print('Debug - itemName: $itemName');
-                    print('Debug - lotNumber: $lotNumber');
-                    print('Debug - content: $content');
-                    print('Debug - poNo: $poNo');
-
                     showDialog(
                       context: context,
                       builder: (context) => EmergencyStop(
@@ -495,28 +601,28 @@ class _ScanItemState extends State<ScanItem> {
             ),
           ),
 
-          // Back Button
+          // Back Button and Title
           const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Back'),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Heading
-          const Center(
-            child: Text(
-              'Scan Item',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2C3E50),
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Back'),
+                ),
+                const Text(
+                  'Scan Item',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -524,468 +630,473 @@ class _ScanItemState extends State<ScanItem> {
           // Main Content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(
-                      maxWidth: 1200), // Increased from 900
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 5,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Existing Container for Item Details
-                      Padding(
-                        padding: const EdgeInsets.all(30),
-                        child: Row(
-                          children: [
-                            // Static Text Section
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Item Name: $itemName',
-                                      style: const TextStyle(fontSize: 16)),
-                                  Text('P.O No: $poNo',
-                                      style: const TextStyle(fontSize: 16)),
-                                  Text('Lot Number: $lotNumber',
-                                      style: const TextStyle(fontSize: 16)),
-                                  const SizedBox(height: 32),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Content:',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        '${_labelContent ?? ''}${_labelContent != null ? '_' : ''}${_convertSubLotNumber(lotNumber)}',
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 20), // Space between sections
-                            // Input Fields Section
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Expanded(
-                                        child: Text('Total QTY',
-                                            style: TextStyle(fontSize: 16)),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: TextField(
-                                          controller: totalQtyController,
-                                          decoration: const InputDecoration(
-                                              border: OutlineInputBorder()),
-                                          keyboardType: TextInputType.number,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth;
+                  return Container(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Item Details Container
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Left Section (40% width)
+                              SizedBox(
+                                width: maxWidth * 0.4,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Item Name: $itemName',
+                                        style: const TextStyle(fontSize: 16)),
+                                    const SizedBox(height: 12),
+                                    Text('P.O No: $poNo',
+                                        style: const TextStyle(fontSize: 16)),
+                                    const SizedBox(height: 12),
+                                    Text('Lot Number: $lotNumber',
+                                        style: const TextStyle(fontSize: 16)),
+                                    const SizedBox(height: 24),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Content:',
+                                          style: TextStyle(fontSize: 16),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          'QTY per box ($qtyPerBox)',
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          '${_labelContent ?? ''}${_labelContent != null ? '_' : ''}${_convertSubLotNumber(lotNumber)}',
                                           style: const TextStyle(fontSize: 16),
                                         ),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: TextField(
-                                          controller: qtyPerBoxController,
-                                          decoration: const InputDecoration(
-                                              border: OutlineInputBorder()),
-                                          keyboardType: TextInputType.number,
-                                          readOnly: true, // Make it read-only
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Expanded(
-                                        child: Text('Inspection QTY',
-                                            style: TextStyle(fontSize: 16)),
-                                      ),
-                                      Expanded(
-                                        flex: 1,
-                                        child: TextField(
-                                          controller: inspectionQtyController,
-                                          decoration: const InputDecoration(
-                                              border: OutlineInputBorder()),
-                                          keyboardType: TextInputType.number,
-                                          readOnly: true, // Make it read-only
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20), // Space between containers
-
-                      // Good/No Good Container
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Container(
-                          width: 700,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: goodCountController,
-                                  textAlign: TextAlign.center,
-                                  readOnly: true, // Make it read-only
-                                  decoration: const InputDecoration(
-                                    labelText: 'Good',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(
-                                  width: 16), // Reduced spacing between inputs
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: noGoodCountController,
-                                  textAlign: TextAlign.center,
-                                  readOnly: true, // Make it read-only
-                                  decoration: const InputDecoration(
-                                    labelText: 'No Good',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Results Table Container
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 30),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              // Calculate dynamic widths based on container width
-                              final double checkboxWidth =
-                                  constraints.maxWidth * 0.05; // 5%
-                              final double numberWidth =
-                                  constraints.maxWidth * 0.05; // 5%
-                              final double contentWidth =
-                                  constraints.maxWidth * 0.35; // 35%
-                              final double resultWidth =
-                                  constraints.maxWidth * 0.25; // 25%
-
-                              return SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: DataTable(
-                                  dividerThickness: 1,
-                                  border: TableBorder(
-                                    verticalInside: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                    horizontalInside: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                    left: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                    right: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                    top: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                    bottom: BorderSide(
-                                        width: 1, color: Colors.grey.shade300),
-                                  ),
-                                  columns: [
-                                    DataColumn(
-                                      label: SizedBox(
-                                        width: checkboxWidth,
-                                        child: const Center(
-                                            child: Text('')), // For checkbox
-                                      ),
-                                    ),
-                                    DataColumn(
-                                      label: SizedBox(
-                                        width: numberWidth,
-                                        child: const Center(child: Text('No.')),
-                                      ),
-                                    ),
-                                    DataColumn(
-                                      label: SizedBox(
-                                        width: contentWidth,
-                                        child: const Center(
-                                            child: Text('Content')),
-                                      ),
-                                    ),
-                                    DataColumn(
-                                      label: SizedBox(
-                                        width: resultWidth,
-                                        child:
-                                            const Center(child: Text('Result')),
-                                      ),
+                                      ],
                                     ),
                                   ],
-                                  rows: _tableData.asMap().entries.map((entry) {
-                                    int index = entry.key;
-                                    Map<String, dynamic> data = entry.value;
-                                    return DataRow(cells: [
-                                      DataCell(
+                                ),
+                              ),
+                              // Right Section (50% width)
+                              SizedBox(
+                                width: maxWidth * 0.5,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
                                         SizedBox(
-                                          width: checkboxWidth,
-                                          child: Center(
-                                            child: Checkbox(
-                                              value:
-                                                  selectedRows.contains(index),
-                                              onChanged: (bool? value) {
-                                                setState(() {
-                                                  if (value == true) {
-                                                    selectedRows.add(index);
-                                                  } else {
-                                                    selectedRows.remove(index);
-                                                  }
-                                                });
-                                              },
-                                            ),
-                                          ),
+                                          width: maxWidth * 0.15,
+                                          child: const Text('Total QTY',
+                                              style: TextStyle(fontSize: 16)),
                                         ),
-                                      ),
-                                      DataCell(
                                         SizedBox(
-                                          width: numberWidth,
-                                          child: Center(
-                                            child: Text((index + 1).toString()),
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        SizedBox(
-                                          width: contentWidth,
+                                          width: maxWidth * 0.35,
                                           child: TextField(
-                                            textAlign: TextAlign.center,
-                                            focusNode: _ensureFocusNode(index),
-                                            controller: TextEditingController(
-                                                text: data['content']),
-                                            onChanged: (value) {
-                                              setState(() {
-                                                data['content'] = value;
-                                                if (value.isNotEmpty) {
-                                                  _validateContent(
-                                                      value, index);
-                                                } else {
-                                                  data['result'] = '';
-                                                }
-                                                _updateCounts();
-                                              });
-                                            },
+                                            controller: totalQtyController,
+                                            enabled: false,
                                             decoration: const InputDecoration(
-                                              border: InputBorder.none,
+                                              border: OutlineInputBorder(),
                                               contentPadding:
                                                   EdgeInsets.symmetric(
-                                                      horizontal: 8),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        SizedBox(
-                                          width: resultWidth,
-                                          child: Center(
-                                            child: Text(
-                                              data['result'] ?? '',
-                                              style: TextStyle(
-                                                color: data['result'] == 'Good'
-                                                    ? Colors.green
-                                                    : data['result'] ==
-                                                            'No Good'
-                                                        ? Colors.red
-                                                        : Colors.black,
-                                                fontWeight: FontWeight.bold,
+                                                horizontal: 12,
+                                                vertical: 8,
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ]);
-                                  }).toList(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-
-                      // Add Delete Selected and Add Row buttons
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 20,
-                          right: 20,
-                          top: 10,
-                          bottom: 30,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (_isTotalQtyReached)
-                              // Show Review Summary button
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: _handleReviewSummary,
-                                child: const Text('Review Summary'),
-                              )
-                            else
-                              // Show Add Row button
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: _addRow,
-                                child: const Text('Add Row'),
-                              ),
-
-                            // Delete Selected button
-                            if (selectedRows.isNotEmpty)
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    // Sort indices in descending order to avoid index shifting issues
-                                    final sortedIndices = selectedRows.toList()
-                                      ..sort((a, b) => b.compareTo(a));
-                                    for (final index in sortedIndices) {
-                                      if (index < _focusNodes.length) {
-                                        _focusNodes[index].dispose();
-                                        _focusNodes.removeAt(index);
-                                      }
-                                      _tableData.removeAt(index);
-                                    }
-                                    selectedRows.clear();
-
-                                    // Add a new row if table is empty
-                                    if (_tableData.isEmpty) {
-                                      _tableData.add({
-                                        'content': '',
-                                        'result': '',
-                                      });
-                                      _focusNodes.add(FocusNode());
-                                    }
-
-                                    _updateCounts();
-                                  });
-                                },
-                                child: const Text('Delete Selected'),
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      // Add Scan New Article Label button when QTY is reached
-                      if (_isQtyPerBoxReached)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 30, vertical: 10),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepPurple,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
+                                      ],
                                     ),
-                                    onPressed: () {
-                                      Navigator.of(context).pushReplacement(
-                                        MaterialPageRoute(
-                                          builder: (context) => ArticleLabel(
-                                            itemName: itemName,
-                                            poNo: poNo,
-                                            operatorScanId: operatorScanId,
-                                            totalQty: totalQty,
-                                            resumeData: widget.resumeData,
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      children: [
+                                        SizedBox(
+                                          width: maxWidth * 0.15,
+                                          child: const Text('QTY per box (05)',
+                                              style: TextStyle(fontSize: 16)),
+                                        ),
+                                        SizedBox(
+                                          width: maxWidth * 0.35,
+                                          child: TextField(
+                                            controller: qtyPerBoxController,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      );
-                                    },
-                                    child: const Text('Scan New Article Label'),
-                                  ),
-                                ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      children: [
+                                        SizedBox(
+                                          width: maxWidth * 0.15,
+                                          child: const Text('Inspection QTY',
+                                              style: TextStyle(fontSize: 16)),
+                                        ),
+                                        SizedBox(
+                                          width: maxWidth * 0.35,
+                                          child: TextField(
+                                            controller: inspectionQtyController,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 30),
                             ],
                           ),
                         ),
-                    ],
-                  ),
-                ),
+                        const SizedBox(height: 24),
+
+                        // Good/No Good Counter Section
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: maxWidth * 0.4,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Good',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: goodCountController,
+                                      enabled: false,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              SizedBox(
+                                width: maxWidth * 0.4,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('No Good',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: noGoodCountController,
+                                      enabled: false,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Scan Table
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minWidth: maxWidth,
+                              ),
+                              child: DataTable(
+                                columnSpacing: 24,
+                                headingRowColor: MaterialStateProperty.all(
+                                    Colors.grey.shade100),
+                                columns: const [
+                                  DataColumn(label: Text('')),
+                                  DataColumn(label: Text('No.')),
+                                  DataColumn(label: Text('Content')),
+                                  DataColumn(label: Text('Result')),
+                                ],
+                                rows: _buildTableRows(),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Action Buttons Row
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (_isTotalQtyReached)
+                                // Show Review Summary button
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: _handleReviewSummary,
+                                  child: const Text('Review Summary'),
+                                )
+                              else
+                                // Show Add Row button
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: _addRow,
+                                  child: const Text('Add Row'),
+                                ),
+                              const SizedBox(width: 16),
+                              // Delete Selected button
+                              if (selectedRows.isNotEmpty)
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      final sortedIndices = selectedRows
+                                          .toList()
+                                        ..sort((a, b) => b.compareTo(a));
+                                      for (final index in sortedIndices) {
+                                        if (index < _focusNodes.length) {
+                                          _focusNodes[index].dispose();
+                                          _focusNodes.removeAt(index);
+                                        }
+                                        _tableData.removeAt(index);
+                                      }
+                                      selectedRows.clear();
+
+                                      if (_tableData.isEmpty) {
+                                        _tableData.add({
+                                          'content': '',
+                                          'result': '',
+                                        });
+                                        _focusNodes.add(FocusNode());
+                                      }
+
+                                      _updateCounts();
+                                    });
+                                  },
+                                  child: const Text('Delete Selected'),
+                                ),
+                              if (_isQtyPerBoxReached) ...[
+                                const SizedBox(width: 16),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.deepPurple,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => ArticleLabel(
+                                          itemName: itemName,
+                                          poNo: poNo,
+                                          operatorScanId: operatorScanId,
+                                          totalQty: totalQty,
+                                          resumeData: widget.resumeData,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Scan New Article Label'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        // Historical Data Section
+                        const SizedBox(height: 24),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Previous Scans',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (_isLoadingHistory)
+                                const Center(child: CircularProgressIndicator())
+                              else if (_historicalData.isEmpty)
+                                const Text('No historical data available')
+                              else
+                                Column(
+                                  children: [
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          minWidth: maxWidth,
+                                        ),
+                                        child: DataTable(
+                                          columnSpacing: 24,
+                                          headingRowColor:
+                                              MaterialStateProperty.all(
+                                                  Colors.grey.shade100),
+                                          columns: const [
+                                            DataColumn(label: Text('Date')),
+                                            DataColumn(
+                                                label: Text('Item Name')),
+                                            DataColumn(label: Text('PO No')),
+                                            DataColumn(label: Text('Content')),
+                                            DataColumn(label: Text('Result')),
+                                          ],
+                                          rows: _historicalData.map((item) {
+                                            final DateTime createdAt =
+                                                DateTime.parse(
+                                                    item['created_at']);
+                                            final formattedDate =
+                                                '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}:${createdAt.second.toString().padLeft(2, '0')}';
+
+                                            return DataRow(
+                                              cells: [
+                                                DataCell(Text(formattedDate)),
+                                                DataCell(Text(
+                                                    item['itemName'] ?? '')),
+                                                DataCell(
+                                                    Text(item['poNo'] ?? '')),
+                                                DataCell(Text(
+                                                    item['content'] ?? '')),
+                                                DataCell(
+                                                  Text(
+                                                    item['result'] ?? '',
+                                                    style: TextStyle(
+                                                      color: item['result'] ==
+                                                              'Good'
+                                                          ? Colors.green
+                                                          : Colors.red,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.arrow_back),
+                                          onPressed: _currentPage > 1
+                                              ? _loadPreviousPage
+                                              : null,
+                                        ),
+                                        Text(
+                                          'Page $_currentPage of ${(_totalItems / _pageSize).ceil()}',
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.arrow_forward),
+                                          onPressed: _currentPage * _pageSize <
+                                                  _totalItems
+                                              ? _loadNextPage
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
