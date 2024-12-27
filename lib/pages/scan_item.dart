@@ -550,35 +550,35 @@ class _ScanItemState extends State<ScanItem> {
             TextField(
               focusNode: _ensureFocusNode(index),
               controller: contentController,
-              autofocus: index == 0, // Autofocus the first row
+              autofocus: index == 0,
               onChanged: (value) {
-                // Update the content immediately but don't validate yet
                 setState(() {
                   data['content'] = value;
                 });
               },
               onSubmitted: (value) {
-                // Validate when Enter is pressed (scanner device) or field is submitted
                 if (value.isNotEmpty) {
                   setState(() {
                     _validateContent(value, index);
                     _updateCounts();
 
-                    // If validation passed and we're not at the last row, add a new row
-                    if (data['result'] == 'Good' &&
-                        index == _tableData.length - 1 &&
-                        !_isTotalQtyReached) {
+                    // Always move to next row or create new row on Enter
+                    if (index == _tableData.length - 1 && !_isTotalQtyReached) {
                       _addRow();
                       // Focus the new row after a short delay
                       Future.delayed(const Duration(milliseconds: 100), () {
                         _ensureFocusNode(_tableData.length - 1).requestFocus();
+                      });
+                    } else if (index < _tableData.length - 1) {
+                      // Move focus to next row if it exists
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _ensureFocusNode(index + 1).requestFocus();
                       });
                     }
                   });
                 }
               },
               onEditingComplete: () {
-                // This is called when Enter is pressed
                 String value = data['content'] ?? '';
                 if (value.isNotEmpty) {
                   setState(() {
@@ -588,7 +588,6 @@ class _ScanItemState extends State<ScanItem> {
                 }
               },
               onTapOutside: (event) {
-                // Validate when clicking outside (for manual input)
                 String value = data['content'] ?? '';
                 if (value.isNotEmpty) {
                   setState(() {
@@ -760,6 +759,60 @@ class _ScanItemState extends State<ScanItem> {
                     color: Color(0xFF2C3E50),
                   ),
                 ),
+                const Expanded(child: SizedBox()),
+                Row(
+                  children: [
+                    const SelectableText(
+                      'Good: ',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.green),
+                        borderRadius: kBorderRadiusSmallAll,
+                      ),
+                      child: SelectableText(
+                        goodCountController.text,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 40),
+                    const SelectableText(
+                      'No Good: ',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.red),
+                        borderRadius: kBorderRadiusSmallAll,
+                      ),
+                      child: SelectableText(
+                        noGoodCountController.text,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -902,72 +955,6 @@ class _ScanItemState extends State<ScanItem> {
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Good/No Good Counter Section
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: kBorderRadiusSmallAll,
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: maxWidth * 0.4,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Good',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      controller: goodCountController,
-                                      enabled: false,
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 24),
-                              SizedBox(
-                                width: maxWidth * 0.4,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('No Good',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      controller: noGoodCountController,
-                                      enabled: false,
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                      ),
                                     ),
                                   ],
                                 ),
