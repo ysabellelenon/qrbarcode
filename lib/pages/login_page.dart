@@ -17,6 +17,13 @@ class _LoginPageState extends State<LoginPage> {
   bool _isPasswordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordController.text =
+        'password123'; // Set initial password for development
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -107,6 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Username field
                   TextFormField(
                     controller: _usernameController,
+                    onFieldSubmitted: (_) => _handleLogin(),
                     decoration: InputDecoration(
                       labelText: 'Username',
                       prefixIcon: const Icon(Icons.person_outline),
