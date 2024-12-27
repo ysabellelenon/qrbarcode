@@ -1275,28 +1275,104 @@ class _ScanItemState extends State<ScanItem> {
                                       ),
                                     ),
                                     const SizedBox(height: 16),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.arrow_back),
-                                          onPressed: _currentPage > 1
-                                              ? _loadPreviousPage
-                                              : null,
+                                    // Updated pagination footer
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.only(
+                                          bottomLeft:
+                                              kBorderRadiusSmallAll.bottomLeft,
+                                          bottomRight:
+                                              kBorderRadiusSmallAll.bottomRight,
                                         ),
-                                        Text(
-                                          'Page $_currentPage of ${(_totalItems / _pageSize).ceil()}',
-                                          style: const TextStyle(fontSize: 16),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.arrow_forward),
-                                          onPressed: _currentPage * _pageSize <
-                                                  _totalItems
-                                              ? _loadNextPage
-                                              : null,
-                                        ),
-                                      ],
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          // Summary info
+                                          Text(
+                                            'Showing ${(_currentPage - 1) * _pageSize + 1} to ${_currentPage * _pageSize > _totalItems ? _totalItems : _currentPage * _pageSize} of $_totalItems entries',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF666666),
+                                            ),
+                                          ),
+                                          // Pagination controls
+                                          Row(
+                                            children: [
+                                              OutlinedButton(
+                                                onPressed: _currentPage > 1
+                                                    ? _loadPreviousPage
+                                                    : null,
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor:
+                                                      Colors.deepPurple,
+                                                  side: const BorderSide(
+                                                      color: Colors.deepPurple),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 16),
+                                                ),
+                                                child: const Row(
+                                                  children: [
+                                                    Icon(Icons.arrow_back,
+                                                        size: 16),
+                                                    SizedBox(width: 4),
+                                                    Text('Previous'),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 16,
+                                                        vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      kBorderRadiusSmallAll,
+                                                  border: Border.all(
+                                                      color:
+                                                          Colors.grey.shade300),
+                                                ),
+                                                child: Text(
+                                                  'Page $_currentPage of ${(_totalItems / _pageSize).ceil()}',
+                                                  style: const TextStyle(
+                                                      fontSize: 14),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              OutlinedButton(
+                                                onPressed:
+                                                    _currentPage * _pageSize <
+                                                            _totalItems
+                                                        ? _loadNextPage
+                                                        : null,
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor:
+                                                      Colors.deepPurple,
+                                                  side: const BorderSide(
+                                                      color: Colors.deepPurple),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 16),
+                                                ),
+                                                child: const Row(
+                                                  children: [
+                                                    Text('Next'),
+                                                    SizedBox(width: 4),
+                                                    Icon(Icons.arrow_forward,
+                                                        size: 16),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
