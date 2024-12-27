@@ -403,45 +403,31 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _showQtyReachedDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return FocusScope(
-          autofocus: true,
-          child: KeyboardListener(
-            focusNode: FocusNode(),
-            onKeyEvent: (event) {
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.enter) {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => ArticleLabel(
-                      itemName: itemName,
-                      poNo: poNo,
-                      operatorScanId: operatorScanId,
-                      totalQty: totalQty,
-                      resumeData: widget.resumeData,
-                    ),
-                  ),
-                );
-              }
-            },
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: kBorderRadiusSmallAll,
+    // First, remove focus from any text field
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    // Small delay to ensure unfocus completes before showing dialog
+    Future.delayed(const Duration(milliseconds: 100), () {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: kBorderRadiusSmallAll,
+            ),
+            title: const Text('Information'),
+            content: const Text('QTY per box has been reached'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
               ),
-              title: const Text('Information'),
-              content: const Text('QTY per box has been reached'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-                ElevatedButton(
+              FocusScope(
+                autofocus: true,
+                child: ElevatedButton(
                   autofocus: true,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
@@ -463,12 +449,12 @@ class _ScanItemState extends State<ScanItem> {
                   },
                   child: const Text('Scan New Article Label'),
                 ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   void _showTotalQtyReachedDialog() {
