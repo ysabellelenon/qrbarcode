@@ -576,28 +576,29 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getHistoricalScans({
-    required String itemName,
-    int page = 1,
-    int pageSize = 10,
-  }) async {
+  Future<List<Map<String, dynamic>>> getHistoricalScans(String itemName,
+      {int page = 1, int pageSize = 10}) async {
     final db = await database;
     final offset = (page - 1) * pageSize;
-
     return await db.rawQuery('''
-      SELECT 
-        s.id,
-        s.content,
-        s.result,
-        s.created_at,
-        ss.itemName,
-        ss.poNo,
-        ss.totalQty
+      SELECT s.*, ss.itemName, ss.poNo
       FROM individual_scans s
       JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
       ORDER BY s.created_at DESC
       LIMIT ? OFFSET ?
-    ''', [pageSize, offset]);
+    ''', [itemName, pageSize, offset]);
+  }
+
+  Future<int> getTotalScansForItem(String itemName) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
+    ''', [itemName]);
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> getHistoricalScansCount(String itemName) async {

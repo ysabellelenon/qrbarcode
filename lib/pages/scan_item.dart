@@ -105,6 +105,7 @@ class _ScanItemState extends State<ScanItem> {
     _fetchLabelContent(itemName);
     _checkSubLotRules();
     _loadHistoricalData();
+    _updateTotalInspectionQty();
 
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
@@ -199,7 +200,7 @@ class _ScanItemState extends State<ScanItem> {
 
     try {
       final data = await DatabaseHelper().getHistoricalScans(
-        itemName: itemName,
+        itemName,
         page: _currentPage,
         pageSize: _pageSize,
       );
@@ -324,6 +325,37 @@ class _ScanItemState extends State<ScanItem> {
     return _focusNodes[index];
   }
 
+  Future<void> _updateTotalInspectionQty() async {
+    try {
+      // Get total historical scans for this item
+      final historicalTotal =
+          await DatabaseHelper().getTotalScansForItem(itemName);
+
+      // Calculate current scans
+      int currentGoodCount = 0;
+      int currentNoGoodCount = 0;
+
+      for (var data in _tableData) {
+        if (data['content']?.isNotEmpty == true) {
+          if (data['result'] == 'Good') {
+            currentGoodCount++;
+          } else if (data['result'] == 'No Good') {
+            currentNoGoodCount++;
+          }
+        }
+      }
+
+      // Update inspection quantity controller with total
+      setState(() {
+        inspectionQtyController.text =
+            (historicalTotal + currentGoodCount + currentNoGoodCount)
+                .toString();
+      });
+    } catch (e) {
+      print('Error updating total inspection quantity: $e');
+    }
+  }
+
   void _updateCounts() {
     int goodCount = 0;
     int noGoodCount = 0;
@@ -343,7 +375,8 @@ class _ScanItemState extends State<ScanItem> {
     setState(() {
       goodCountController.text = goodCount.toString();
       noGoodCountController.text = noGoodCount.toString();
-      inspectionQtyController.text = (goodCount + noGoodCount).toString();
+
+      // Update QTY per box
       qtyPerBoxController.text = populatedRowCount.toString();
 
       // Check if we've reached the QTY per box
@@ -400,6 +433,9 @@ class _ScanItemState extends State<ScanItem> {
         _hasShownQtyReachedDialog = false;
       }
     });
+
+    // Update total inspection quantity after counts are updated
+    _updateTotalInspectionQty();
   }
 
   void _showQtyReachedDialog() {
