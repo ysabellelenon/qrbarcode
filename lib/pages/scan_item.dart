@@ -51,6 +51,9 @@ class _ScanItemState extends State<ScanItem> {
   String _sortColumn = 'created_at';
   bool _sortAscending = false;
 
+  int _historicalGoodCount = 0; // New variable for historical good count
+  int _historicalNoGoodCount = 0; // New variable for historical no good count
+
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo =>
@@ -207,9 +210,22 @@ class _ScanItemState extends State<ScanItem> {
 
       final total = await DatabaseHelper().getHistoricalScansCount(itemName);
 
+      // Calculate historical good and no good counts
+      int goodCount = 0;
+      int noGoodCount = 0;
+      for (var item in data) {
+        if (item['result'] == 'Good') {
+          goodCount++;
+        } else if (item['result'] == 'No Good') {
+          noGoodCount++;
+        }
+      }
+
       setState(() {
         _historicalData = data;
         _totalItems = total;
+        _historicalGoodCount = goodCount; // Set historical good count
+        _historicalNoGoodCount = noGoodCount; // Set historical no good count
         _isLoadingHistory = false;
       });
     } catch (e) {
@@ -373,8 +389,10 @@ class _ScanItemState extends State<ScanItem> {
     }
 
     setState(() {
-      goodCountController.text = goodCount.toString();
-      noGoodCountController.text = noGoodCount.toString();
+      // Add historical counts to current session counts
+      goodCountController.text = (_historicalGoodCount + goodCount).toString();
+      noGoodCountController.text =
+          (_historicalNoGoodCount + noGoodCount).toString();
 
       // Update QTY per box
       qtyPerBoxController.text = populatedRowCount.toString();
