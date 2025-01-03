@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Import sqflite_common_ffi
+import 'package:flutter/foundation.dart';
+import 'package:window_size/window_size.dart';
 import 'utils/db_path_printer.dart';
 import 'pages/login_page.dart';
 import 'pages/engineer_login.dart';
@@ -17,6 +19,27 @@ import 'dart:io';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Set window size for desktop platforms
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    setWindowTitle('QR Barcode System');
+    getCurrentScreen().then((screen) {
+      if (screen != null) {
+        final screenFrame = screen.frame;
+        // Set minimum size to 720p and use screen size directly
+        setWindowMinSize(const Size(1280, 720));
+        setWindowMaxSize(screenFrame.size);
+
+        // Set to screen size directly
+        setWindowFrame(Rect.fromLTWH(
+          screenFrame.left,
+          screenFrame.top,
+          screenFrame.width,
+          screenFrame.height,
+        ));
+      }
+    });
+  }
+
   // Initialize sqflite_common_ffi for desktop platforms
   if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
     sqfliteFfiInit();
@@ -27,7 +50,7 @@ void main() async {
     // Initialize database
     final db = await DatabaseHelper().database;
     print('Database initialized successfully');
-    
+
     // Print database path and contents
     await DbPathPrinter.printPath();
   } catch (e) {
