@@ -655,4 +655,16 @@ class DatabaseHelper {
       'noGoodCount': Sqflite.firstIntValue(noGoodCount) ?? 0,
     };
   }
+
+  Future<List<Map<String, dynamic>>> getAllHistoricalScans(
+      String itemName) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT s.*, ss.itemName, ss.poNo
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
+      ORDER BY s.created_at DESC
+    ''', [itemName]);
+  }
 }
