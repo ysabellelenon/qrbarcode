@@ -101,6 +101,39 @@ class _ScanItemState extends State<ScanItem> {
     return parts.join('');
   }
 
+  // Add new method to fetch total counts
+  Future<void> _updateTotalGoodNoGoodCounts() async {
+    try {
+      final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
+      setState(() {
+        _historicalGoodCount = counts['goodCount'] ?? 0;
+        _historicalNoGoodCount = counts['noGoodCount'] ?? 0;
+        // Update the display counters
+        int currentGoodCount = 0;
+        int currentNoGoodCount = 0;
+
+        // Count current session
+        for (var data in _tableData) {
+          if (data['content']?.isNotEmpty == true) {
+            if (data['result'] == 'Good') {
+              currentGoodCount++;
+            } else if (data['result'] == 'No Good') {
+              currentNoGoodCount++;
+            }
+          }
+        }
+
+        // Update the display with total counts
+        goodCountController.text =
+            (_historicalGoodCount + currentGoodCount).toString();
+        noGoodCountController.text =
+            (_historicalNoGoodCount + currentNoGoodCount).toString();
+      });
+    } catch (e) {
+      print('Error updating total Good/No Good counts: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -153,9 +186,6 @@ class _ScanItemState extends State<ScanItem> {
         });
         _focusNodes.add(FocusNode());
       }
-
-      // Update counts
-      _updateCounts();
     } else {
       // Initialize with a single empty row for new scan if total QTY not reached
       _tableData.clear();
@@ -177,11 +207,8 @@ class _ScanItemState extends State<ScanItem> {
       totalQtyController.text = totalQty.toString();
     }
 
-    // Initialize counters
-    goodCountController.text = '0';
-    noGoodCountController.text = '0';
-
-    // Update counts for restored data
+    // Update counts for restored data and get historical counts
+    _updateTotalGoodNoGoodCounts();
     if (widget.resumeData != null) {
       _updateCounts();
     }
@@ -231,22 +258,9 @@ class _ScanItemState extends State<ScanItem> {
 
       final total = await DatabaseHelper().getHistoricalScansCount(itemName);
 
-      // Calculate historical good and no good counts
-      int goodCount = 0;
-      int noGoodCount = 0;
-      for (var item in data) {
-        if (item['result'] == 'Good') {
-          goodCount++;
-        } else if (item['result'] == 'No Good') {
-          noGoodCount++;
-        }
-      }
-
       setState(() {
         _historicalData = data;
         _totalItems = total;
-        _historicalGoodCount = goodCount; // Set historical good count
-        _historicalNoGoodCount = noGoodCount; // Set historical no good count
         _isLoadingHistory = false;
       });
     } catch (e) {
@@ -410,11 +424,6 @@ class _ScanItemState extends State<ScanItem> {
     }
 
     setState(() {
-      // Add historical counts to current session counts
-      goodCountController.text = (_historicalGoodCount + goodCount).toString();
-      noGoodCountController.text =
-          (_historicalNoGoodCount + noGoodCount).toString();
-
       // Update QTY per box
       qtyPerBoxController.text = populatedRowCount.toString();
 
@@ -454,6 +463,8 @@ class _ScanItemState extends State<ScanItem> {
 
     // Update total inspection quantity after counts are updated
     _updateTotalInspectionQty();
+    // Update Good/No Good counts
+    _updateTotalGoodNoGoodCounts();
   }
 
   void _showQtyReachedDialog() {

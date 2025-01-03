@@ -632,4 +632,27 @@ class DatabaseHelper {
       orderBy: 'created_at ASC',
     );
   }
+
+  Future<Map<String, int>> getTotalGoodNoGoodCounts(String itemName) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> goodCount = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ? AND s.result = 'Good'
+    ''', [itemName]);
+
+    final List<Map<String, dynamic>> noGoodCount = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ? AND s.result = 'No Good'
+    ''', [itemName]);
+
+    return {
+      'goodCount': Sqflite.firstIntValue(goodCount) ?? 0,
+      'noGoodCount': Sqflite.firstIntValue(noGoodCount) ?? 0,
+    };
+  }
 }
