@@ -108,7 +108,26 @@ class _ScanItemState extends State<ScanItem> {
     _fetchLabelContent(itemName);
     _checkSubLotRules();
     _loadHistoricalData();
-    _updateTotalInspectionQty();
+
+    // Check total inspection quantity at load time
+    _updateTotalInspectionQty().then((_) {
+      int currentInspectionQty =
+          int.tryParse(inspectionQtyController.text) ?? 0;
+      int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+
+      if (currentInspectionQty >= totalTargetQty) {
+        setState(() {
+          _isTotalQtyReached = true;
+        });
+        // Show the dialog after a brief delay to ensure the widget is fully built
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (!_hasShownQtyReachedDialog) {
+            _hasShownQtyReachedDialog = true;
+            _showTotalQtyReachedDialog();
+          }
+        });
+      }
+    });
 
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
@@ -126,8 +145,8 @@ class _ScanItemState extends State<ScanItem> {
         _focusNodes.add(FocusNode());
       }
 
-      // Add an empty row if needed
-      if (!_isQtyPerBoxReached) {
+      // Add an empty row if needed and if total QTY not reached
+      if (!_isQtyPerBoxReached && !_isTotalQtyReached) {
         _tableData.add({
           'content': '',
           'result': '',
@@ -138,14 +157,16 @@ class _ScanItemState extends State<ScanItem> {
       // Update counts
       _updateCounts();
     } else {
-      // Initialize with a single empty row for new scan
+      // Initialize with a single empty row for new scan if total QTY not reached
       _tableData.clear();
       _focusNodes.clear();
-      _tableData.add({
-        'content': '',
-        'result': '',
-      });
-      _focusNodes.add(FocusNode());
+      if (!_isTotalQtyReached) {
+        _tableData.add({
+          'content': '',
+          'result': '',
+        });
+        _focusNodes.add(FocusNode());
+      }
     }
 
     // Set the total quantity
@@ -165,9 +186,9 @@ class _ScanItemState extends State<ScanItem> {
       _updateCounts();
     }
 
-    // Set focus to the first content field after the widget is built
+    // Set focus to the first content field after the widget is built if not total QTY reached
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_focusNodes.isNotEmpty) {
+      if (_focusNodes.isNotEmpty && !_isTotalQtyReached) {
         _focusNodes[0].requestFocus();
       }
     });
@@ -402,7 +423,8 @@ class _ScanItemState extends State<ScanItem> {
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
 
       // Check if total QTY has been reached
-      int currentInspectionQty = goodCount + noGoodCount;
+      int currentInspectionQty =
+          int.tryParse(inspectionQtyController.text) ?? 0;
       int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
 
       // Update the total QTY reached flag
@@ -416,29 +438,7 @@ class _ScanItemState extends State<ScanItem> {
         // Show Total QTY reached dialog
         if (!_hasShownQtyReachedDialog) {
           _hasShownQtyReachedDialog = true;
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Information'),
-              content: const Text('TOTAL QTY has been reached'),
-              actions: [
-                FocusScope(
-                  autofocus: true,
-                  child: ElevatedButton(
-                    autofocus: true,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('OK'),
-                  ),
-                ),
-              ],
-            ),
-          );
+          _showTotalQtyReachedDialog();
         }
       } else if (targetQty > 0 && populatedRowCount >= targetQty) {
         _isQtyPerBoxReached = true;
@@ -514,7 +514,7 @@ class _ScanItemState extends State<ScanItem> {
   void _showTotalQtyReachedDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap OK to dismiss
+      barrierDismissible: false, // User must tap a button to dismiss
       builder: (BuildContext context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -528,6 +528,21 @@ class _ScanItemState extends State<ScanItem> {
                 Navigator.of(context).pop();
               },
               child: const Text('OK'),
+            ),
+            FocusScope(
+              autofocus: true,
+              child: ElevatedButton(
+                autofocus: true,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _handleReviewSummary();
+                },
+                child: const Text('Review Finished Item'),
+              ),
             ),
           ],
         );
@@ -591,13 +606,14 @@ class _ScanItemState extends State<ScanItem> {
               focusNode: _ensureFocusNode(index),
               controller: contentController,
               autofocus: index == 0,
+              enabled: !_isTotalQtyReached,
               onChanged: (value) {
                 setState(() {
                   data['content'] = value;
                 });
               },
               onSubmitted: (value) {
-                if (value.isNotEmpty) {
+                if (value.isNotEmpty && !_isTotalQtyReached) {
                   setState(() {
                     _validateContent(value, index);
                     _updateCounts();
@@ -620,7 +636,7 @@ class _ScanItemState extends State<ScanItem> {
               },
               onEditingComplete: () {
                 String value = data['content'] ?? '';
-                if (value.isNotEmpty) {
+                if (value.isNotEmpty && !_isTotalQtyReached) {
                   setState(() {
                     _validateContent(value, index);
                     _updateCounts();
@@ -629,7 +645,7 @@ class _ScanItemState extends State<ScanItem> {
               },
               onTapOutside: (event) {
                 String value = data['content'] ?? '';
-                if (value.isNotEmpty) {
+                if (value.isNotEmpty && !_isTotalQtyReached) {
                   setState(() {
                     _validateContent(value, index);
                     _updateCounts();
