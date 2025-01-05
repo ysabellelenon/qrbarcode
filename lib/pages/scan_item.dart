@@ -978,8 +978,8 @@ class _ScanItemState extends State<ScanItem> {
                                       children: [
                                         SizedBox(
                                           width: maxWidth * 0.15,
-                                          child: const SelectableText(
-                                              'QTY per box (05)',
+                                          child: SelectableText(
+                                              'QTY per box (${qtyPerBox})',
                                               style: TextStyle(fontSize: 16)),
                                         ),
                                         SizedBox(
