@@ -106,32 +106,50 @@ class _ScanItemState extends State<ScanItem> {
     try {
       final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
       setState(() {
-        _historicalGoodCount = counts['goodCount'] ?? 0;
-        _historicalNoGoodCount = counts['noGoodCount'] ?? 0;
-        // Update the display counters
-        int currentGoodCount = 0;
-        int currentNoGoodCount = 0;
-
-        // Count current session
-        for (var data in _tableData) {
-          if (data['content']?.isNotEmpty == true) {
-            if (data['result'] == 'Good') {
-              currentGoodCount++;
-            } else if (data['result'] == 'No Good') {
-              currentNoGoodCount++;
-            }
-          }
-        }
-
-        // Update the display with total counts
-        goodCountController.text =
-            (_historicalGoodCount + currentGoodCount).toString();
-        noGoodCountController.text =
-            (_historicalNoGoodCount + currentNoGoodCount).toString();
+        goodCountController.text = (counts['goodCount'] ?? 0).toString();
+        noGoodCountController.text = (counts['noGoodCount'] ?? 0).toString();
       });
     } catch (e) {
       print('Error updating total Good/No Good counts: $e');
     }
+  }
+
+  Future<void> _updateTotalInspectionQty() async {
+    try {
+      // Get total historical scans for this item
+      final historicalTotal =
+          await DatabaseHelper().getTotalScansForItem(itemName);
+
+      setState(() {
+        inspectionQtyController.text = historicalTotal.toString();
+      });
+    } catch (e) {
+      print('Error updating total inspection quantity: $e');
+    }
+  }
+
+  void _addRow() {
+    setState(() {
+      _tableData.add({
+        'content': '',
+        'result': '',
+        'isLocked': false,
+      });
+      _focusNodes.add(FocusNode());
+
+      // Focus the new row immediately
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _focusNodes.last.requestFocus();
+      });
+    });
+  }
+
+  FocusNode _ensureFocusNode(int index) {
+    // Add focus nodes if needed
+    while (_focusNodes.length <= index) {
+      _focusNodes.add(FocusNode());
+    }
+    return _focusNodes[index];
   }
 
   @override
@@ -142,25 +160,9 @@ class _ScanItemState extends State<ScanItem> {
     _checkSubLotRules();
     _loadHistoricalData();
 
-    // Check total inspection quantity at load time
-    _updateTotalInspectionQty().then((_) {
-      int currentInspectionQty =
-          int.tryParse(inspectionQtyController.text) ?? 0;
-      int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
-
-      if (currentInspectionQty >= totalTargetQty) {
-        setState(() {
-          _isTotalQtyReached = true;
-        });
-        // Show the dialog after a brief delay to ensure the widget is fully built
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (!_hasShownQtyReachedDialog) {
-            _hasShownQtyReachedDialog = true;
-            _showTotalQtyReachedDialog();
-          }
-        });
-      }
-    });
+    // Initialize counts
+    _updateTotalInspectionQty();
+    _updateTotalGoodNoGoodCounts();
 
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
@@ -170,6 +172,7 @@ class _ScanItemState extends State<ScanItem> {
       _tableData.addAll(savedTableData.map((item) => {
             'content': item['content'] ?? '',
             'result': item['result'] ?? '',
+            'isLocked': true, // Lock restored rows
           }));
 
       // Create focus nodes for each row
@@ -177,43 +180,25 @@ class _ScanItemState extends State<ScanItem> {
       for (int i = 0; i < _tableData.length; i++) {
         _focusNodes.add(FocusNode());
       }
+    }
 
-      // Add an empty row if needed and if total QTY not reached
-      if (!_isQtyPerBoxReached && !_isTotalQtyReached) {
-        _tableData.add({
-          'content': '',
-          'result': '',
-        });
-        _focusNodes.add(FocusNode());
-      }
-    } else {
-      // Initialize with a single empty row for new scan if total QTY not reached
-      _tableData.clear();
-      _focusNodes.clear();
-      if (!_isTotalQtyReached) {
-        _tableData.add({
-          'content': '',
-          'result': '',
-        });
-        _focusNodes.add(FocusNode());
-      }
+    // Always add an empty row for new scans if total QTY not reached
+    if (!_isTotalQtyReached) {
+      _tableData.add({
+        'content': '',
+        'result': '',
+        'isLocked': false,
+      });
+      _focusNodes.add(FocusNode());
     }
 
     // Set the total quantity
-    if (widget.resumeData != null) {
-      totalQtyController.text =
-          widget.resumeData!['quantity'] ?? totalQty.toString();
-    } else {
-      totalQtyController.text = totalQty.toString();
-    }
+    totalQtyController.text = totalQty.toString();
 
-    // Update counts for restored data and get historical counts
-    _updateTotalGoodNoGoodCounts();
-    if (widget.resumeData != null) {
-      _updateCounts();
-    }
+    // Check initial QTY status
+    _checkAndUpdateQtyStatus();
 
-    // Set focus to the first content field after the widget is built if not total QTY reached
+    // Set focus to the first content field after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_focusNodes.isNotEmpty && !_isTotalQtyReached) {
         _focusNodes[0].requestFocus();
@@ -326,105 +311,62 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _validateContent(String value, int index) async {
+    // If this row already has a result, don't validate again
+    if (_tableData[index]['result']?.isNotEmpty == true) {
+      return;
+    }
+
     final expectedContent =
         '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
 
+    String result;
     if (value == expectedContent) {
-      setState(() {
-        _tableData[index]['result'] = 'Good';
-      });
-
-      // Save the individual scan content
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        'Good',
-      );
+      result = 'Good';
     } else {
-      setState(() {
-        _tableData[index]['result'] = 'No Good';
-      });
+      result = 'No Good';
+    }
 
-      // Save the failed scan
+    // Save to database first
+    try {
       await DatabaseHelper().insertScanContent(
         operatorScanId,
         value,
-        'No Good',
+        result,
+      );
+
+      // Only update UI after successful database operation
+      setState(() {
+        _tableData[index]['result'] = result;
+        _tableData[index]['isLocked'] = true; // Lock the field after validation
+      });
+
+      // Update counts from database after successful insert
+      await _updateTotalInspectionQty();
+      await _updateTotalGoodNoGoodCounts();
+
+      // Check if we need to show any dialogs
+      _checkAndUpdateQtyStatus();
+
+      // Add new row if needed (after all updates are complete)
+      if (!_isTotalQtyReached) {
+        _addRow();
+      }
+    } catch (e) {
+      print('Error saving scan content: $e');
+      // Show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving scan: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
-
-    _updateCounts();
   }
 
-  void _addRow() {
-    if (qtyPerBoxController.text.isNotEmpty) {
-      setState(() {
-        _tableData.add({
-          'content': '',
-          'result': '',
-        });
-        _updateCounts();
-      });
-    }
-  }
-
-  FocusNode _ensureFocusNode(int index) {
-    // Add focus nodes if needed
-    while (_focusNodes.length <= index) {
-      _focusNodes.add(FocusNode());
-    }
-    return _focusNodes[index];
-  }
-
-  Future<void> _updateTotalInspectionQty() async {
-    try {
-      // Get total historical scans for this item
-      final historicalTotal =
-          await DatabaseHelper().getTotalScansForItem(itemName);
-
-      // Calculate current scans (only count rows with content)
-      int currentGoodCount = 0;
-      int currentNoGoodCount = 0;
-
-      for (var data in _tableData) {
-        if (data['content']?.isNotEmpty == true) {
-          // Only count rows with content
-          if (data['result'] == 'Good') {
-            currentGoodCount++;
-          } else if (data['result'] == 'No Good') {
-            currentNoGoodCount++;
-          }
-        }
-      }
-
-      // Update inspection quantity controller with total
-      setState(() {
-        inspectionQtyController.text =
-            (historicalTotal + currentGoodCount + currentNoGoodCount)
-                .toString();
-      });
-    } catch (e) {
-      print('Error updating total inspection quantity: $e');
-    }
-  }
-
-  void _updateCounts() {
-    int goodCount = 0;
-    int noGoodCount = 0;
-    int populatedRowCount = 0;
-
-    // Only count rows that have content
-    for (var data in _tableData) {
-      if (data['content']?.isNotEmpty == true) {
-        // Check if content exists and is not empty
-        populatedRowCount++;
-        if (data['result'] == 'Good') {
-          goodCount++;
-        } else if (data['result'] == 'No Good') {
-          noGoodCount++;
-        }
-      }
-    }
+  void _checkAndUpdateQtyStatus() {
+    // Check QTY per box and total QTY reached status
+    int populatedRowCount =
+        _tableData.where((data) => data['content']?.isNotEmpty == true).length;
 
     setState(() {
       // Update QTY per box
@@ -463,11 +405,6 @@ class _ScanItemState extends State<ScanItem> {
         _hasShownQtyReachedDialog = false;
       }
     });
-
-    // Update total inspection quantity after counts are updated
-    _updateTotalInspectionQty();
-    // Update Good/No Good counts
-    _updateTotalGoodNoGoodCounts();
   }
 
   void _showQtyReachedDialog() {
@@ -620,50 +557,18 @@ class _ScanItemState extends State<ScanItem> {
               focusNode: _ensureFocusNode(index),
               controller: contentController,
               autofocus: index == 0,
-              enabled: !_isTotalQtyReached,
+              enabled: !_isTotalQtyReached &&
+                  !(data['isLocked'] == true), // Disable if locked
               onChanged: (value) {
                 setState(() {
                   data['content'] = value;
                 });
               },
               onSubmitted: (value) {
-                if (value.isNotEmpty && !_isTotalQtyReached) {
-                  setState(() {
-                    _validateContent(value, index);
-                    _updateCounts();
-
-                    // Always move to next row or create new row on Enter
-                    if (index == _tableData.length - 1 && !_isTotalQtyReached) {
-                      _addRow();
-                      // Focus the new row after a short delay
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _ensureFocusNode(_tableData.length - 1).requestFocus();
-                      });
-                    } else if (index < _tableData.length - 1) {
-                      // Move focus to next row if it exists
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _ensureFocusNode(index + 1).requestFocus();
-                      });
-                    }
-                  });
-                }
-              },
-              onEditingComplete: () {
-                String value = data['content'] ?? '';
-                if (value.isNotEmpty && !_isTotalQtyReached) {
-                  setState(() {
-                    _validateContent(value, index);
-                    _updateCounts();
-                  });
-                }
-              },
-              onTapOutside: (event) {
-                String value = data['content'] ?? '';
-                if (value.isNotEmpty && !_isTotalQtyReached) {
-                  setState(() {
-                    _validateContent(value, index);
-                    _updateCounts();
-                  });
+                if (value.isNotEmpty &&
+                    !_isTotalQtyReached &&
+                    !(data['isLocked'] == true)) {
+                  _validateContent(value, index);
                 }
               },
               decoration: InputDecoration(
@@ -682,6 +587,10 @@ class _ScanItemState extends State<ScanItem> {
                   horizontal: 12,
                   vertical: 8,
                 ),
+                filled: data['isLocked'] ==
+                    true, // Add background color for locked fields
+                fillColor:
+                    data['isLocked'] == true ? Colors.grey.shade100 : null,
               ),
             ),
           ),
@@ -806,7 +715,7 @@ class _ScanItemState extends State<ScanItem> {
           await _loadHistoricalData();
           await _updateTotalInspectionQty();
           await _updateTotalGoodNoGoodCounts();
-          _updateCounts();
+          _checkAndUpdateQtyStatus();
         } catch (refreshError) {
           print('Error refreshing data: $refreshError');
           // If refresh fails, try one more time after a delay
@@ -814,7 +723,7 @@ class _ScanItemState extends State<ScanItem> {
           await _loadHistoricalData();
           await _updateTotalInspectionQty();
           await _updateTotalGoodNoGoodCounts();
-          _updateCounts();
+          _checkAndUpdateQtyStatus();
         }
       }
     } catch (e) {
@@ -1218,11 +1127,12 @@ class _ScanItemState extends State<ScanItem> {
                                         _tableData.add({
                                           'content': '',
                                           'result': '',
+                                          'isLocked': false,
                                         });
                                         _focusNodes.add(FocusNode());
                                       }
 
-                                      _updateCounts();
+                                      _checkAndUpdateQtyStatus();
                                     });
                                   },
                                   child: const Text('Delete Selected'),
