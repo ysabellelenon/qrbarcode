@@ -667,4 +667,26 @@ class DatabaseHelper {
       ORDER BY s.created_at DESC
     ''', [itemName]);
   }
+
+  Future<int> clearIndividualScans(String itemName) async {
+    final db = await database;
+    // First get all session IDs for this item
+    final sessions = await db.query(
+      'scanning_sessions',
+      columns: ['id'],
+      where: 'itemName = ?',
+      whereArgs: [itemName],
+    );
+
+    if (sessions.isEmpty) return 0;
+
+    final sessionIds = sessions.map((s) => s['id']).toList();
+
+    // Delete all individual scans for these sessions
+    return await db.delete(
+      'individual_scans',
+      where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
+      whereArgs: sessionIds,
+    );
+  }
 }

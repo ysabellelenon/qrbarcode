@@ -379,14 +379,16 @@ class _ScanItemState extends State<ScanItem> {
   Future<void> _updateTotalInspectionQty() async {
     try {
       // Get total historical scans for this item
-      final historicalTotal = await DatabaseHelper().getTotalScansForItem(itemName);
+      final historicalTotal =
+          await DatabaseHelper().getTotalScansForItem(itemName);
 
       // Calculate current scans (only count rows with content)
       int currentGoodCount = 0;
       int currentNoGoodCount = 0;
 
       for (var data in _tableData) {
-        if (data['content']?.isNotEmpty == true) {  // Only count rows with content
+        if (data['content']?.isNotEmpty == true) {
+          // Only count rows with content
           if (data['result'] == 'Good') {
             currentGoodCount++;
           } else if (data['result'] == 'No Good') {
@@ -398,7 +400,8 @@ class _ScanItemState extends State<ScanItem> {
       // Update inspection quantity controller with total
       setState(() {
         inspectionQtyController.text =
-            (historicalTotal + currentGoodCount + currentNoGoodCount).toString();
+            (historicalTotal + currentGoodCount + currentNoGoodCount)
+                .toString();
       });
     } catch (e) {
       print('Error updating total inspection quantity: $e');
@@ -412,7 +415,8 @@ class _ScanItemState extends State<ScanItem> {
 
     // Only count rows that have content
     for (var data in _tableData) {
-      if (data['content']?.isNotEmpty == true) {  // Check if content exists and is not empty
+      if (data['content']?.isNotEmpty == true) {
+        // Check if content exists and is not empty
         populatedRowCount++;
         if (data['result'] == 'Good') {
           goodCount++;
@@ -431,7 +435,8 @@ class _ScanItemState extends State<ScanItem> {
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
 
       // Check if total QTY has been reached
-      int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+      int currentInspectionQty =
+          int.tryParse(inspectionQtyController.text) ?? 0;
       int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
 
       // Update the total QTY reached flag
@@ -741,6 +746,87 @@ class _ScanItemState extends State<ScanItem> {
           result.contains(searchLower) ||
           date.contains(searchLower);
     }).toList();
+  }
+
+  Future<void> _clearScans() async {
+    try {
+      // Show confirmation dialog
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Clear All Scans'),
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
+          content: Text(
+              'Are you sure you want to clear all scan history for $itemName? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Clear'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        final count = await DatabaseHelper().clearIndividualScans(itemName);
+        if (!mounted) return;
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully cleared $count scan records'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Reset page to 1 and clear current data
+        setState(() {
+          _currentPage = 1;
+          _historicalData.clear();
+          _totalItems = 0;
+          goodCountController.text = '0';
+          noGoodCountController.text = '0';
+          inspectionQtyController.text = '0';
+        });
+
+        // Small delay to ensure database is ready
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Refresh data sequentially instead of in parallel
+        try {
+          await _loadHistoricalData();
+          await _updateTotalInspectionQty();
+          await _updateTotalGoodNoGoodCounts();
+          _updateCounts();
+        } catch (refreshError) {
+          print('Error refreshing data: $refreshError');
+          // If refresh fails, try one more time after a delay
+          await Future.delayed(const Duration(milliseconds: 500));
+          await _loadHistoricalData();
+          await _updateTotalInspectionQty();
+          await _updateTotalGoodNoGoodCounts();
+          _updateCounts();
+        }
+      }
+    } catch (e) {
+      print('Error in _clearScans: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error clearing scans: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -1416,6 +1502,23 @@ class _ScanItemState extends State<ScanItem> {
                                           ),
                                         ],
                                       ),
+                                    ),
+
+                                    // Add Clear Scans button at the bottom
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed: _clearScans,
+                                          icon: const Icon(Icons.delete_forever,
+                                              color: Colors.red),
+                                          label: const Text(
+                                            'Clear All Scans (Dev Only)',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
