@@ -379,15 +379,14 @@ class _ScanItemState extends State<ScanItem> {
   Future<void> _updateTotalInspectionQty() async {
     try {
       // Get total historical scans for this item
-      final historicalTotal =
-          await DatabaseHelper().getTotalScansForItem(itemName);
+      final historicalTotal = await DatabaseHelper().getTotalScansForItem(itemName);
 
-      // Calculate current scans
+      // Calculate current scans (only count rows with content)
       int currentGoodCount = 0;
       int currentNoGoodCount = 0;
 
       for (var data in _tableData) {
-        if (data['content']?.isNotEmpty == true) {
+        if (data['content']?.isNotEmpty == true) {  // Only count rows with content
           if (data['result'] == 'Good') {
             currentGoodCount++;
           } else if (data['result'] == 'No Good') {
@@ -399,8 +398,7 @@ class _ScanItemState extends State<ScanItem> {
       // Update inspection quantity controller with total
       setState(() {
         inspectionQtyController.text =
-            (historicalTotal + currentGoodCount + currentNoGoodCount)
-                .toString();
+            (historicalTotal + currentGoodCount + currentNoGoodCount).toString();
       });
     } catch (e) {
       print('Error updating total inspection quantity: $e');
@@ -412,8 +410,9 @@ class _ScanItemState extends State<ScanItem> {
     int noGoodCount = 0;
     int populatedRowCount = 0;
 
+    // Only count rows that have content
     for (var data in _tableData) {
-      if (data['content']?.isNotEmpty == true) {
+      if (data['content']?.isNotEmpty == true) {  // Check if content exists and is not empty
         populatedRowCount++;
         if (data['result'] == 'Good') {
           goodCount++;
@@ -432,8 +431,7 @@ class _ScanItemState extends State<ScanItem> {
       int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
 
       // Check if total QTY has been reached
-      int currentInspectionQty =
-          int.tryParse(inspectionQtyController.text) ?? 0;
+      int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
       int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
 
       // Update the total QTY reached flag
