@@ -4,7 +4,9 @@ import '../database_helper.dart';
 import '../widgets/previous_scans_table.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import '../utils/pdf_generator.dart';
 
 class EmergencyStop extends StatefulWidget {
   final String itemName;
@@ -34,6 +36,30 @@ class _EmergencyStopState extends State<EmergencyStop> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   String _errorMessage = '';
+  List<Map<String, dynamic>> _scannedData = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScannedData();
+  }
+
+  Future<void> _loadScannedData() async {
+    try {
+      final scans =
+          await DatabaseHelper().getAllHistoricalScans(widget.itemName);
+      setState(() {
+        _scannedData = scans;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading scanned data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _validatePassword() async {
     final user = await DatabaseHelper().getUserByUsernameAndPassword(
@@ -51,43 +77,59 @@ class _EmergencyStopState extends State<EmergencyStop> {
   }
 
   void _showRemarksDialog() {
+    String? errorText;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Remarks'),
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
-          content: TextField(
-            controller: _remarksController,
-            decoration: const InputDecoration(
-              hintText: 'Enter reason for temporary stoppage',
-              border: OutlineInputBorder(),
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Remarks'),
+            shape: RoundedRectangleBorder(
+              borderRadius: kBorderRadiusSmallAll,
             ),
-            maxLines: 3,
-            autofocus: true,
-            onSubmitted: (_) {
-              Navigator.pop(context);
-              _showSummaryPage();
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              focusNode: FocusNode(),
-              onPressed: () {
+            content: TextField(
+              controller: _remarksController,
+              decoration: InputDecoration(
+                hintText: 'Enter reason for temporary stoppage',
+                border: const OutlineInputBorder(),
+                errorText: errorText,
+              ),
+              maxLines: 3,
+              autofocus: true,
+              onSubmitted: (_) {
+                if (_remarksController.text.trim().isEmpty) {
+                  setState(() {
+                    errorText = 'Please enter remarks';
+                  });
+                  return;
+                }
                 Navigator.pop(context);
                 _showSummaryPage();
               },
-              child: const Text('Done'),
             ),
-          ],
-        );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                focusNode: FocusNode(),
+                onPressed: () {
+                  if (_remarksController.text.trim().isEmpty) {
+                    setState(() {
+                      errorText = 'Please enter remarks';
+                    });
+                    return;
+                  }
+                  Navigator.pop(context);
+                  _showSummaryPage();
+                },
+                child: const Text('Done'),
+              ),
+            ],
+          );
+        });
       },
     );
   }
@@ -110,7 +152,7 @@ class _EmergencyStopState extends State<EmergencyStop> {
           content: widget.content,
           poNo: widget.poNo,
           quantity: widget.quantity,
-          tableData: widget.tableData,
+          tableData: _scannedData,
           remarks: _remarksController.text,
           onPrint: _printSummary,
         ),
@@ -119,45 +161,122 @@ class _EmergencyStopState extends State<EmergencyStop> {
   }
 
   void _printSummary() async {
-    // Create a PDF document
-    final pdf = pw.Document();
-
-    // Add a page to the PDF
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            children: [
-              pw.Text('Emergency Stop Summary',
-                  style: pw.TextStyle(fontSize: 24)),
-              pw.SizedBox(height: 20),
-              pw.Text('Item Name: ${widget.itemName}'),
-              pw.Text('Lot Number: ${widget.lotNumber}'),
-              pw.Text('Content: ${widget.content}'),
-              pw.Text('P.O Number: ${widget.poNo}'),
-              pw.Text('Quantity: ${widget.quantity}'),
-              pw.Text('Remarks: ${_remarksController.text}'),
-              pw.SizedBox(height: 20),
-              pw.Text('Results Table:', style: pw.TextStyle(fontSize: 18)),
-              // Add your table data here
-              for (var entry in widget.tableData.asMap().entries)
-                pw.Row(
-                  children: [
-                    pw.Text((entry.key + 1).toString()),
-                    pw.Text(entry.value['content'] ?? ''),
-                    pw.Text(entry.value['result'] ?? ''),
+    try {
+      await generateAndSavePdf(
+        itemName: widget.itemName,
+        lotNumber: widget.lotNumber,
+        content: widget.content,
+        poNo: widget.poNo,
+        quantity: widget.quantity,
+        tableData: _scannedData,
+        remarks: _remarksController.text,
+        isEmergencyStop: true,
+        onSuccess: (String outputFile) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Success'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: kBorderRadiusSmallAll,
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('PDF saved successfully to:'),
+                      const SizedBox(height: 8),
+                      SelectableText(outputFile),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        try {
+                          if (Platform.isMacOS) {
+                            await Process.run('open', [outputFile]);
+                          } else if (Platform.isWindows) {
+                            await Process.run(
+                                'cmd', ['/c', 'start', '', outputFile]);
+                          }
+                        } catch (e) {
+                          print('Error opening file: $e');
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Error'),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: kBorderRadiusSmallAll,
+                                  ),
+                                  content: Text('Failed to open file: $e'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Open File'),
+                    ),
                   ],
-                ),
-            ],
-          );
+                );
+              },
+            );
+          }
         },
-      ),
-    );
-
-    // Print the PDF
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
+        onError: (String error) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Error'),
+                  content: Text('Failed to generate PDF: $error'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+      );
+    } catch (e) {
+      print('Error in _printSummary: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Error'),
+              content: Text('Failed to generate PDF: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
   }
 
   @override

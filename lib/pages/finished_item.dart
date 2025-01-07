@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
+import '../utils/pdf_generator.dart';
 
 class FinishedItem extends StatefulWidget {
   final String itemName;
@@ -358,273 +359,109 @@ class _FinishedItemState extends State<FinishedItem> {
 
   void _printSummary() async {
     try {
-      final pdf = pw.Document();
-
-      // Reduce rows per page to avoid TooManyPagesException
-      final int rowsPerPage = 25;
-      final chunks = <List<Map<String, dynamic>>>[];
-
-      for (var i = 0; i < _scannedData.length; i += rowsPerPage) {
-        chunks.add(
-          _scannedData.sublist(
-            i,
-            i + rowsPerPage > _scannedData.length
-                ? _scannedData.length
-                : i + rowsPerPage,
-          ),
-        );
-      }
-
-      // Create a base style for all text
-      final baseTextStyle = pw.TextStyle(
-        fontSize: 10,
-        font: pw.Font.courier(),
-      );
-
-      final headerTextStyle = pw.TextStyle(
-        fontSize: 12,
-        font: pw.Font.courier(),
-        fontWeight: pw.FontWeight.bold,
-      );
-
-      final titleTextStyle = pw.TextStyle(
-        fontSize: 16,
-        font: pw.Font.courier(),
-        fontWeight: pw.FontWeight.bold,
-      );
-
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(40),
-          header: (pw.Context context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text('Review Summary', style: titleTextStyle),
-                pw.SizedBox(height: 20),
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Item Name: ${widget.itemName}',
-                              style: baseTextStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text('Lot Number: ${widget.lotNumber}',
-                              style: baseTextStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text('Content: ${widget.content}',
-                              style: baseTextStyle),
-                        ],
-                      ),
-                    ),
-                    pw.Expanded(
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('P.O Number: ${widget.poNo}',
-                              style: baseTextStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text('Quantity: ${widget.quantity}',
-                              style: baseTextStyle),
-                          pw.SizedBox(height: 5),
-                          pw.Text('Remarks: ${_remarksController.text}',
-                              style: baseTextStyle),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text('Results Table:', style: headerTextStyle),
-                pw.SizedBox(height: 10),
-              ],
-            );
-          },
-          build: (pw.Context context) {
-            return chunks.map((chunk) {
-              return pw.Column(
-                children: [
-                  pw.Table(
-                    border: pw.TableBorder.all(),
-                    columnWidths: {
-                      0: const pw.FlexColumnWidth(1),
-                      1: const pw.FlexColumnWidth(2),
-                      2: const pw.FlexColumnWidth(2),
-                    },
+      await generateAndSavePdf(
+        itemName: widget.itemName,
+        lotNumber: widget.lotNumber,
+        content: widget.content,
+        poNo: widget.poNo,
+        quantity: widget.quantity,
+        tableData: _scannedData,
+        remarks: _remarksController.text,
+        isEmergencyStop: false,
+        onSuccess: (String outputFile) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Success'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: kBorderRadiusSmallAll,
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(
-                          color: PdfColors.grey300,
-                        ),
-                        children: [
-                          pw.Container(
-                            padding: const pw.EdgeInsets.all(5),
-                            child: pw.Text('No.', style: headerTextStyle),
-                          ),
-                          pw.Container(
-                            padding: const pw.EdgeInsets.all(5),
-                            child: pw.Text('Content', style: headerTextStyle),
-                          ),
-                          pw.Container(
-                            padding: const pw.EdgeInsets.all(5),
-                            child: pw.Text('Result', style: headerTextStyle),
-                          ),
-                        ],
-                      ),
-                      ...chunk.asMap().entries.map((entry) {
-                        final index =
-                            chunks.indexOf(chunk) * rowsPerPage + entry.key;
-                        return pw.TableRow(
-                          children: [
-                            pw.Container(
-                              padding: const pw.EdgeInsets.all(5),
-                              child: pw.Text((index + 1).toString(),
-                                  style: baseTextStyle),
-                            ),
-                            pw.Container(
-                              padding: const pw.EdgeInsets.all(5),
-                              child: pw.Text(entry.value['content'] ?? '',
-                                  style: baseTextStyle),
-                            ),
-                            pw.Container(
-                              padding: const pw.EdgeInsets.all(5),
-                              child: pw.Text(
-                                entry.value['result'] ?? '',
-                                style: baseTextStyle.copyWith(
-                                  color: entry.value['result'] == 'Good'
-                                      ? PdfColors.green
-                                      : PdfColors.red,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                      const Text('PDF saved successfully to:'),
+                      const SizedBox(height: 8),
+                      SelectableText(outputFile),
                     ],
                   ),
-                  if (chunks.indexOf(chunk) < chunks.length - 1)
-                    pw.SizedBox(height: 20),
-                ],
-              );
-            }).toList();
-          },
-          footer: (pw.Context context) {
-            return pw.Container(
-              alignment: pw.Alignment.centerRight,
-              margin: const pw.EdgeInsets.only(top: 20),
-              child: pw.Text(
-                'Page ${context.pageNumber} of ${context.pagesCount}',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                ),
-              ),
-            );
-          },
-        ),
-      );
-
-      // Get default file name
-      final String timestamp =
-          DateTime.now().toIso8601String().replaceAll(':', '-');
-      final String defaultFileName =
-          'review_summary_${widget.itemName}_$timestamp.pdf';
-
-      // Show save file dialog
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save PDF File',
-        fileName: defaultFileName,
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-      );
-
-      if (outputFile != null) {
-        if (!outputFile.toLowerCase().endsWith('.pdf')) {
-          outputFile = '$outputFile.pdf';
-        }
-
-        final file = File(outputFile);
-        await file.writeAsBytes(await pdf.save());
-
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Success'),
-                shape: RoundedRectangleBorder(
-                  borderRadius: kBorderRadiusSmallAll,
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('PDF saved successfully to:'),
-                    const SizedBox(height: 8),
-                    SelectableText(outputFile!),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      try {
-                        if (Platform.isMacOS) {
-                          await Process.run('open', [outputFile!]);
-                        } else if (Platform.isWindows) {
-                          await Process.run(
-                              'cmd', ['/c', 'start', '', outputFile!]);
-                        }
-                      } catch (e) {
-                        print('Error opening file: $e');
-                        if (mounted) {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Error'),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: kBorderRadiusSmallAll,
-                                ),
-                                content: Text('Failed to open file: $e'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('OK'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        try {
+                          if (Platform.isMacOS) {
+                            await Process.run('open', [outputFile]);
+                          } else if (Platform.isWindows) {
+                            await Process.run(
+                                'cmd', ['/c', 'start', '', outputFile]);
+                          }
+                        } catch (e) {
+                          print('Error opening file: $e');
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: const Text('Error'),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: kBorderRadiusSmallAll,
                                   ),
-                                ],
-                              );
-                            },
-                          );
+                                  content: Text('Failed to open file: $e'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('OK'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
                         }
-                      }
-                    },
-                    child: const Text('Open File'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      }
+                      },
+                      child: const Text('Open File'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+        onError: (String error) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text('Error'),
+                  content: Text('Failed to generate PDF: $error'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
+      );
     } catch (e) {
-      print('Error generating PDF: $e');
+      print('Error in _printSummary: $e');
       if (mounted) {
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Error'),
-              shape: RoundedRectangleBorder(
-                borderRadius: kBorderRadiusSmallAll,
-              ),
               content: Text('Failed to generate PDF: $e'),
               actions: [
                 TextButton(
