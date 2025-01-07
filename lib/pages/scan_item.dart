@@ -484,14 +484,35 @@ class _ScanItemState extends State<ScanItem> {
       return;
     }
 
-    final expectedContent =
-        '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
+    final expectedContent = '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
+    
+    // Check if the content exists in other rows
+    bool isDuplicate = _tableData.any((row) => 
+      row['content'] == value && 
+      _tableData.indexOf(row) != index
+    );
 
     String result;
-    if (value == expectedContent) {
-      result = 'Good';
-    } else {
-      result = 'No Good';
+    
+    // For Counting category
+    if (_itemCategory == 'Counting') {
+      // Good if the content is unique and different from expected content
+      if (!isDuplicate && value != expectedContent) {
+        result = 'Good';
+      } else {
+        // No Good if duplicate or matches expected content
+        result = 'No Good';
+      }
+    } 
+    // For Non-Counting category
+    else {
+      // Good if the content matches expected content
+      if (value == expectedContent) {
+        result = 'Good';
+      } else {
+        // No Good if different from expected content
+        result = 'No Good';
+      }
     }
 
     // Save to database first
