@@ -149,9 +149,11 @@ class _ScanItemState extends State<ScanItem> {
     _fetchLabelContent(itemName);
     _checkSubLotRules();
 
-    // Initialize counts
-    _updateTotalInspectionQty();
-    _updateTotalGoodNoGoodCounts();
+    // Set the total quantity first
+    totalQtyController.text = totalQty.toString();
+
+    // Initialize counts and check QTY status
+    _initializeCountsAndStatus();
 
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
@@ -171,8 +173,29 @@ class _ScanItemState extends State<ScanItem> {
       }
     }
 
-    // Always add an empty row for new scans if total QTY not reached
-    if (!_isTotalQtyReached) {
+    // Set focus to the first content field after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_focusNodes.isNotEmpty && !_isTotalQtyReached) {
+        _focusNodes[0].requestFocus();
+      }
+    });
+  }
+
+  // New method to initialize counts and check status
+  Future<void> _initializeCountsAndStatus() async {
+    await _updateTotalInspectionQty();
+    await _updateTotalGoodNoGoodCounts();
+
+    // Check if total QTY is already reached
+    int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+    int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+
+    setState(() {
+      _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
+    });
+
+    // Only add an empty row if total QTY is not reached
+    if (!_isTotalQtyReached && _tableData.isEmpty) {
       _tableData.add({
         'content': '',
         'result': '',
@@ -181,18 +204,8 @@ class _ScanItemState extends State<ScanItem> {
       _focusNodes.add(FocusNode());
     }
 
-    // Set the total quantity
-    totalQtyController.text = totalQty.toString();
-
-    // Check initial QTY status
+    // Check and update QTY status after initialization
     _checkAndUpdateQtyStatus();
-
-    // Set focus to the first content field after the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_focusNodes.isNotEmpty && !_isTotalQtyReached) {
-        _focusNodes[0].requestFocus();
-      }
-    });
   }
 
   Future<void> _checkSubLotRules() async {
