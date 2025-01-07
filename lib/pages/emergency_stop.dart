@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qrbarcode/constants.dart';
 import '../database_helper.dart';
+import '../widgets/previous_scans_table.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -55,6 +57,9 @@ class _EmergencyStopState extends State<EmergencyStop> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Remarks'),
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
           content: TextField(
             controller: _remarksController,
             decoration: const InputDecoration(
@@ -159,6 +164,9 @@ class _EmergencyStopState extends State<EmergencyStop> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Emergency Stop'),
+      shape: RoundedRectangleBorder(
+        borderRadius: kBorderRadiusSmallAll,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -250,7 +258,18 @@ class EmergencySummary extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            _buildResultsTable(),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: PreviousScansTable(
+                itemName: itemName,
+                title: '', // Empty title since we already have one above
+              ),
+            ),
             const SizedBox(height: 20),
             Center(
               child: Row(
@@ -272,7 +291,8 @@ class EmergencySummary extends StatelessWidget {
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/login', (route) => false);
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
@@ -311,74 +331,6 @@ class EmergencySummary extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildResultsTable() {
-    return Table(
-      border: TableBorder.all(),
-      columnWidths: const {
-        0: FlexColumnWidth(1),
-        1: FlexColumnWidth(2),
-        2: FlexColumnWidth(2),
-      },
-      children: [
-        const TableRow(
-          children: [
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'No.',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'Content',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            TableCell(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'Result',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-        ...tableData.asMap().entries.map((entry) {
-          return TableRow(
-            children: [
-              TableCell(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text((entry.key + 1).toString()),
-                ),
-              ),
-              TableCell(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(entry.value['content'] ?? ''),
-                ),
-              ),
-              TableCell(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(entry.value['result'] ?? ''),
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ],
     );
   }
 }

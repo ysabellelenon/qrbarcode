@@ -5,6 +5,7 @@ import '../database_helper.dart'; // Import the DatabaseHelper
 import 'article_label.dart'; // Add this import
 import 'emergency_stop.dart'; // Add this import
 import 'finished_item.dart'; // Add this import
+import '../widgets/previous_scans_table.dart';
 
 class ScanItem extends StatefulWidget {
   final Map<String, dynamic>? resumeData;
@@ -40,17 +41,6 @@ class _ScanItemState extends State<ScanItem> {
   bool _hasSubLotRules = false; // Add this variable
 
   // Add variables for historical data
-  List<Map<String, dynamic>> _historicalData = [];
-  int _currentPage = 1;
-  static const int _pageSize = 10;
-  int _totalItems = 0;
-  bool _isLoadingHistory = false;
-
-  // Add these variables for sorting and searching
-  String _searchQuery = '';
-  String _sortColumn = 'created_at';
-  bool _sortAscending = false;
-
   int _historicalGoodCount = 0; // New variable for historical good count
   int _historicalNoGoodCount = 0; // New variable for historical no good count
 
@@ -158,7 +148,6 @@ class _ScanItemState extends State<ScanItem> {
 
     _fetchLabelContent(itemName);
     _checkSubLotRules();
-    _loadHistoricalData();
 
     // Initialize counts
     _updateTotalInspectionQty();
@@ -224,142 +213,6 @@ class _ScanItemState extends State<ScanItem> {
       }
     } catch (e) {
       print('Error checking sub-lot rules: $e');
-    }
-  }
-
-  Future<void> _loadHistoricalData() async {
-    if (_isLoadingHistory) return;
-
-    setState(() {
-      _isLoadingHistory = true;
-    });
-
-    try {
-      final data = await DatabaseHelper().getHistoricalScans(
-        itemName,
-        page: _currentPage,
-        pageSize: _pageSize,
-      );
-
-      final total = await DatabaseHelper().getHistoricalScansCount(itemName);
-
-      setState(() {
-        _historicalData = data;
-        _totalItems = total;
-        _isLoadingHistory = false;
-      });
-    } catch (e) {
-      print('Error loading historical data: $e');
-      setState(() {
-        _isLoadingHistory = false;
-      });
-    }
-  }
-
-  void _loadNextPage() {
-    if (_currentPage * _pageSize < _totalItems) {
-      setState(() {
-        _currentPage++;
-      });
-      _loadHistoricalData();
-    }
-  }
-
-  void _loadPreviousPage() {
-    if (_currentPage > 1) {
-      setState(() {
-        _currentPage--;
-      });
-      _loadHistoricalData();
-    }
-  }
-
-  @override
-  void dispose() {
-    // Clean up focus nodes
-    for (var node in _focusNodes) {
-      node.dispose();
-    }
-    goodCountController.dispose();
-    noGoodCountController.dispose();
-    super.dispose();
-  }
-
-  void _fetchLabelContent(String itemName) async {
-    final itemData = await DatabaseHelper().getItems();
-    final matchingItem = itemData.firstWhere(
-      (item) => item['itemCode'] == itemName,
-      orElse: () => {},
-    );
-
-    if (matchingItem.isNotEmpty) {
-      setState(() {
-        if (matchingItem['codes'].isNotEmpty) {
-          _labelContent = matchingItem['codes'][0]['content'];
-          _itemCategory = matchingItem['codes'][0]['category'];
-        } else {
-          _labelContent = 'No content available';
-          _itemCategory = null;
-        }
-      });
-    } else {
-      setState(() {
-        _labelContent = 'Item not found';
-        _itemCategory = null;
-      });
-    }
-  }
-
-  void _validateContent(String value, int index) async {
-    // If this row already has a result, don't validate again
-    if (_tableData[index]['result']?.isNotEmpty == true) {
-      return;
-    }
-
-    final expectedContent =
-        '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
-
-    String result;
-    if (value == expectedContent) {
-      result = 'Good';
-    } else {
-      result = 'No Good';
-    }
-
-    // Save to database first
-    try {
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        result,
-      );
-
-      // Only update UI after successful database operation
-      setState(() {
-        _tableData[index]['result'] = result;
-        _tableData[index]['isLocked'] = true; // Lock the field after validation
-      });
-
-      // Update counts from database after successful insert
-      await _updateTotalInspectionQty();
-      await _updateTotalGoodNoGoodCounts();
-
-      // Check if we need to show any dialogs
-      _checkAndUpdateQtyStatus();
-
-      // Add new row if needed (after all updates are complete)
-      if (!_isTotalQtyReached) {
-        _addRow();
-      }
-    } catch (e) {
-      print('Error saving scan content: $e');
-      // Show error to user
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving scan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -612,129 +465,92 @@ class _ScanItemState extends State<ScanItem> {
     }).toList();
   }
 
-  // Add this method to handle sorting
-  void _sort<T>(
-      String column, Comparable<T> Function(Map<String, dynamic>) getField) {
-    setState(() {
-      if (_sortColumn == column) {
-        _sortAscending = !_sortAscending;
-      } else {
-        _sortColumn = column;
-        _sortAscending = true;
-      }
+  void _validateContent(String value, int index) async {
+    // If this row already has a result, don't validate again
+    if (_tableData[index]['result']?.isNotEmpty == true) {
+      return;
+    }
 
-      // Create a mutable copy of the data before sorting
-      final mutableData = List<Map<String, dynamic>>.from(_historicalData);
-      mutableData.sort((a, b) {
-        final aValue = getField(a);
-        final bValue = getField(b);
-        return _sortAscending
-            ? Comparable.compare(aValue, bValue)
-            : Comparable.compare(bValue, aValue);
-      });
-      _historicalData = mutableData;
-    });
-  }
+    final expectedContent =
+        '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
 
-  // Add this method to filter data based on search query
-  List<Map<String, dynamic>> _getFilteredData() {
-    if (_searchQuery.isEmpty) return _historicalData;
+    String result;
+    if (value == expectedContent) {
+      result = 'Good';
+    } else {
+      result = 'No Good';
+    }
 
-    // Create a mutable copy for filtering
-    return List<Map<String, dynamic>>.from(_historicalData).where((item) {
-      final searchLower = _searchQuery.toLowerCase();
-      final itemName = (item['itemName'] ?? '').toLowerCase();
-      final poNo = (item['poNo'] ?? '').toLowerCase();
-      final content = (item['content'] ?? '').toLowerCase();
-      final result = (item['result'] ?? '').toLowerCase();
-      final date = DateTime.parse(item['created_at']).toString().toLowerCase();
-
-      return itemName.contains(searchLower) ||
-          poNo.contains(searchLower) ||
-          content.contains(searchLower) ||
-          result.contains(searchLower) ||
-          date.contains(searchLower);
-    }).toList();
-  }
-
-  Future<void> _clearScans() async {
+    // Save to database first
     try {
-      // Show confirmation dialog
-      final bool? confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Clear All Scans'),
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
-          content: Text(
-              'Are you sure you want to clear all scan history for $itemName? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Clear'),
-            ),
-          ],
-        ),
+      await DatabaseHelper().insertScanContent(
+        operatorScanId,
+        value,
+        result,
       );
 
-      if (confirm == true) {
-        final count = await DatabaseHelper().clearIndividualScans(itemName);
-        if (!mounted) return;
+      // Only update UI after successful database operation
+      setState(() {
+        _tableData[index]['result'] = result;
+        _tableData[index]['isLocked'] = true; // Lock the field after validation
+      });
 
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully cleared $count scan records'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Update counts from database after successful insert
+      await _updateTotalInspectionQty();
+      await _updateTotalGoodNoGoodCounts();
 
-        // Reset page to 1 and clear current data
-        setState(() {
-          _currentPage = 1;
-          _historicalData.clear();
-          _totalItems = 0;
-          goodCountController.text = '0';
-          noGoodCountController.text = '0';
-          inspectionQtyController.text = '0';
-        });
+      // Check if we need to show any dialogs
+      _checkAndUpdateQtyStatus();
 
-        // Small delay to ensure database is ready
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        // Refresh data sequentially instead of in parallel
-        try {
-          await _loadHistoricalData();
-          await _updateTotalInspectionQty();
-          await _updateTotalGoodNoGoodCounts();
-          _checkAndUpdateQtyStatus();
-        } catch (refreshError) {
-          print('Error refreshing data: $refreshError');
-          // If refresh fails, try one more time after a delay
-          await Future.delayed(const Duration(milliseconds: 500));
-          await _loadHistoricalData();
-          await _updateTotalInspectionQty();
-          await _updateTotalGoodNoGoodCounts();
-          _checkAndUpdateQtyStatus();
-        }
+      // Add new row if needed (after all updates are complete)
+      if (!_isTotalQtyReached) {
+        _addRow();
       }
     } catch (e) {
-      print('Error in _clearScans: $e');
-      if (!mounted) return;
+      print('Error saving scan content: $e');
+      // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error clearing scans: $e'),
+          content: Text('Error saving scan: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  @override
+  void dispose() {
+    // Clean up focus nodes
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    goodCountController.dispose();
+    noGoodCountController.dispose();
+    super.dispose();
+  }
+
+  void _fetchLabelContent(String itemName) async {
+    final itemData = await DatabaseHelper().getItems();
+    final matchingItem = itemData.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => {},
+    );
+
+    if (matchingItem.isNotEmpty) {
+      setState(() {
+        if (matchingItem['codes'].isNotEmpty) {
+          _labelContent = matchingItem['codes'][0]['content'];
+          _itemCategory = matchingItem['codes'][0]['category'];
+        } else {
+          _labelContent = 'No content available';
+          _itemCategory = null;
+        }
+      });
+    } else {
+      setState(() {
+        _labelContent = 'Item not found';
+        _itemCategory = null;
+      });
     }
   }
 
@@ -1173,267 +989,15 @@ class _ScanItemState extends State<ScanItem> {
 
                         // Historical Data Section
                         const SizedBox(height: 24),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: kBorderRadiusSmallAll,
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Previous Scans',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              // Add search field
-                              TextField(
-                                decoration: InputDecoration(
-                                  hintText: 'Search in previous scans...',
-                                  prefixIcon: const Icon(Icons.search),
-                                  border: OutlineInputBorder(
-                                    borderRadius: kBorderRadiusSmallAll,
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              if (_isLoadingHistory)
-                                const Center(child: CircularProgressIndicator())
-                              else if (_historicalData.isEmpty)
-                                const Text('No historical data available')
-                              else
-                                Column(
-                                  children: [
-                                    SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          minWidth: maxWidth,
-                                        ),
-                                        child: DataTable(
-                                          columnSpacing: 24,
-                                          headingRowColor:
-                                              MaterialStateProperty.all(
-                                                  Colors.grey.shade100),
-                                          sortColumnIndex: [
-                                            'created_at',
-                                            'itemName',
-                                            'poNo',
-                                            'content',
-                                            'result'
-                                          ].indexOf(_sortColumn),
-                                          sortAscending: _sortAscending,
-                                          columns: [
-                                            DataColumn(
-                                              label:
-                                                  const SelectableText('Date'),
-                                              onSort: (_, __) => _sort<String>(
-                                                'created_at',
-                                                (item) => item['created_at'],
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              label: const SelectableText(
-                                                  'Item Name'),
-                                              onSort: (_, __) => _sort<String>(
-                                                'itemName',
-                                                (item) =>
-                                                    item['itemName'] ?? '',
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              label:
-                                                  const SelectableText('PO No'),
-                                              onSort: (_, __) => _sort<String>(
-                                                'poNo',
-                                                (item) => item['poNo'] ?? '',
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              label: const SelectableText(
-                                                  'Content'),
-                                              onSort: (_, __) => _sort<String>(
-                                                'content',
-                                                (item) => item['content'] ?? '',
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              label: const SelectableText(
-                                                  'Result'),
-                                              onSort: (_, __) => _sort<String>(
-                                                'result',
-                                                (item) => item['result'] ?? '',
-                                              ),
-                                            ),
-                                          ],
-                                          rows: _getFilteredData().map((item) {
-                                            final DateTime createdAt =
-                                                DateTime.parse(
-                                                    item['created_at']);
-                                            final formattedDate =
-                                                '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}:${createdAt.second.toString().padLeft(2, '0')}';
-
-                                            return DataRow(
-                                              cells: [
-                                                DataCell(SelectableText(
-                                                    formattedDate)),
-                                                DataCell(SelectableText(
-                                                    item['itemName'] ?? '')),
-                                                DataCell(SelectableText(
-                                                    item['poNo'] ?? '')),
-                                                DataCell(SelectableText(
-                                                    item['content'] ?? '')),
-                                                DataCell(
-                                                  SelectableText(
-                                                    item['result'] ?? '',
-                                                    style: TextStyle(
-                                                      color: item['result'] ==
-                                                              'Good'
-                                                          ? Colors.green
-                                                          : Colors.red,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    // Updated pagination footer
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade100,
-                                        borderRadius: BorderRadius.only(
-                                          bottomLeft:
-                                              kBorderRadiusSmallAll.bottomLeft,
-                                          bottomRight:
-                                              kBorderRadiusSmallAll.bottomRight,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          // Summary info
-                                          Text(
-                                            'Showing ${(_currentPage - 1) * _pageSize + 1} to ${_currentPage * _pageSize > _totalItems ? _totalItems : _currentPage * _pageSize} of $_totalItems entries',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Color(0xFF666666),
-                                            ),
-                                          ),
-                                          // Pagination controls
-                                          Row(
-                                            children: [
-                                              OutlinedButton(
-                                                onPressed: _currentPage > 1
-                                                    ? _loadPreviousPage
-                                                    : null,
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.deepPurple,
-                                                  side: const BorderSide(
-                                                      color: Colors.deepPurple),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 16),
-                                                ),
-                                                child: const Row(
-                                                  children: [
-                                                    Icon(Icons.arrow_back,
-                                                        size: 16),
-                                                    SizedBox(width: 4),
-                                                    Text('Previous'),
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 16,
-                                                        vertical: 8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      kBorderRadiusSmallAll,
-                                                  border: Border.all(
-                                                      color:
-                                                          Colors.grey.shade300),
-                                                ),
-                                                child: Text(
-                                                  'Page $_currentPage of ${(_totalItems / _pageSize).ceil()}',
-                                                  style: const TextStyle(
-                                                      fontSize: 14),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              OutlinedButton(
-                                                onPressed:
-                                                    _currentPage * _pageSize <
-                                                            _totalItems
-                                                        ? _loadNextPage
-                                                        : null,
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor:
-                                                      Colors.deepPurple,
-                                                  side: const BorderSide(
-                                                      color: Colors.deepPurple),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 16),
-                                                ),
-                                                child: const Row(
-                                                  children: [
-                                                    Text('Next'),
-                                                    SizedBox(width: 4),
-                                                    Icon(Icons.arrow_forward,
-                                                        size: 16),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Add Clear Scans button at the bottom
-                                    const SizedBox(height: 16),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        TextButton.icon(
-                                          onPressed: _clearScans,
-                                          icon: const Icon(Icons.delete_forever,
-                                              color: Colors.red),
-                                          label: const Text(
-                                            'Clear All Scans (Dev Only)',
-                                            style: TextStyle(color: Colors.red),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
+                        PreviousScansTable(
+                          itemName: itemName,
+                          showClearButton: true,
+                          onDataCleared: () {
+                            // Update counts when data is cleared
+                            _updateTotalInspectionQty();
+                            _updateTotalGoodNoGoodCounts();
+                            _checkAndUpdateQtyStatus();
+                          },
                         ),
                       ],
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qrbarcode/constants.dart';
 import '../database_helper.dart';
+import '../widgets/previous_scans_table.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';
@@ -589,6 +590,9 @@ class _FinishedItemState extends State<FinishedItem> {
                             builder: (BuildContext context) {
                               return AlertDialog(
                                 title: const Text('Error'),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                ),
                                 content: Text('Failed to open file: $e'),
                                 actions: [
                                   TextButton(
@@ -618,6 +622,9 @@ class _FinishedItemState extends State<FinishedItem> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Error'),
+              shape: RoundedRectangleBorder(
+                borderRadius: kBorderRadiusSmallAll,
+              ),
               content: Text('Failed to generate PDF: $e'),
               actions: [
                 TextButton(
@@ -670,7 +677,10 @@ class _FinishedItemState extends State<FinishedItem> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildResultsTable(),
+                  PreviousScansTable(
+                    itemName: widget.itemName,
+                    title: '', // Empty title since we already have one above
+                  ),
                 ],
               ),
             ),
