@@ -37,8 +37,7 @@ class _SublotConfigState extends State<SublotConfig> {
     // Initialize maps for each counting code
     for (var code in widget.countingCodes) {
       enableRules[code['content']!] = false;
-      // Parse the content to get the serial count
-      selectedSerialCounts[code['content']!] = _getSerialCountFromContent(code['content']!);
+      selectedSerialCounts[code['content']!] = '1';  // Always default to '1'
     }
   }
 
