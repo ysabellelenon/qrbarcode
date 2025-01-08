@@ -777,7 +777,7 @@ class _ScanItemState extends State<ScanItem> {
                                         ),
                                         const SizedBox(height: 8),
                                         SelectableText(
-                                          '${_labelContent ?? ''}${_labelContent != null ? '_' : ''}${_convertSubLotNumber(lotNumber)}',
+                                          _labelContent ?? '',
                                           style: const TextStyle(fontSize: 16),
                                         ),
                                       ],
