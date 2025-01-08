@@ -62,46 +62,44 @@ class _SublotConfigState extends State<SublotConfig> {
             ),
             SelectableText('Enable Sub-Lot number rules for "$labelContent"'),
             const Spacer(),
-            if (enableRules[labelContent] ?? false) ...[
-              const SelectableText('Number of serial no. for'),
-              const SizedBox(width: 8),
-              SelectableText('"$labelContent"'),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 120,
-                child: DropdownButtonFormField<String>(
-                  value: selectedSerialCounts[labelContent],
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: kBorderRadiusSmallAll,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: kBorderRadiusSmallAll,
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: kBorderRadiusSmallAll,
-                      borderSide: const BorderSide(color: Colors.blue),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+            const SelectableText('Number of serial no. for'),
+            const SizedBox(width: 8),
+            SelectableText('"$labelContent"'),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 120,
+              child: DropdownButtonFormField<String>(
+                value: selectedSerialCounts[labelContent],
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: kBorderRadiusSmallAll,
                   ),
-                  items: _serialCounts.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedSerialCounts[labelContent] = newValue ?? '';
-                    });
-                  },
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusSmallAll,
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusSmallAll,
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
+                items: _serialCounts.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedSerialCounts[labelContent] = newValue ?? '';
+                  });
+                },
               ),
-            ],
+            ),
           ],
         ),
       ),
