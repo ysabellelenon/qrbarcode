@@ -506,7 +506,7 @@ class _ScanItemState extends State<ScanItem> {
     // For Counting category
     if (_itemCategory == 'Counting' && serialCount > 0) {
       // Get the last N digits of both contents
-      final expectedContent = _labelContent ?? ''; // Remove the lot number append
+      final expectedContent = _labelContent ?? '';
       final expectedLastDigits = expectedContent.substring(expectedContent.length - serialCount);
       final inputLastDigits = value.substring(value.length - serialCount);
       
@@ -539,7 +539,7 @@ class _ScanItemState extends State<ScanItem> {
     } 
     // For Non-Counting category
     else {
-      final expectedContent = '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
+      final expectedContent = _labelContent ?? ''; // Remove lot number append
       // Debug prints
       print('Non-Counting Validation:');
       print('Expected Content: $expectedContent');
