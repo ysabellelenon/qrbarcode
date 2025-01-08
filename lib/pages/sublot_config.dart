@@ -37,8 +37,24 @@ class _SublotConfigState extends State<SublotConfig> {
     // Initialize maps for each counting code
     for (var code in widget.countingCodes) {
       enableRules[code['content']!] = false;
-      selectedSerialCounts[code['content']!] = '1';
+      // Parse the content to get the serial count
+      selectedSerialCounts[code['content']!] = _getSerialCountFromContent(code['content']!);
     }
+  }
+
+  String _getSerialCountFromContent(String content) {
+    // Find the part after underscore
+    final parts = content.split('_');
+    if (parts.length != 2) return '1';  // Default to 1 if format is invalid
+    
+    final dateCode = parts[1];
+    if (dateCode.length < 8) return '1';  // Default to 1 if format is invalid
+    
+    // Count the remaining digits after the sub-lot number position (first 8 characters)
+    final remainingDigits = dateCode.substring(8).length.toString();
+    
+    // If the count is valid (1-20), return it, otherwise return '1'
+    return _serialCounts.contains(remainingDigits) ? remainingDigits : '1';
   }
 
   Widget _buildConfigContainer(String labelContent) {
