@@ -229,48 +229,52 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     const DataColumn(label: Text('Section')),
                                     const DataColumn(label: Text('Actions')),
                                   ],
-                                  rows: filteredUsers.map((user) {
-                                    return DataRow(
-                                      cells: [
-                                        DataCell(
-                                          Checkbox(
-                                            value: selectedUsers.contains(user['id']),
-                                            onChanged: (bool? value) {
-                                              setState(() {
-                                                if (value == true) {
-                                                  selectedUsers.add(user['id'] as int);
-                                                  if (selectedUsers.length == filteredUsers.length) {
-                                                    selectAll = true;
+                                  rows: List<DataRow>.generate(
+                                    filteredUsers.length,
+                                    (index) {
+                                      final user = filteredUsers[index];
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(
+                                            Checkbox(
+                                              value: selectedUsers.contains(user['id']),
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  if (value == true) {
+                                                    selectedUsers.add(user['id'] as int);
+                                                    if (selectedUsers.length == filteredUsers.length) {
+                                                      selectAll = true;
+                                                    }
+                                                  } else {
+                                                    selectedUsers.remove(user['id'] as int);
+                                                    selectAll = false;
                                                   }
-                                                } else {
-                                                  selectedUsers.remove(user['id'] as int);
-                                                  selectAll = false;
-                                                }
-                                              });
-                                            },
+                                                });
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                        DataCell(Text(user['id'].toString())),
-                                        DataCell(Text(user['lastName'])),
-                                        DataCell(Text(user['firstName'])),
-                                        DataCell(Text(user['lineNo'])),
-                                        DataCell(Text(user['section'])),
-                                        DataCell(
-                                          OutlinedButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => EditUser(user: user),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text('Edit'),
+                                          DataCell(Text('${index + 1}')),
+                                          DataCell(Text(user['lastName'])),
+                                          DataCell(Text(user['firstName'])),
+                                          DataCell(Text(user['lineNo'])),
+                                          DataCell(Text(user['section'])),
+                                          DataCell(
+                                            OutlinedButton(
+                                              onPressed: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => EditUser(user: user),
+                                                  ),
+                                                );
+                                              },
+                                              child: const Text('Edit'),
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
 
