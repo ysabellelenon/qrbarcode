@@ -206,23 +206,19 @@ class _SublotConfigState extends State<SublotConfig> {
                       ),
                       onPressed: () {
                         // Create a list of codes with their configurations
-                        final configuredCodes =
-                            widget.countingCodes.map((code) {
+                        final configuredCodes = widget.countingCodes.map((code) {
                           final config = {
                             'code': code['code'],
                             'content': code['content'],
                             'category': 'Counting',
                             'hasSubLot': enableRules[code['content']] ?? false,
-                            'serialCount': enableRules[code['content']] ?? false
-                                ? selectedSerialCounts[code['content']]
-                                : '0',
+                            'serialCount': selectedSerialCounts[code['content']],
                           };
                           print('Configured code: $config'); // Debug print
                           return config;
                         }).toList();
 
-                        print(
-                            'All configured codes: $configuredCodes'); // Debug print
+                        print('All configured codes: $configuredCodes'); // Debug print
 
                         Navigator.push(
                           context,
@@ -231,24 +227,21 @@ class _SublotConfigState extends State<SublotConfig> {
                               itemId: widget.itemId,
                               itemName: widget.itemName,
                               revision: widget.revision ?? '1',
-                              codeCount: widget.allCodes?.length ??
-                                  widget.countingCodes.length,
+                              codeCount: widget.allCodes?.length ?? widget.countingCodes.length,
                               codes: configuredCodes +
                                   (widget.allCodes
-                                          ?.where((code) =>
-                                              code['category'] != 'Counting')
-                                          .map((code) {
-                                        final nonCountingCode = {
-                                          'code': code['code'],
-                                          'content': code['content'],
-                                          'category': code['category'],
-                                          'hasSubLot': false,
-                                          'serialCount': '0',
-                                        };
-                                        print(
-                                            'Non-counting code: $nonCountingCode'); // Debug print
-                                        return nonCountingCode;
-                                      }).toList() ??
+                                      ?.where((code) => code['category'] != 'Counting')
+                                      .map((code) {
+                                    final nonCountingCode = {
+                                      'code': code['code'],
+                                      'content': code['content'],
+                                      'category': code['category'],
+                                      'hasSubLot': false,
+                                      'serialCount': '0',
+                                    };
+                                    print('Non-counting code: $nonCountingCode'); // Debug print
+                                    return nonCountingCode;
+                                  }).toList() ??
                                       []),
                               isUpdate: widget.isUpdate,
                             ),

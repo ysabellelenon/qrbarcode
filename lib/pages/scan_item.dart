@@ -484,38 +484,73 @@ class _ScanItemState extends State<ScanItem> {
       return;
     }
 
-    final expectedContent = '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
-    
-    // Check if the content exists in other rows
-    bool isDuplicate = _tableData.any((row) => 
-      row['content'] == value && 
-      _tableData.indexOf(row) != index
+    final items = await DatabaseHelper().getItems();
+    final matchingItem = items.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => <String, dynamic>{},
     );
+
+    // Get the serial count for this item's counting code
+    int serialCount = 0;
+    if (matchingItem.isNotEmpty) {
+      final codes = matchingItem['codes'] as List;
+      final countingCode = codes.firstWhere(
+        (code) => code['category'] == 'Counting',
+        orElse: () => <String, dynamic>{},
+      );
+      serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+    }
 
     String result;
     
     // For Counting category
-    if (_itemCategory == 'Counting') {
-      // Good if the content is unique and different from expected content
-      if (!isDuplicate && value != expectedContent) {
-        result = 'Good';
-      } else {
-        // No Good if duplicate or matches expected content
+    if (_itemCategory == 'Counting' && serialCount > 0) {
+      // Get the last N digits of both contents
+      final expectedContent = _labelContent ?? ''; // Remove the lot number append
+      final expectedLastDigits = expectedContent.substring(expectedContent.length - serialCount);
+      final inputLastDigits = value.substring(value.length - serialCount);
+      
+      // Debug prints
+      print('Validation Details:');
+      print('Expected Content: $expectedContent');
+      print('Scanned Content: $value');
+      print('Serial Count: $serialCount');
+      print('Expected Last $serialCount digits: $expectedLastDigits');
+      print('Input Last $serialCount digits: $inputLastDigits');
+      
+      // Check if the input's last digits exist in other rows
+      bool isDuplicate = _tableData.any((row) {
+        if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+        final rowLastDigits = row['content']!.substring(row['content']!.length - serialCount);
+        print('Comparing with row content: ${row['content']} (last digits: $rowLastDigits)');
+        return rowLastDigits == inputLastDigits;
+      });
+
+      print('Is Duplicate: $isDuplicate');
+
+      // No Good if last digits match the expected content or are duplicated
+      if (inputLastDigits == expectedLastDigits || isDuplicate) {
         result = 'No Good';
+        print('Result: No Good - ${isDuplicate ? "Duplicate found" : "Matches expected content"}');
+      } else {
+        result = 'Good';
+        print('Result: Good - Different from expected and no duplicates');
       }
     } 
     // For Non-Counting category
     else {
-      // Good if the content matches expected content
-      if (value == expectedContent) {
-        result = 'Good';
-      } else {
-        // No Good if different from expected content
-        result = 'No Good';
-      }
+      final expectedContent = '${_labelContent ?? ''}_${_convertSubLotNumber(lotNumber)}';
+      // Debug prints
+      print('Non-Counting Validation:');
+      print('Expected Content: $expectedContent');
+      print('Scanned Content: $value');
+      
+      // Good only if the content exactly matches the expected content
+      result = (value == expectedContent) ? 'Good' : 'No Good';
+      print('Result: $result');
     }
 
-    // Save to database first
+    // Save to database and update UI
     try {
       await DatabaseHelper().insertScanContent(
         operatorScanId,
@@ -523,26 +558,20 @@ class _ScanItemState extends State<ScanItem> {
         result,
       );
 
-      // Only update UI after successful database operation
       setState(() {
         _tableData[index]['result'] = result;
-        _tableData[index]['isLocked'] = true; // Lock the field after validation
+        _tableData[index]['isLocked'] = true;
       });
 
-      // Update counts from database after successful insert
       await _updateTotalInspectionQty();
       await _updateTotalGoodNoGoodCounts();
-
-      // Check if we need to show any dialogs
       _checkAndUpdateQtyStatus();
 
-      // Add new row if needed (after all updates are complete)
       if (!_isTotalQtyReached) {
         _addRow();
       }
     } catch (e) {
       print('Error saving scan content: $e');
-      // Show error to user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error saving scan: $e'),
