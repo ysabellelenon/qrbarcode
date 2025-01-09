@@ -40,59 +40,76 @@ class _ArticleLabelState extends State<ArticleLabel> {
   int get totalQty => widget.resumeData?['totalQty'] ?? widget.totalQty ?? 0;
 
   void _validateArticleLabel(String articleLabel) {
-    if (articleLabel.length >= 22) {
-      String firstPart = articleLabel.split(' ')[0];
+    print('\nArticle Label Validation:');
+    print('Original Input: $articleLabel');
 
+    // Split by periods and spaces
+    List<String> parts = articleLabel.split(RegExp(r'\.\s+'));
+    print('Split parts by periods: $parts');
+
+    if (parts.length >= 4) {  // We need at least 4 parts now since PO is in the 4th part
+      String firstPart = parts[0];
+      String poNumberPart = parts[3];  // PO number is in the 4th part
+      String lotNumberPart = parts.last;  // Lot number is in the last part
+
+      print('First Part: $firstPart');
+      print('PO Number Part: $poNumberPart');
+      print('Lot Number Part: $lotNumberPart');
+
+      // Extract item name from first part
       if (firstPart.length >= 12) {
         String extractedItemName = firstPart.substring(12);
+        print('Extracted Item Name: $extractedItemName');
 
-        List<String> parts = articleLabel.split(' ');
+        // Extract PO number - look for the first 10 digits
+        RegExp poRegExp = RegExp(r'(\d{10})');
+        Match? poMatch = poRegExp.firstMatch(poNumberPart);
+        String extractedPoNo = poMatch?.group(1) ?? '';
+        print('Extracted PO No: $extractedPoNo');
 
-        String extractedPoNo = '';
-        if (parts.length > 3) {
-          extractedPoNo = parts[3]
-              .substring(0, 10); // First 10 digits after the third space
-        } else {
-          setState(() {
-            isError = true; // Set error flag
-          });
-          return; // Exit early
+        // Look for quantity in any part
+        String qtyPerBox = '';
+        RegExp qtyRegExp = RegExp(r'(?:QTY|PH)(\d+)');
+        for (String part in parts) {
+          Match? match = qtyRegExp.firstMatch(part);
+          if (match != null) {
+            qtyPerBox = match.group(1) ?? '';
+            print('Found QTY: $qtyPerBox');
+            break;
+          }
         }
 
         if (extractedItemName.trim() != itemName || extractedPoNo != poNo) {
           setState(() {
-            isError = true; // Set error flag
+            isError = true;
+            print('Validation Failed:');
+            print('Expected Item Name: $itemName, Got: ${extractedItemName.trim()}');
+            print('Expected PO No: $poNo, Got: $extractedPoNo');
           });
         } else {
           setState(() {
-            isError = false; // Clear error flag
+            isError = false;
+            
+            // Get lot number (last part)
+            String lotNumber = lotNumberPart.trim();
+            
+            print('Extracted Lot Number: $lotNumber');
+            print('Extracted Qty: $qtyPerBox');
+
+            lotNumberController.text = lotNumber;
+            qtyController.text = qtyPerBox;
           });
-
-          String lotNumber = parts.last; // Last part after space
-          String qtyPerBox = '';
-          if (parts.length > 2) {
-            String qtyPart = parts
-                .sublist(2)
-                .join(' '); // Join the remaining parts after the second space
-            RegExp qtyRegExp = RegExp(r'(\d+)'); // Regex to find all digits
-            Match? match = qtyRegExp.firstMatch(qtyPart);
-            qtyPerBox = match != null
-                ? match.group(1) ?? ''
-                : ''; // Get the first match of digits
-          }
-
-          lotNumberController.text = lotNumber;
-          qtyController.text = qtyPerBox;
         }
       } else {
         setState(() {
-          isError = true; // Set error flag
+          isError = true;
+          print('Error: First part too short');
         });
-        return; // Exit early
       }
     } else {
       setState(() {
-        isError = true; // Set error flag
+        isError = true;
+        print('Error: Not enough parts after splitting');
       });
     }
   }
