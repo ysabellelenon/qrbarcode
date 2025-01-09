@@ -250,9 +250,64 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                           ),
                           onChanged: _validateArticleLabel,
-                          onFieldSubmitted: (_) {
+                          onFieldSubmitted: (_) async {
                             // When Enter is pressed and there's no error, proceed
                             if (!isError) {
+                              print('\n=== Article Label Processing (Enter pressed) ===');
+                              print('Item Name: $itemName');
+                              print('Starting database query...');
+                              
+                              // Get the item details from database to get the registered label content
+                              final items = await DatabaseHelper().getItems();
+                              print('Retrieved ${items.length} items from database');
+                              
+                              final matchingItem = items.firstWhere(
+                                (item) {
+                                  print('Checking item: ${item['itemCode']} against $itemName');
+                                  return item['itemCode'] == itemName;
+                                },
+                                orElse: () => <String, dynamic>{},
+                              );
+                              print('Found matching item: ${matchingItem.isNotEmpty}');
+                              print('Matching item details: $matchingItem');
+
+                              String labelContent = '';
+                              if (matchingItem.isNotEmpty) {
+                                final codes = matchingItem['codes'] as List;
+                                print('Found codes: $codes');
+                                
+                                final countingCode = codes.firstWhere(
+                                  (code) {
+                                    print('Checking code: ${code['category']}');
+                                    return code['category'] == 'Counting';
+                                  },
+                                  orElse: () => <String, dynamic>{},
+                                );
+                                print('Found counting code: $countingCode');
+
+                                // Get base label content
+                                String baseContent = countingCode['content'] ?? '';
+                                print('Retrieved Base Label Content: $baseContent');
+                                
+                                // Combine with lot number
+                                labelContent = baseContent + lotNumberController.text;
+                                print('Combined with lot number: $labelContent');
+                              }
+
+                              print('Lot Number: ${lotNumberController.text}');
+                              print('Final Content to be passed: $labelContent');
+
+                              // Save the article label data to database
+                              await DatabaseHelper().insertArticleLabel({
+                                'operatorScanId': operatorScanId,
+                                'articleLabel': articleLabelController.text,
+                                'lotNumber': lotNumberController.text,
+                                'qtyPerBox': qtyController.text,
+                                'content': labelContent,  // Use the combined content
+                                'createdAt': DateTime.now().toIso8601String(),
+                              });
+
+                              // Navigate to ScanItem page
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => ScanItem(
@@ -260,7 +315,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                       'itemName': itemName,
                                       'poNo': poNo,
                                       'lotNumber': lotNumberController.text,
-                                      'content': articleLabelController.text,
+                                      'content': labelContent,  // Use the combined content
                                       'qtyPerBox': qtyController.text,
                                       'operatorScanId': operatorScanId,
                                       'totalQty': totalQty,
@@ -326,17 +381,58 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             onPressed: isError
                                 ? null
                                 : () async {
-                                    // Disable button when isError is true
+                                    print('\n=== Article Label Processing ===');
+                                    print('Item Name: $itemName');
+                                    print('Starting database query...');
+                                    
+                                    // Get the item details from database to get the registered label content
+                                    final items = await DatabaseHelper().getItems();
+                                    print('Retrieved ${items.length} items from database');
+                                    
+                                    final matchingItem = items.firstWhere(
+                                      (item) {
+                                        print('Checking item: ${item['itemCode']} against $itemName');
+                                        return item['itemCode'] == itemName;
+                                      },
+                                      orElse: () => <String, dynamic>{},
+                                    );
+                                    print('Found matching item: ${matchingItem.isNotEmpty}');
+                                    print('Matching item details: $matchingItem');
+
+                                    String labelContent = '';
+                                    if (matchingItem.isNotEmpty) {
+                                      final codes = matchingItem['codes'] as List;
+                                      print('Found codes: $codes');
+                                      
+                                      final countingCode = codes.firstWhere(
+                                        (code) {
+                                          print('Checking code: ${code['category']}');
+                                          return code['category'] == 'Counting';
+                                        },
+                                        orElse: () => <String, dynamic>{},
+                                      );
+                                      print('Found counting code: $countingCode');
+
+                                      // Get base label content
+                                      String baseContent = countingCode['content'] ?? '';
+                                      print('Retrieved Base Label Content: $baseContent');
+                                      
+                                      // Combine with lot number
+                                      labelContent = baseContent + lotNumberController.text;
+                                      print('Combined with lot number: $labelContent');
+                                    }
+
+                                    print('Lot Number: ${lotNumberController.text}');
+                                    print('Final Content to be passed: $labelContent');
+
                                     // Save the article label data to database
                                     await DatabaseHelper().insertArticleLabel({
                                       'operatorScanId': operatorScanId,
-                                      'articleLabel':
-                                          articleLabelController.text,
+                                      'articleLabel': articleLabelController.text,
                                       'lotNumber': lotNumberController.text,
                                       'qtyPerBox': qtyController.text,
-                                      'content': articleLabelController.text,
-                                      'createdAt':
-                                          DateTime.now().toIso8601String(),
+                                      'content': labelContent,  // Use the combined content
+                                      'createdAt': DateTime.now().toIso8601String(),
                                     });
 
                                     // Navigate to ScanItem page
@@ -346,10 +442,8 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                           scanData: {
                                             'itemName': itemName,
                                             'poNo': poNo,
-                                            'lotNumber':
-                                                lotNumberController.text,
-                                            'content':
-                                                articleLabelController.text,
+                                            'lotNumber': lotNumberController.text,
+                                            'content': labelContent,  // Use the combined content
                                             'qtyPerBox': qtyController.text,
                                             'operatorScanId': operatorScanId,
                                             'totalQty': totalQty,

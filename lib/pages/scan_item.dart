@@ -28,8 +28,9 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController goodCountController = TextEditingController();
   final TextEditingController noGoodCountController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
-  String? _labelContent; // New variable to hold the fetched label content
-  String? _itemCategory; // To store the item's category
+  String? _labelContent;
+  String? _itemCategory;
+  String _displayContent = '';
   final Set<String> _usedContents =
       {}; // To track used contents for "Counting" category
   final List<FocusNode> _focusNodes = [];
@@ -479,8 +480,15 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _validateContent(String value, int index) async {
+    print('\n====== Starting Content Validation ======');
+    print('Row Index: $index');
+    print('Label Content from Database: $_labelContent');
+    print('Scanned Value: $value');
+    print('Item Category: $_itemCategory');
+
     // If this row already has a result, don't validate again
     if (_tableData[index]['result']?.isNotEmpty == true) {
+      print('Row already validated - skipping');
       return;
     }
 
@@ -490,8 +498,9 @@ class _ScanItemState extends State<ScanItem> {
       orElse: () => <String, dynamic>{},
     );
 
-    // Get the serial count for this item's counting code
+    // Get the serial count and hasSubLot status
     int serialCount = 0;
+    bool hasSubLotRules = false;
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
       final countingCode = codes.firstWhere(
@@ -499,6 +508,9 @@ class _ScanItemState extends State<ScanItem> {
         orElse: () => <String, dynamic>{},
       );
       serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+      hasSubLotRules = countingCode['hasSubLot'] == true || countingCode['hasSubLot'] == 1;
+      print('Serial Count: $serialCount');
+      print('Has Sub-lot Rules: $hasSubLotRules');
     }
 
     String result;
@@ -602,17 +614,39 @@ class _ScanItemState extends State<ScanItem> {
     if (matchingItem.isNotEmpty) {
       setState(() {
         if (matchingItem['codes'].isNotEmpty) {
+          // Get the base label content
           _labelContent = matchingItem['codes'][0]['content'];
           _itemCategory = matchingItem['codes'][0]['category'];
+          
+          // Format lot number: remove dash and leading zeros in sub-lot number
+          String formattedLotNumber = '';
+          if (lotNumber.contains('-')) {
+            final parts = lotNumber.split('-');
+            final mainPart = parts[0];  // e.g., "241127"
+            final subLotPart = parts[1]; // e.g., "01"
+            
+            // Remove leading zeros from sub-lot number
+            final subLotNum = int.parse(subLotPart);
+            formattedLotNumber = '$mainPart$subLotNum';
+          } else {
+            formattedLotNumber = lotNumber;
+          }
+          
+          // Combine with formatted lot number
+          _displayContent = '${_labelContent}$formattedLotNumber';
+          print('Formatted lot number: $formattedLotNumber');
+          print('Final display content: $_displayContent');
         } else {
           _labelContent = 'No content available';
           _itemCategory = null;
+          _displayContent = 'No content available';
         }
       });
     } else {
       setState(() {
         _labelContent = 'Item not found';
         _itemCategory = null;
+        _displayContent = 'Item not found';
       });
     }
   }
@@ -806,7 +840,7 @@ class _ScanItemState extends State<ScanItem> {
                                         ),
                                         const SizedBox(height: 8),
                                         SelectableText(
-                                          _labelContent ?? '',
+                                          _displayContent,
                                           style: const TextStyle(fontSize: 16),
                                         ),
                                       ],
