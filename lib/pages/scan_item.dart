@@ -614,9 +614,19 @@ class _ScanItemState extends State<ScanItem> {
     if (matchingItem.isNotEmpty) {
       setState(() {
         if (matchingItem['codes'].isNotEmpty) {
-          // Get the base label content
-          _labelContent = matchingItem['codes'][0]['content'];
-          _itemCategory = matchingItem['codes'][0]['category'];
+          // Get the base label content and serial count
+          final codes = matchingItem['codes'] as List;
+          final countingCode = codes.firstWhere(
+            (code) => code['category'] == 'Counting',
+            orElse: () => <String, dynamic>{},
+          );
+          
+          _labelContent = countingCode['content'];
+          _itemCategory = countingCode['category'];
+          
+          // Get serial count
+          int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+          print('Serial Count from masterlist: $serialCount');
           
           // Format lot number: remove dash and leading zeros in sub-lot number
           String formattedLotNumber = '';
@@ -632,10 +642,17 @@ class _ScanItemState extends State<ScanItem> {
             formattedLotNumber = lotNumber;
           }
           
-          // Combine with formatted lot number
-          _displayContent = '${_labelContent}$formattedLotNumber';
-          print('Formatted lot number: $formattedLotNumber');
-          print('Final display content: $_displayContent');
+          // Add initial serial number with leading zeros based on serial count
+          String initialSerialNumber = '0' * serialCount;
+          initialSerialNumber = '1'.padLeft(serialCount, '0'); // This will create '0001' for serialCount 4
+          
+          // Combine everything
+          _displayContent = '${_labelContent}$formattedLotNumber$initialSerialNumber';
+          
+          print('Base Content: ${_labelContent}');
+          print('Formatted Lot Number: $formattedLotNumber');
+          print('Initial Serial Number: $initialSerialNumber');
+          print('Final Display Content: $_displayContent');
         } else {
           _labelContent = 'No content available';
           _itemCategory = null;
