@@ -636,44 +636,58 @@ class _ScanItemState extends State<ScanItem> {
     if (matchingItem.isNotEmpty) {
       setState(() {
         if (matchingItem['codes'].isNotEmpty) {
-          // Get the base label content and serial count
+          // Get the base label content and check category
           final codes = matchingItem['codes'] as List;
           final countingCode = codes.firstWhere(
             (code) => code['category'] == 'Counting',
             orElse: () => <String, dynamic>{},
           );
           
-          _labelContent = countingCode['content'];
-          _itemCategory = countingCode['category'];
+          final nonCountingCode = codes.firstWhere(
+            (code) => code['category'] == 'Non-Counting',
+            orElse: () => <String, dynamic>{},
+          );
           
-          // Get serial count
-          int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
-          print('Serial Count from masterlist: $serialCount');
-          
-          // Format lot number: remove dash and leading zeros in sub-lot number
-          String formattedLotNumber = '';
-          if (lotNumber.contains('-')) {
-            final parts = lotNumber.split('-');
-            final mainPart = parts[0];  // e.g., "241127"
-            final subLotPart = parts[1]; // e.g., "01"
+          // Set content based on category
+          if (countingCode.isNotEmpty) {
+            _labelContent = countingCode['content'];
+            _itemCategory = 'Counting';
             
-            // Remove leading zeros from sub-lot number
-            final subLotNum = int.parse(subLotPart);
-            formattedLotNumber = '$mainPart$subLotNum';
-          } else {
-            formattedLotNumber = lotNumber;
+            // Get serial count for Counting items
+            int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+            print('Serial Count from masterlist: $serialCount');
+            
+            // Format lot number
+            String formattedLotNumber = '';
+            if (lotNumber.contains('-')) {
+              final parts = lotNumber.split('-');
+              final mainPart = parts[0];
+              final subLotPart = parts[1];
+              final subLotNum = int.parse(subLotPart);
+              formattedLotNumber = '$mainPart$subLotNum';
+            } else {
+              formattedLotNumber = lotNumber;
+            }
+            
+            // Add asterisks only for Counting items
+            String asterisks = '*' * serialCount;
+            _displayContent = '${_labelContent}$formattedLotNumber$asterisks';
+            
+            print('Base Content: ${_labelContent}');
+            print('Formatted Lot Number: $formattedLotNumber');
+            print('Asterisks: $asterisks');
+            print('Final Display Content: $_displayContent');
+          } else if (nonCountingCode.isNotEmpty) {
+            _labelContent = nonCountingCode['content'];
+            _itemCategory = 'Non-Counting';
+            
+            // For Non-Counting items, just combine label content and original lot number
+            _displayContent = '${_labelContent}$lotNumber';  // Use original lot number
+            
+            print('Base Content: ${_labelContent}');
+            print('Original Lot Number: $lotNumber');
+            print('Final Display Content: $_displayContent');
           }
-          
-          // Add asterisks based on serial count
-          String asterisks = '*' * serialCount;
-          
-          // Combine everything
-          _displayContent = '${_labelContent}$formattedLotNumber$asterisks';
-          
-          print('Base Content: ${_labelContent}');
-          print('Formatted Lot Number: $formattedLotNumber');
-          print('Asterisks: $asterisks');
-          print('Final Display Content: $_displayContent');
         } else {
           _labelContent = 'No content available';
           _itemCategory = null;
