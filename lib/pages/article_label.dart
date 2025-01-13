@@ -269,26 +269,43 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                 final codes = matchingItem['codes'] as List;
                                 print('Found codes: $codes');
                                 
+                                // First try to find Counting code
                                 final countingCode = codes.firstWhere(
-                                  (code) {
-                                    print('Checking code: ${code['category']}');
-                                    return code['category'] == 'Counting';
-                                  },
+                                  (code) => code['category'] == 'Counting',
                                   orElse: () => <String, dynamic>{},
                                 );
-                                print('Found counting code: $countingCode');
-
-                                // Get base label content
-                                String baseContent = countingCode['content'] ?? '';
-                                print('Retrieved Base Label Content: $baseContent');
                                 
-                                // Combine with lot number
-                                labelContent = baseContent + lotNumberController.text;
-                                print('Combined with lot number: $labelContent');
+                                // If no Counting code, look for Non-Counting code
+                                final nonCountingCode = codes.firstWhere(
+                                  (code) => code['category'] == 'Non-Counting',
+                                  orElse: () => <String, dynamic>{},
+                                );
+                                
+                                String baseContent = '';
+                                if (countingCode.isNotEmpty) {
+                                  baseContent = countingCode['content'] ?? '';
+                                  print('Retrieved Base Label Content (Counting): $baseContent');
+                                } else if (nonCountingCode.isNotEmpty) {
+                                  baseContent = nonCountingCode['content'] ?? '';
+                                  print('Retrieved Base Label Content (Non-Counting): $baseContent');
+                                }
+                                
+                                // Combine with lot number based on category
+                                if (countingCode.isNotEmpty) {
+                                  // For Counting items, format lot number
+                                  String formattedLotNumber = lotNumberController.text.contains('-') 
+                                    ? lotNumberController.text.split('-').join('')
+                                    : lotNumberController.text;
+                                  labelContent = baseContent + formattedLotNumber;
+                                } else if (nonCountingCode.isNotEmpty) {
+                                  // For Non-Counting items, use original lot number
+                                  labelContent = baseContent + lotNumberController.text;
+                                }
+                                
+                                print('Base Content: $baseContent');
+                                print('Lot Number: ${lotNumberController.text}');
+                                print('Final Content to be passed: $labelContent');
                               }
-
-                              print('Lot Number: ${lotNumberController.text}');
-                              print('Final Content to be passed: $labelContent');
 
                               // Save the article label data to database
                               await DatabaseHelper().insertArticleLabel({
@@ -397,26 +414,43 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                       final codes = matchingItem['codes'] as List;
                                       print('Found codes: $codes');
                                       
+                                      // First try to find Counting code
                                       final countingCode = codes.firstWhere(
-                                        (code) {
-                                          print('Checking code: ${code['category']}');
-                                          return code['category'] == 'Counting';
-                                        },
+                                        (code) => code['category'] == 'Counting',
                                         orElse: () => <String, dynamic>{},
                                       );
-                                      print('Found counting code: $countingCode');
-
-                                      // Get base label content
-                                      String baseContent = countingCode['content'] ?? '';
-                                      print('Retrieved Base Label Content: $baseContent');
                                       
-                                      // Combine with lot number
-                                      labelContent = baseContent + lotNumberController.text;
-                                      print('Combined with lot number: $labelContent');
+                                      // If no Counting code, look for Non-Counting code
+                                      final nonCountingCode = codes.firstWhere(
+                                        (code) => code['category'] == 'Non-Counting',
+                                        orElse: () => <String, dynamic>{},
+                                      );
+                                      
+                                      String baseContent = '';
+                                      if (countingCode.isNotEmpty) {
+                                        baseContent = countingCode['content'] ?? '';
+                                        print('Retrieved Base Label Content (Counting): $baseContent');
+                                      } else if (nonCountingCode.isNotEmpty) {
+                                        baseContent = nonCountingCode['content'] ?? '';
+                                        print('Retrieved Base Label Content (Non-Counting): $baseContent');
+                                      }
+                                      
+                                      // Combine with lot number based on category
+                                      if (countingCode.isNotEmpty) {
+                                        // For Counting items, format lot number
+                                        String formattedLotNumber = lotNumberController.text.contains('-') 
+                                          ? lotNumberController.text.split('-').join('')
+                                          : lotNumberController.text;
+                                        labelContent = baseContent + formattedLotNumber;
+                                      } else if (nonCountingCode.isNotEmpty) {
+                                        // For Non-Counting items, use original lot number
+                                        labelContent = baseContent + lotNumberController.text;
+                                      }
+                                      
+                                      print('Base Content: $baseContent');
+                                      print('Lot Number: ${lotNumberController.text}');
+                                      print('Final Content to be passed: $labelContent');
                                     }
-
-                                    print('Lot Number: ${lotNumberController.text}');
-                                    print('Final Content to be passed: $labelContent');
 
                                     // Save the article label data to database
                                     await DatabaseHelper().insertArticleLabel({

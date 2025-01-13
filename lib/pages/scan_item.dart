@@ -578,8 +578,11 @@ class _ScanItemState extends State<ScanItem> {
           print('Main lot number not found in scanned value');
         }
       } else {
-        // For non-Counting items, exact match required
-        result = (value == _labelContent) ? 'Good' : 'No Good';
+        // For non-Counting items, compare with the display content
+        print('Non-Counting Validation:');
+        print('Expected Content: $_displayContent');
+        print('Scanned Content: $value');
+        result = (value == _displayContent) ? 'Good' : 'No Good';
         print('Non-Counting item result: $result');
       }
     }
