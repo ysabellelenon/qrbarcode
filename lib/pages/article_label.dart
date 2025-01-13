@@ -47,12 +47,14 @@ class _ArticleLabelState extends State<ArticleLabel> {
     List<String> parts = articleLabel.split(RegExp(r'\.\s+'));
     print('Split parts by periods: $parts');
 
-    if (parts.length >= 4) {  // We need at least 4 parts now since PO is in the 4th part
+    if (parts.length >= 4) {
       String firstPart = parts[0];
-      String poNumberPart = parts[3];  // PO number is in the 4th part
-      String lotNumberPart = parts.last;  // Lot number is in the last part
+      String thirdPart = parts[2];  // Get the third part (AB50)
+      String poNumberPart = parts[3];
+      String lotNumberPart = parts.last;
 
       print('First Part: $firstPart');
+      print('Third Part (QTY): $thirdPart');
       print('PO Number Part: $poNumberPart');
       print('Lot Number Part: $lotNumberPart');
 
@@ -67,17 +69,11 @@ class _ArticleLabelState extends State<ArticleLabel> {
         String extractedPoNo = poMatch?.group(1) ?? '';
         print('Extracted PO No: $extractedPoNo');
 
-        // Look for quantity in any part
-        String qtyPerBox = '';
-        RegExp qtyRegExp = RegExp(r'(?:QTY|PH)(\d+)');
-        for (String part in parts) {
-          Match? match = qtyRegExp.firstMatch(part);
-          if (match != null) {
-            qtyPerBox = match.group(1) ?? '';
-            print('Found QTY: $qtyPerBox');
-            break;
-          }
-        }
+        // Extract QTY from third part - get the numbers after 2 letters
+        RegExp qtyRegExp = RegExp(r'[A-Z]{2}(\d+)');
+        Match? qtyMatch = qtyRegExp.firstMatch(thirdPart);
+        String qtyPerBox = qtyMatch?.group(1) ?? '';
+        print('Extracted QTY from third part: $qtyPerBox');
 
         if (extractedItemName.trim() != itemName || extractedPoNo != poNo) {
           setState(() {
@@ -89,10 +85,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
         } else {
           setState(() {
             isError = false;
-            
-            // Get lot number (last part)
             String lotNumber = lotNumberPart.trim();
-            
             print('Extracted Lot Number: $lotNumber');
             print('Extracted Qty: $qtyPerBox');
 
