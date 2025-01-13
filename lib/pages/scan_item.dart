@@ -498,68 +498,90 @@ class _ScanItemState extends State<ScanItem> {
       orElse: () => <String, dynamic>{},
     );
 
-    // Get the serial count and hasSubLot status
-    int serialCount = 0;
-    bool hasSubLotRules = false;
+    String result = 'No Good'; // Default to No Good
+    
+    // Get the serial count and check if it's a Counting item
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
       final countingCode = codes.firstWhere(
         (code) => code['category'] == 'Counting',
         orElse: () => <String, dynamic>{},
       );
-      serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
-      hasSubLotRules = countingCode['hasSubLot'] == true || countingCode['hasSubLot'] == 1;
-      print('Serial Count: $serialCount');
-      print('Has Sub-lot Rules: $hasSubLotRules');
-    }
-
-    String result;
-    
-    // For Counting category
-    if (_itemCategory == 'Counting' && serialCount > 0) {
-      // Get the last N digits of both contents
-      final expectedContent = _labelContent ?? '';
-      final expectedLastDigits = expectedContent.substring(expectedContent.length - serialCount);
-      final inputLastDigits = value.substring(value.length - serialCount);
       
-      // Debug prints
-      print('Validation Details:');
-      print('Expected Content: $expectedContent');
-      print('Scanned Content: $value');
-      print('Serial Count: $serialCount');
-      print('Expected Last $serialCount digits: $expectedLastDigits');
-      print('Input Last $serialCount digits: $inputLastDigits');
+      int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+      bool isCountingItem = countingCode.isNotEmpty;
       
-      // Check if the input's last digits exist in other rows
-      bool isDuplicate = _tableData.any((row) {
-        if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
-        final rowLastDigits = row['content']!.substring(row['content']!.length - serialCount);
-        print('Comparing with row content: ${row['content']} (last digits: $rowLastDigits)');
-        return rowLastDigits == inputLastDigits;
-      });
+      print('Serial Count: $serialCount');
+      print('Is Counting Item: $isCountingItem');
 
-      print('Is Duplicate: $isDuplicate');
+      if (isCountingItem) {
+        // Get the sub-lot number from the lot number
+        int subLotNumber = 1; // Default value
+        if (lotNumber.contains('-')) {
+          final subLotPart = lotNumber.split('-')[1];
+          subLotNumber = int.tryParse(subLotPart) ?? 1;
+        }
+        print('Sub-lot Number: $subLotNumber');
 
-      // No Good if last digits match the expected content or are duplicated
-      if (inputLastDigits == expectedLastDigits || isDuplicate) {
-        result = 'No Good';
-        print('Result: No Good - ${isDuplicate ? "Duplicate found" : "Matches expected content"}');
+        // Remove any spaces from the scanned value
+        String cleanValue = value.replaceAll(' ', '');
+        print('Cleaned scanned value: $cleanValue');
+
+        // Find the lot number pattern in the scanned value
+        String mainLotPart = lotNumber.split('-')[0]; // e.g., "241127"
+        String subLotStr = subLotNumber.toString();
+        
+        // Look for the pattern: main lot part followed by sub-lot number
+        int mainLotIndex = cleanValue.indexOf(mainLotPart);
+        if (mainLotIndex != -1) {
+          // Look for the sub-lot number right after the main lot part
+          int expectedSubLotIndex = mainLotIndex + mainLotPart.length;
+          String actualSubLot = cleanValue.substring(expectedSubLotIndex, expectedSubLotIndex + subLotStr.length);
+          
+          if (actualSubLot == subLotStr) {
+            // Get the remaining digits after the sub-lot number
+            String remainingDigits = cleanValue.substring(expectedSubLotIndex + subLotStr.length);
+            print('Remaining digits after sub-lot: $remainingDigits');
+            
+            // Check if the number of remaining digits matches the serial count
+            if (remainingDigits.length == serialCount) {
+              // Check if these digits are not duplicated in other rows
+              bool isDuplicate = _tableData.any((row) {
+                if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+                String otherContent = row['content']!.replaceAll(' ', '');
+                int otherMainLotIndex = otherContent.indexOf(mainLotPart);
+                if (otherMainLotIndex != -1) {
+                  int otherExpectedSubLotIndex = otherMainLotIndex + mainLotPart.length;
+                  String otherActualSubLot = otherContent.substring(
+                    otherExpectedSubLotIndex, 
+                    otherExpectedSubLotIndex + subLotStr.length
+                  );
+                  if (otherActualSubLot == subLotStr) {
+                    String otherRemainingDigits = otherContent.substring(
+                      otherExpectedSubLotIndex + subLotStr.length
+                    );
+                    return otherRemainingDigits == remainingDigits;
+                  }
+                }
+                return false;
+              });
+
+              result = isDuplicate ? 'No Good' : 'Good';
+              print('Result: $result (${isDuplicate ? "Duplicate found" : "No duplicates"})');
+            } else {
+              print('Number of digits after sub-lot ($remainingDigits) does not match serial count ($serialCount)');
+            }
+          } else {
+            print('Sub-lot number not found at expected position');
+          }
+        } else {
+          print('Main lot number not found in scanned value');
+        }
       } else {
-        result = 'Good';
-        print('Result: Good - Different from expected and no duplicates');
+        // For non-Counting items, exact match required
+        result = (value == _labelContent) ? 'Good' : 'No Good';
+        print('Non-Counting item result: $result');
       }
-    } 
-    // For Non-Counting category
-    else {
-      final expectedContent = _labelContent ?? ''; // Remove lot number append
-      // Debug prints
-      print('Non-Counting Validation:');
-      print('Expected Content: $expectedContent');
-      print('Scanned Content: $value');
-      
-      // Good only if the content exactly matches the expected content
-      result = (value == expectedContent) ? 'Good' : 'No Good';
-      print('Result: $result');
     }
 
     // Save to database and update UI
@@ -642,16 +664,15 @@ class _ScanItemState extends State<ScanItem> {
             formattedLotNumber = lotNumber;
           }
           
-          // Add initial serial number with leading zeros based on serial count
-          String initialSerialNumber = '0' * serialCount;
-          initialSerialNumber = '1'.padLeft(serialCount, '0'); // This will create '0001' for serialCount 4
+          // Add asterisks based on serial count
+          String asterisks = '*' * serialCount;
           
           // Combine everything
-          _displayContent = '${_labelContent}$formattedLotNumber$initialSerialNumber';
+          _displayContent = '${_labelContent}$formattedLotNumber$asterisks';
           
           print('Base Content: ${_labelContent}');
           print('Formatted Lot Number: $formattedLotNumber');
-          print('Initial Serial Number: $initialSerialNumber');
+          print('Asterisks: $asterisks');
           print('Final Display Content: $_displayContent');
         } else {
           _labelContent = 'No content available';
