@@ -639,7 +639,6 @@ class _ScanItemState extends State<ScanItem> {
     if (matchingItem.isNotEmpty) {
       setState(() {
         if (matchingItem['codes'].isNotEmpty) {
-          // Get the base label content and check category
           final codes = matchingItem['codes'] as List;
           final countingCode = codes.firstWhere(
             (code) => code['category'] == 'Counting',
@@ -651,28 +650,51 @@ class _ScanItemState extends State<ScanItem> {
             orElse: () => <String, dynamic>{},
           );
           
-          // Set content based on category
           if (countingCode.isNotEmpty) {
             _labelContent = countingCode['content'];
             _itemCategory = 'Counting';
+            
+            // Check if sub-lot rules are enabled for this item
+            bool hasSubLotRules = countingCode['hasSubLot'] == 1 || countingCode['hasSubLot'] == true;
             
             // Get serial count for Counting items
             int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
             print('Serial Count from masterlist: $serialCount');
             
-            // Format lot number
+            // Format lot number with sub-lot rules if enabled
             String formattedLotNumber = '';
             if (lotNumber.contains('-')) {
               final parts = lotNumber.split('-');
               final mainPart = parts[0];
               final subLotPart = parts[1];
-              final subLotNum = int.parse(subLotPart);
-              formattedLotNumber = '$mainPart$subLotNum';
+              
+              if (hasSubLotRules) {
+                // Convert sub-lot number according to rules if between 10-20
+                int subLotNum = int.tryParse(subLotPart) ?? 0;
+                String convertedSubLot;
+                
+                if (subLotNum == 10) {
+                  convertedSubLot = '0';
+                } else if (subLotNum >= 11 && subLotNum <= 20) {
+                  // Convert to letters A-J (11=A, 12=B, etc.)
+                  convertedSubLot = String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+                } else {
+                  // For numbers outside 10-20, just use the number
+                  convertedSubLot = subLotNum.toString();
+                }
+                
+                formattedLotNumber = '$mainPart$convertedSubLot';
+                print('Sub-lot conversion: $subLotPart -> $convertedSubLot');
+              } else {
+                // No sub-lot rules, just remove leading zeros
+                int subLotNum = int.tryParse(subLotPart) ?? 0;
+                formattedLotNumber = '$mainPart$subLotNum';
+              }
             } else {
               formattedLotNumber = lotNumber;
             }
             
-            // Add asterisks only for Counting items
+            // Add asterisks for Counting items
             String asterisks = '*' * serialCount;
             _displayContent = '${_labelContent}$formattedLotNumber$asterisks';
             
@@ -683,9 +705,7 @@ class _ScanItemState extends State<ScanItem> {
           } else if (nonCountingCode.isNotEmpty) {
             _labelContent = nonCountingCode['content'];
             _itemCategory = 'Non-Counting';
-            
-            // For Non-Counting items, just combine label content and original lot number
-            _displayContent = '${_labelContent}$lotNumber';  // Use original lot number
+            _displayContent = '${_labelContent}$lotNumber';
             
             print('Base Content: ${_labelContent}');
             print('Original Lot Number: $lotNumber');
