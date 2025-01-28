@@ -395,88 +395,198 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   List<DataRow> _buildTableRows() {
-    return _tableData.asMap().entries.map((entry) {
-      int index = entry.key;
-      Map<String, dynamic> data = entry.value;
+    // For Non-Counting items, group identical scans in pairs
+    if (_itemCategory == 'Non-Counting') {
+      Map<String, List<int>> contentOccurrences = {};
+      Map<int, int> indexToRowNumber = {};
+      Map<int, bool> showRowNumber = {}; // Track which rows should show numbers
+      int currentRowNumber = 1;
+      int lastUsedRowNumber = 1;
 
-      // Create a TextEditingController for this row
-      final contentController = TextEditingController(text: data['content']);
+      // First pass: count occurrences and assign row numbers
+      for (int i = 0; i < _tableData.length; i++) {
+        String content = _tableData[i]['content'] ?? '';
+        if (content.isEmpty) {
+          indexToRowNumber[i] = lastUsedRowNumber;
+          showRowNumber[i] = true;
+          continue;
+        }
 
-      return DataRow(
-        cells: [
-          DataCell(
-            Checkbox(
-              value: selectedRows.contains(index),
-              onChanged: (bool? value) {
-                setState(() {
-                  if (value == true) {
-                    selectedRows.add(index);
-                  } else {
-                    selectedRows.remove(index);
+        contentOccurrences.putIfAbsent(content, () => []);
+        contentOccurrences[content]!.add(i);
+
+        if (contentOccurrences[content]!.length % 2 == 1) {
+          // First occurrence in a new pair
+          indexToRowNumber[i] = currentRowNumber;
+          lastUsedRowNumber = currentRowNumber; // Track the last used row number
+          currentRowNumber++;
+          showRowNumber[i] = true; // Show number for first occurrence
+        } else {
+          // Second occurrence in a pair
+          indexToRowNumber[i] = indexToRowNumber[contentOccurrences[content]![contentOccurrences[content]!.length - 2]]!;
+          showRowNumber[i] = false; // Don't show number for second occurrence
+        }
+      }
+
+      return _tableData.asMap().entries.map((entry) {
+        int index = entry.key;
+        Map<String, dynamic> data = entry.value;
+        final contentController = TextEditingController(text: data['content']);
+
+        return DataRow(
+          cells: [
+            DataCell(
+              Checkbox(
+                value: selectedRows.contains(index),
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value == true) {
+                      selectedRows.add(index);
+                    } else {
+                      selectedRows.remove(index);
+                    }
+                  });
+                },
+              ),
+            ),
+            // Only show row number for first occurrence in a pair
+            DataCell(Text(showRowNumber[index] == true ? indexToRowNumber[index].toString() : '')),
+            DataCell(
+              TextField(
+                focusNode: _ensureFocusNode(index),
+                controller: contentController,
+                autofocus: index == 0,
+                enabled: !_isTotalQtyReached && !(data['isLocked'] == true),
+                onChanged: (value) {
+                  setState(() {
+                    data['content'] = value;
+                  });
+                },
+                onSubmitted: (value) {
+                  if (value.isNotEmpty && !_isTotalQtyReached && !(data['isLocked'] == true)) {
+                    _validateContent(value, index);
                   }
-                });
-              },
-            ),
-          ),
-          DataCell(Text((index + 1).toString())),
-          DataCell(
-            TextField(
-              focusNode: _ensureFocusNode(index),
-              controller: contentController,
-              autofocus: index == 0,
-              enabled: !_isTotalQtyReached &&
-                  !(data['isLocked'] == true), // Disable if locked
-              onChanged: (value) {
-                setState(() {
-                  data['content'] = value;
-                });
-              },
-              onSubmitted: (value) {
-                if (value.isNotEmpty &&
-                    !_isTotalQtyReached &&
-                    !(data['isLocked'] == true)) {
-                  _validateContent(value, index);
-                }
-              },
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  filled: data['isLocked'] == true,
+                  fillColor: data['isLocked'] == true ? Colors.grey.shade100 : null,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
-                  borderSide: const BorderSide(color: Colors.blue),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                filled: data['isLocked'] ==
-                    true, // Add background color for locked fields
-                fillColor:
-                    data['isLocked'] == true ? Colors.grey.shade100 : null,
               ),
             ),
-          ),
-          DataCell(
-            Text(
-              data['result'] ?? '',
-              style: TextStyle(
-                color: data['result'] == 'Good'
-                    ? Colors.green
-                    : data['result'] == 'No Good'
-                        ? Colors.red
-                        : Colors.black,
-                fontWeight: FontWeight.bold,
+            DataCell(
+              Text(
+                data['result'] ?? '',
+                style: TextStyle(
+                  color: data['result'] == 'Good'
+                      ? Colors.green
+                      : data['result'] == 'No Good'
+                          ? Colors.red
+                          : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-        ],
-      );
-    }).toList();
+          ],
+        );
+      }).toList();
+    } else {
+      // Original implementation for Counting items
+      return _tableData.asMap().entries.map((entry) {
+        int index = entry.key;
+        Map<String, dynamic> data = entry.value;
+        final contentController = TextEditingController(text: data['content']);
+
+        return DataRow(
+          cells: [
+            DataCell(
+              Checkbox(
+                value: selectedRows.contains(index),
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value == true) {
+                      selectedRows.add(index);
+                    } else {
+                      selectedRows.remove(index);
+                    }
+                  });
+                },
+              ),
+            ),
+            DataCell(Text((index + 1).toString())),
+            DataCell(
+              TextField(
+                focusNode: _ensureFocusNode(index),
+                controller: contentController,
+                autofocus: index == 0,
+                enabled: !_isTotalQtyReached &&
+                    !(data['isLocked'] == true), // Disable if locked
+                onChanged: (value) {
+                  setState(() {
+                    data['content'] = value;
+                  });
+                },
+                onSubmitted: (value) {
+                  if (value.isNotEmpty &&
+                      !_isTotalQtyReached &&
+                      !(data['isLocked'] == true)) {
+                    _validateContent(value, index);
+                  }
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: kBorderRadiusNoneAll,
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  filled: data['isLocked'] ==
+                      true, // Add background color for locked fields
+                  fillColor:
+                      data['isLocked'] == true ? Colors.grey.shade100 : null,
+                ),
+              ),
+            ),
+            DataCell(
+              Text(
+                data['result'] ?? '',
+                style: TextStyle(
+                  color: data['result'] == 'Good'
+                      ? Colors.green
+                      : data['result'] == 'No Good'
+                          ? Colors.red
+                          : Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      }).toList();
+    }
   }
 
   void _validateContent(String value, int index) async {
