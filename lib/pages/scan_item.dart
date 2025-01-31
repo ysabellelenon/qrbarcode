@@ -591,6 +591,7 @@ class _ScanItemState extends State<ScanItem> {
     }
   }
 
+  /// Validates the scanned content and updates the result.
   void _validateContent(String value, int index) async {
     print('\n====== Starting Content Validation ======');
     print('Row Index: $index');
@@ -753,6 +754,7 @@ class _ScanItemState extends State<ScanItem> {
               },
               child: const Text('OK'),
             ),
+            // Optional: Add more actions if needed
           ],
         );
       },
@@ -926,20 +928,20 @@ class _ScanItemState extends State<ScanItem> {
             ),
           ),
 
-          // Back Button and Title
+          // Back Button Removed
           const SizedBox(height: 30),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Back'),
-                ),
-                const Expanded(child: SizedBox()),
+                // OutlinedButton for 'Back' has been removed
+                // const OutlinedButton(
+                //   onPressed: () {
+                //     Navigator.of(context).pop();
+                //   },
+                //   child: const Text('Back'),
+                // ),
                 const SelectableText(
                   'Scan Item',
                   style: TextStyle(
@@ -948,7 +950,6 @@ class _ScanItemState extends State<ScanItem> {
                     color: Color(0xFF2C3E50),
                   ),
                 ),
-                const Expanded(child: SizedBox()),
                 Row(
                   children: [
                     const SelectableText(
