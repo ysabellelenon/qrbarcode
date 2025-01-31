@@ -498,6 +498,7 @@ class _ScanItemState extends State<ScanItem> {
                           ? Colors.red
                           : Colors.black,
                   fontWeight: FontWeight.bold,
+                  fontSize: data['result'] == 'No Good' ? 20 : 16, // Increased font size for "No Good"
                 ),
               ),
             ),
@@ -580,6 +581,7 @@ class _ScanItemState extends State<ScanItem> {
                           ? Colors.red
                           : Colors.black,
                   fontWeight: FontWeight.bold,
+                  fontSize: data['result'] == 'No Good' ? 20 : 16, // Increased font size for "No Good"
                 ),
               ),
             ),
@@ -717,6 +719,11 @@ class _ScanItemState extends State<ScanItem> {
       if (!_isTotalQtyReached) {
         _addRow();
       }
+
+      // If the result is "No Good", show an alert dialog
+      if (result == 'No Good') {
+        _showNoGoodAlert();
+      }
     } catch (e) {
       print('Error saving scan content: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -726,6 +733,30 @@ class _ScanItemState extends State<ScanItem> {
         ),
       );
     }
+  }
+
+  /// Displays an alert dialog when a "No Good" result is recorded.
+  void _showNoGoodAlert() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Alert'),
+          content: const Text(
+            'A "No Good" result has been recorded. Please review the issue.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
