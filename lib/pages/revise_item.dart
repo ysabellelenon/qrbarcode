@@ -39,7 +39,7 @@ class _ReviseItemState extends State<ReviseItem> {
   }
 
   void _initializeCodeContainers() {
-    final codes = widget.item['codes'] as List<Map<String, dynamic>>;
+    final codes = widget.item['codes'] as List<dynamic>;
     setState(() {
       // Ensure all indices in selectedCategories are initialized
       for (int i = 0; i < codes.length; i++) {
@@ -58,6 +58,7 @@ class _ReviseItemState extends State<ReviseItem> {
           },
           labelController: TextEditingController(text: codes[index]['content']),
           hasSubLot: codes[index]['hasSubLot'] == 1,
+          serialCount: codes[index]['serialCount'] ?? '0',
         ),
       );
     });
@@ -299,7 +300,7 @@ class _ReviseItemState extends State<ReviseItem> {
                                                 container.labelController.text,
                                             'hasSubLot':
                                                 container.hasSubLot,
-                                            'serialCount': '0',
+                                            'serialCount': container.serialCount,
                                           };
                                         }).toList(),
                                       };

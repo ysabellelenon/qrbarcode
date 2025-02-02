@@ -6,6 +6,7 @@ class CodeContainer extends StatefulWidget {
   final Function(String) onCategoryChanged;
   final TextEditingController labelController;
   final bool hasSubLot;
+  final String serialCount;
 
   const CodeContainer({
     Key? key,
@@ -14,6 +15,7 @@ class CodeContainer extends StatefulWidget {
     required this.onCategoryChanged,
     required this.labelController,
     required this.hasSubLot,
+    this.serialCount = '0',
   }) : super(key: key);
 
   @override
