@@ -395,44 +395,11 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   List<DataRow> _buildTableRows() {
-    // For Non-Counting items, group identical scans in pairs
     if (_itemCategory == 'Non-Counting') {
-      Map<String, List<int>> contentOccurrences = {};
-      Map<int, int> indexToRowNumber = {};
-      Map<int, bool> showRowNumber = {}; // Track which rows should show numbers
-      int currentRowNumber = 1;
-      int lastUsedRowNumber = 1;
-
-      // First pass: count occurrences and assign row numbers
-      for (int i = 0; i < _tableData.length; i++) {
-        String content = _tableData[i]['content'] ?? '';
-        if (content.isEmpty) {
-          indexToRowNumber[i] = lastUsedRowNumber;
-          showRowNumber[i] = true;
-          continue;
-        }
-
-        contentOccurrences.putIfAbsent(content, () => []);
-        contentOccurrences[content]!.add(i);
-
-        if (contentOccurrences[content]!.length % 2 == 1) {
-          // First occurrence in a new pair
-          indexToRowNumber[i] = currentRowNumber;
-          lastUsedRowNumber = currentRowNumber; // Track the last used row number
-          currentRowNumber++;
-          showRowNumber[i] = true; // Show number for first occurrence
-        } else {
-          // Second occurrence in a pair
-          indexToRowNumber[i] = indexToRowNumber[contentOccurrences[content]![contentOccurrences[content]!.length - 2]]!;
-          showRowNumber[i] = false; // Don't show number for second occurrence
-        }
-      }
-
       return _tableData.asMap().entries.map((entry) {
         int index = entry.key;
         Map<String, dynamic> data = entry.value;
-        final contentController = TextEditingController(text: data['content']);
-
+        
         return DataRow(
           cells: [
             DataCell(
@@ -449,12 +416,14 @@ class _ScanItemState extends State<ScanItem> {
                 },
               ),
             ),
-            // Only show row number for first occurrence in a pair
-            DataCell(Text(showRowNumber[index] == true ? indexToRowNumber[index].toString() : '')),
+            DataCell(
+              Text(data['showRowNumber'] == true ? 
+                  data['rowNumber'].toString() : '')
+            ),
             DataCell(
               TextField(
                 focusNode: _ensureFocusNode(index),
-                controller: contentController,
+                controller: TextEditingController(text: data['content']),
                 autofocus: index == 0,
                 enabled: !_isTotalQtyReached && !(data['isLocked'] == true),
                 onChanged: (value) {
@@ -671,8 +640,37 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       } else {
-        // Non-Counting validation remains the same
-        result = (value == _displayContent) ? 'Good' : 'No Good';
+        // For Non-Counting items
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+        
+        // Check if the scanned value matches the display content
+        if (value != _displayContent) {
+          result = 'No Good';
+        } else {
+          result = 'Good';
+          
+          // Get total number of previous scans (including this one)
+          int totalScans = _tableData
+              .where((row) => row['result']?.isNotEmpty == true)
+              .length;
+          
+          // Calculate group number (0-based)
+          int currentGroup = totalScans ~/ noOfCodes;
+          // Calculate position within group
+          int positionInGroup = totalScans % noOfCodes;
+          
+          setState(() {
+            if (positionInGroup == 0) {
+              // First scan in a new group
+              _tableData[index]['showRowNumber'] = true;
+              _tableData[index]['rowNumber'] = currentGroup + 1;
+            } else {
+              // Subsequent scan in current group
+              _tableData[index]['showRowNumber'] = false;
+              _tableData[index]['rowNumber'] = currentGroup + 1;
+            }
+          });
+        }
       }
     }
 

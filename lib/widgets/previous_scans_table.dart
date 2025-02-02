@@ -127,66 +127,35 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
 
   Future<void> _clearScans() async {
     try {
-      final bool? confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Clear All Scans'),
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
-          content: Text(
-              'Are you sure you want to clear all scan history for ${widget.itemName}? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Clear'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true) {
-        final count =
-            await DatabaseHelper().clearIndividualScans(widget.itemName);
-        if (!mounted) return;
-
+      await DatabaseHelper().clearIndividualScans(widget.itemName);
+      setState(() {
+        _historicalData.clear();
+        _totalItems = 0;
+        _currentPage = 1;
+      });
+      
+      widget.onDataCleared?.call();
+      
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully cleared $count scan records'),
+          const SnackBar(
+            content: Text('All scans cleared successfully'),
             backgroundColor: Colors.green,
           ),
         );
-
-        setState(() {
-          _currentPage = 1;
-          _historicalData.clear();
-          _totalItems = 0;
-        });
-
-        await Future.delayed(const Duration(milliseconds: 100));
-        await _loadHistoricalData();
-
-        if (widget.onDataCleared != null) {
-          widget.onDataCleared!();
-        }
       }
     } catch (e) {
-      print('Error in _clearScans: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error clearing scans: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error clearing scans: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+    
+    await _loadHistoricalData();
   }
 
   @override
