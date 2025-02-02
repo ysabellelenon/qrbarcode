@@ -627,27 +627,47 @@ class _ScanItemState extends State<ScanItem> {
         String baseContent = countingCode['content'] ?? '';
         print('Base Label Content: $baseContent');
         
-        // Check if the scanned value contains the complete base content
-        if (!value.contains(baseContent)) {
-          print('Scanned content missing complete base label content');
+        // Check if the scanned value starts with the exact base content
+        // First remove any spaces from both strings for comparison
+        String cleanedValue = value.replaceAll(' ', '');
+        String cleanedBaseContent = baseContent.replaceAll(' ', '');
+        
+        if (!cleanedValue.startsWith(cleanedBaseContent)) {
+          print('Scanned content does not start with the correct base label content');
           result = 'No Good';
         } else {
           // Now check the lot number and serial part
-          String subLotStr = lotNumber.split('-')[1];
-          int subLotNum = int.tryParse(subLotStr) ?? 0;
+          String mainLotPart = lotNumber.split('-')[0]; // e.g., "241126"
+          String subLotPart = lotNumber.split('-')[1]; // e.g., "02"
+          // Convert sub-lot to number and back to string to remove leading zeros
+          int subLotNum = int.tryParse(subLotPart) ?? 0;
+          String normalizedSubLot = subLotNum.toString();
           int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
           
-          // Get the remaining digits after the sub-lot number
-          String remainingDigits = value.substring(value.indexOf(subLotStr) + subLotStr.length);
-          
-          if (remainingDigits.length == serialCount) {
-            // Check for duplicates
-            bool isDuplicate = _tableData.any((row) {
-              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
-              return row['content'] == value;
-            });
+          // Find where the lot number starts in the scanned value
+          int lotIndex = value.indexOf(mainLotPart);
+          if (lotIndex != -1) {
+            // Get the remaining digits after the lot number
+            String remainingDigits = value.substring(lotIndex + mainLotPart.length);
             
-            result = isDuplicate ? 'No Good' : 'Good';
+            // Get the scanned sub-lot and normalize it (remove leading zeros)
+            String scannedSubLot = remainingDigits.substring(0, remainingDigits.length - serialCount);
+            int scannedSubLotNum = int.tryParse(scannedSubLot) ?? 0;
+            String normalizedScannedSubLot = scannedSubLotNum.toString();
+            
+            // Get the serial part
+            String serialPart = remainingDigits.substring(remainingDigits.length - serialCount);
+            
+            // Compare normalized sub-lot numbers and check serial part length
+            if (normalizedScannedSubLot == normalizedSubLot && serialPart.length == serialCount) {
+              // Check for duplicates
+              bool isDuplicate = _tableData.any((row) {
+                if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+                return row['content'] == value;
+              });
+              
+              result = isDuplicate ? 'No Good' : 'Good';
+            }
           }
         }
       } else {
