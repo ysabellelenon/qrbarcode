@@ -648,29 +648,28 @@ class _ScanItemState extends State<ScanItem> {
           result = 'No Good';
         } else {
           result = 'Good';
-          
-          // Get total number of previous scans (including this one)
-          int totalScans = _tableData
-              .where((row) => row['result']?.isNotEmpty == true)
-              .length;
-          
-          // Calculate group number (0-based)
-          int currentGroup = totalScans ~/ noOfCodes;
-          // Calculate position within group
-          int positionInGroup = totalScans % noOfCodes;
-          
-          setState(() {
-            if (positionInGroup == 0) {
-              // First scan in a new group
-              _tableData[index]['showRowNumber'] = true;
-              _tableData[index]['rowNumber'] = currentGroup + 1;
-            } else {
-              // Subsequent scan in current group
-              _tableData[index]['showRowNumber'] = false;
-              _tableData[index]['rowNumber'] = currentGroup + 1;
-            }
-          });
         }
+
+        // Get total number of previous scans
+        int previousScans = _tableData
+            .where((row) => 
+                row['result']?.isNotEmpty == true && 
+                _tableData.indexOf(row) < index)
+            .length;
+
+        // Calculate current group number (1-based)
+        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+
+        setState(() {
+          // Show row number if:
+          // 1. This is the first scan in a group, OR
+          // 2. Previous group is complete and this is a new scan
+          bool isFirstInGroup = previousScans % noOfCodes == 0;
+          bool previousGroupComplete = previousScans > 0 && previousScans % noOfCodes == 0;
+          
+          _tableData[index]['showRowNumber'] = isFirstInGroup || previousGroupComplete;
+          _tableData[index]['rowNumber'] = currentGroup;
+        });
       }
     }
 
@@ -845,6 +844,14 @@ class _ScanItemState extends State<ScanItem> {
         _displayContent = 'Item not found';
       });
     }
+  }
+
+  void _resetInspectionQty() {
+    setState(() {
+      inspectionQtyController.text = '0';
+      goodCountController.text = '0';
+      noGoodCountController.text = '0';
+    });
   }
 
   @override
@@ -1285,7 +1292,7 @@ class _ScanItemState extends State<ScanItem> {
                           itemName: itemName,
                           showClearButton: true,
                           onDataCleared: () {
-                            // Update counts when data is cleared
+                            _resetInspectionQty();
                             _updateTotalInspectionQty();
                             _updateTotalGoodNoGoodCounts();
                             _checkAndUpdateQtyStatus();
