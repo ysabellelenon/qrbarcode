@@ -613,7 +613,6 @@ class _ScanItemState extends State<ScanItem> {
 
     String result = 'No Good'; // Default to No Good
     
-    // Get the serial count and check if it's a Counting item
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
       final countingCode = codes.firstWhere(
@@ -621,82 +620,39 @@ class _ScanItemState extends State<ScanItem> {
         orElse: () => <String, dynamic>{},
       );
       
-      int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
       bool isCountingItem = countingCode.isNotEmpty;
       
-      print('Serial Count: $serialCount');
-      print('Is Counting Item: $isCountingItem');
-
       if (isCountingItem) {
-        // Get the sub-lot number from the lot number
-        int subLotNumber = 1; // Default value
-        if (lotNumber.contains('-')) {
-          final subLotPart = lotNumber.split('-')[1];
-          subLotNumber = int.tryParse(subLotPart) ?? 1;
-        }
-        print('Sub-lot Number: $subLotNumber');
-
-        // Remove any spaces from the scanned value
-        String cleanValue = value.replaceAll(' ', '');
-        print('Cleaned scanned value: $cleanValue');
-
-        // Find the lot number pattern in the scanned value
-        String mainLotPart = lotNumber.split('-')[0]; // e.g., "241127"
-        String subLotStr = subLotNumber.toString();
+        // Get the base label content that should be at the start
+        String baseContent = countingCode['content'] ?? '';
+        print('Base Label Content: $baseContent');
         
-        // Look for the pattern: main lot part followed by sub-lot number
-        int mainLotIndex = cleanValue.indexOf(mainLotPart);
-        if (mainLotIndex != -1) {
-          // Look for the sub-lot number right after the main lot part
-          int expectedSubLotIndex = mainLotIndex + mainLotPart.length;
-          String actualSubLot = cleanValue.substring(expectedSubLotIndex, expectedSubLotIndex + subLotStr.length);
-          
-          if (actualSubLot == subLotStr) {
-            // Get the remaining digits after the sub-lot number
-            String remainingDigits = cleanValue.substring(expectedSubLotIndex + subLotStr.length);
-            print('Remaining digits after sub-lot: $remainingDigits');
-            
-            // Check if the number of remaining digits matches the serial count
-            if (remainingDigits.length == serialCount) {
-              // Check if these digits are not duplicated in other rows
-              bool isDuplicate = _tableData.any((row) {
-                if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
-                String otherContent = row['content']!.replaceAll(' ', '');
-                int otherMainLotIndex = otherContent.indexOf(mainLotPart);
-                if (otherMainLotIndex != -1) {
-                  int otherExpectedSubLotIndex = otherMainLotIndex + mainLotPart.length;
-                  String otherActualSubLot = otherContent.substring(
-                    otherExpectedSubLotIndex, 
-                    otherExpectedSubLotIndex + subLotStr.length
-                  );
-                  if (otherActualSubLot == subLotStr) {
-                    String otherRemainingDigits = otherContent.substring(
-                      otherExpectedSubLotIndex + subLotStr.length
-                    );
-                    return otherRemainingDigits == remainingDigits;
-                  }
-                }
-                return false;
-              });
-
-              result = isDuplicate ? 'No Good' : 'Good';
-              print('Result: $result (${isDuplicate ? "Duplicate found" : "No duplicates"})');
-            } else {
-              print('Number of digits after sub-lot ($remainingDigits) does not match serial count ($serialCount)');
-            }
-          } else {
-            print('Sub-lot number not found at expected position');
-          }
+        // Check if the scanned value contains the complete base content
+        if (!value.contains(baseContent)) {
+          print('Scanned content missing complete base label content');
+          result = 'No Good';
         } else {
-          print('Main lot number not found in scanned value');
+          // Now check the lot number and serial part
+          String subLotStr = lotNumber.split('-')[1];
+          int subLotNum = int.tryParse(subLotStr) ?? 0;
+          int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+          
+          // Get the remaining digits after the sub-lot number
+          String remainingDigits = value.substring(value.indexOf(subLotStr) + subLotStr.length);
+          
+          if (remainingDigits.length == serialCount) {
+            // Check for duplicates
+            bool isDuplicate = _tableData.any((row) {
+              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+              return row['content'] == value;
+            });
+            
+            result = isDuplicate ? 'No Good' : 'Good';
+          }
         }
       } else {
-        // For non-Counting items, compare with the display content
-        print('Non-Counting Validation:');
-        print('Expected Content: $_displayContent');
-        print('Scanned Content: $value');
+        // Non-Counting validation remains the same
         result = (value == _displayContent) ? 'Good' : 'No Good';
-        print('Non-Counting item result: $result');
       }
     }
 
@@ -740,22 +696,26 @@ class _ScanItemState extends State<ScanItem> {
   void _showNoGoodAlert() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Alert'),
-          content: const Text(
-            'A "No Good" result has been recorded. Please review the issue.',
-            style: TextStyle(fontSize: 16),
+        return RawKeyboardListener(
+          focusNode: FocusNode(),
+          onKey: (event) {
+            if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+              Navigator.of(context).pop(); // Close dialog on Enter
+            }
+          },
+          child: AlertDialog(
+            title: const Text('Alert'),
+            content: const Text('A "No Good" result has been recorded. Please review the issue.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                autofocus: true, // Auto focus the OK button
+                child: const Text('OK'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Dismiss the dialog
-              },
-              child: const Text('OK'),
-            ),
-            // Optional: Add more actions if needed
-          ],
         );
       },
     );
