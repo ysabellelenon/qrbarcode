@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../constants.dart';
 import '../database_helper.dart';
 import '../utils/logout_helper.dart';
@@ -107,126 +108,134 @@ class ReviewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
-      body: Column(
-        children: [
-          // App Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 5,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'QR Barcode System',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+      body: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (event) {
+          if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+            _registerItem(context);
+          }
+        },
+        child: Column(
+          children: [
+            // App Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 5,
+                    offset: Offset(0, 2),
                   ),
-                ),
-                ElevatedButton(
-                  onPressed: () => LogoutHelper.showLogoutConfirmation(context),
-                  child: const Text('Logout'),
-                ),
-              ],
-            ),
-          ),
-
-          // Main Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Back'),
+                  const Text(
+                    'QR Barcode System',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // All content in one white container
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Item Details Section
-                        const SelectableText(
-                          'Item Details',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildInfoRow('Item Name', itemName),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildInfoRow('Rev No.', revision),
-                            ),
-                            Expanded(
-                              child: _buildInfoRow(
-                                  'No. of Code', codeCount.toString()),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Code Details Section
-                        ...codes.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final code = entry.value;
-                          return _buildCodeSection(code, index);
-                        }),
-
-                        // Register Button
-                        Center(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed: () => _registerItem(context),
-                            child: const Text('Register'),
-                          ),
-                        ),
-                      ],
-                    ),
+                  ElevatedButton(
+                    onPressed: () => LogoutHelper.showLogoutConfirmation(context),
+                    child: const Text('Logout'),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Main Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Back'),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // All content in one white container
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Item Details Section
+                          const SelectableText(
+                            'Item Details',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _buildInfoRow('Item Name', itemName),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildInfoRow('Rev No.', revision),
+                              ),
+                              Expanded(
+                                child: _buildInfoRow(
+                                    'No. of Code', codeCount.toString()),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Code Details Section
+                          ...codes.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final code = entry.value;
+                            return _buildCodeSection(code, index);
+                          }),
+
+                          // Register Button
+                          Center(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: kPrimaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () => _registerItem(context),
+                              child: const Text('Register'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
