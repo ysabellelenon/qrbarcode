@@ -230,103 +230,121 @@ class _ScanItemState extends State<ScanItem> {
     }
   }
 
-  void _checkAndUpdateQtyStatus() {
-    // Check QTY per box and total QTY reached status
-    int populatedRowCount =
-        _tableData.where((data) => data['content']?.isNotEmpty == true).length;
-
-    setState(() {
-      // Update QTY per box
-      qtyPerBoxController.text = populatedRowCount.toString();
-
-      // Check if we've reached the QTY per box
-      String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
-      int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-
-      // Check if total QTY has been reached
-      int currentInspectionQty =
-          int.tryParse(inspectionQtyController.text) ?? 0;
-      int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
-
-      // Update the total QTY reached flag
-      _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
-
-      bool wasQtyReached = widget.resumeData != null &&
-          widget.resumeData!.containsKey('isQtyReached') &&
-          widget.resumeData!['isQtyReached'] == true;
-
-      if (_isTotalQtyReached) {
-        // Show Total QTY reached dialog
-        if (!_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;
-          _showTotalQtyReachedDialog();
-        }
-      } else if (targetQty > 0 && populatedRowCount >= targetQty) {
-        _isQtyPerBoxReached = true;
-        if (!wasQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;
-          _showQtyReachedDialog();
-        }
-      } else {
-        _isQtyPerBoxReached = false;
-        _hasShownQtyReachedDialog = false;
+  void _checkAndUpdateQtyStatus() async {
+    if (_itemCategory == 'Non-Counting') {
+      // For Non-Counting items, count by groups
+      int noOfCodes = int.parse((await DatabaseHelper().getItems())
+          .firstWhere((item) => item['itemCode'] == itemName)['codeCount'] ?? '1');
+      
+      // Get total scans
+      int totalScans = _tableData
+          .where((row) => row['result']?.isNotEmpty == true)
+          .length;
+      
+      // Calculate number of complete groups
+      int groupCount = totalScans ~/ noOfCodes;
+      
+      setState(() {
+        // Update inspection quantity based on complete groups
+        inspectionQtyController.text = groupCount.toString();
+        
+        // Update QTY per box based on complete groups
+        qtyPerBoxController.text = groupCount.toString();
+        
+        // Check if total quantity is reached
+        int totalQty = int.tryParse(totalQtyController.text) ?? 0;
+        _isTotalQtyReached = groupCount >= totalQty;
+        
+        // Check if QTY per box is reached
+        int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 60;
+        _isQtyPerBoxReached = groupCount > 0 && groupCount == targetQtyPerBox;
+      });
+      
+      // Only show QTY per box dialog if total QTY is not reached
+      if (_isQtyPerBoxReached && !_isTotalQtyReached) {
+        _showQtyReachedDialog();
       }
-    });
+      
+      // Show total QTY dialog if reached
+      if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+        _hasShownQtyReachedDialog = true;
+        _showTotalQtyReachedDialog();
+      }
+    } else {
+      // For Counting items - keep existing logic
+      int populatedRowCount = _tableData
+          .where((data) => data['content']?.isNotEmpty == true)
+          .length;
+
+      setState(() {
+        // Update QTY per box
+        qtyPerBoxController.text = populatedRowCount.toString();
+
+        // Check if we've reached the QTY per box
+        String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
+        int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
+
+        // Check if total QTY has been reached
+        int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+        int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+
+        _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
+
+        // Only set QTY per box reached if total QTY is not reached
+        if (targetQty > 0 && populatedRowCount >= targetQty && !_isTotalQtyReached) {
+          _isQtyPerBoxReached = true;
+          if (!_hasShownQtyReachedDialog) {
+            _hasShownQtyReachedDialog = true;
+            _showQtyReachedDialog();
+          }
+        }
+      });
+      
+      // Show total QTY dialog if reached
+      if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+        _hasShownQtyReachedDialog = true;
+        _showTotalQtyReachedDialog();
+      }
+    }
   }
 
   void _showQtyReachedDialog() {
     // First, remove focus from any text field
     FocusManager.instance.primaryFocus?.unfocus();
 
-    // Small delay to ensure unfocus completes before showing dialog
-    Future.delayed(const Duration(milliseconds: 100), () {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: kBorderRadiusSmallAll,
-            ),
-            title: const Text('Information'),
-            content: const Text('QTY per box has been reached'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('OK'),
-              ),
-              FocusScope(
-                autofocus: true,
-                child: ElevatedButton(
-                  autofocus: true,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Information'),
+        content: const Text('QTY per box has been reached'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('OK'),
+          ),
+          // Only show Scan New Article Label button if total QTY is not reached
+          if (!_isTotalQtyReached)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => ArticleLabel(
+                      itemName: itemName,
+                      poNo: poNo,
+                      operatorScanId: operatorScanId,
+                      totalQty: totalQty,
+                      resumeData: widget.resumeData,
+                    ),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => ArticleLabel(
-                          itemName: itemName,
-                          poNo: poNo,
-                          operatorScanId: operatorScanId,
-                          totalQty: totalQty,
-                          resumeData: widget.resumeData,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Scan New Article Label'),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    });
+                );
+              },
+              child: const Text('Scan New Article Label'),
+            ),
+        ],
+      ),
+    );
   }
 
   void _showTotalQtyReachedDialog() {
