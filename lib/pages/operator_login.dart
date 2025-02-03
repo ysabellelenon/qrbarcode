@@ -52,14 +52,15 @@ class _OperatorLoginState extends State<OperatorLogin> {
     );
 
     if (mounted) {
-      // Check if widget is still mounted
       setState(() {
         if (matchingItem.isNotEmpty &&
             matchingItem['codes']?.isNotEmpty == true) {
           _labelContent = matchingItem['codes'][0]['content'];
           _isItemFound = true;
-          // Move focus to P.O No. field after confirming item is found
-          FocusScope.of(context).requestFocus(_poNoFocus);
+          // Automatically move focus to PO No. field when valid item is found
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            FocusScope.of(context).requestFocus(_poNoFocus);
+          });
         } else {
           _labelContent = 'Item not found';
           _isItemFound = false;
@@ -95,6 +96,14 @@ class _OperatorLoginState extends State<OperatorLogin> {
         );
       }
     }
+  }
+
+  void _handlePoNoInput(String value) {
+    // Don't auto-focus to QTY field on change
+    // Only move focus when explicitly submitted
+    setState(() {
+      // Handle PO number input if needed
+    });
   }
 
   @override
@@ -187,6 +196,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     },
                                     onFieldSubmitted: (_) {
                                       if (_isItemFound) {
+                                        // Only move to PO No. field when Enter is pressed or field is submitted
                                         FocusScope.of(context)
                                             .requestFocus(_poNoFocus);
                                       }
@@ -202,15 +212,10 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                     validator: (value) =>
                                         value!.isEmpty ? 'Required' : null,
-                                    onChanged: (value) {
-                                      if (value.isNotEmpty) {
-                                        FocusScope.of(context)
-                                            .requestFocus(_qtyFocus);
-                                      }
-                                    },
+                                    onChanged: _handlePoNoInput,
                                     onFieldSubmitted: (_) {
-                                      FocusScope.of(context)
-                                          .requestFocus(_qtyFocus);
+                                      // Only move focus when Enter is pressed
+                                      FocusScope.of(context).requestFocus(_qtyFocus);
                                     },
                                   ),
                                   const SizedBox(height: 16),
@@ -224,11 +229,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     keyboardType: TextInputType.number,
                                     validator: (value) =>
                                         value!.isEmpty ? 'Required' : null,
-                                    onChanged: (value) {
-                                      // Remove automatic submission
-                                    },
                                     onFieldSubmitted: (_) {
-                                      _handleSubmit(); // Only submit when Enter is pressed
+                                      _handleSubmit();
                                     },
                                   ),
                                   const SizedBox(height: 32),
