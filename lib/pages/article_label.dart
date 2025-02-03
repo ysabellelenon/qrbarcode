@@ -43,66 +43,52 @@ class _ArticleLabelState extends State<ArticleLabel> {
     print('\nArticle Label Validation:');
     print('Original Input: $articleLabel');
 
-    // Split by periods and spaces
-    List<String> parts = articleLabel.split(RegExp(r'\.\s+'));
-    print('Split parts by periods: $parts');
+    // Remove extra spaces and ensure consistent spacing
+    String cleanLabel = articleLabel.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    // Extract item code (starts after first 12 characters until R-Pb)
+    String extractedItemName = '';
+    int rPbIndex = cleanLabel.indexOf("R-Pb");
+    if (cleanLabel.length >= 12 && rPbIndex != -1) {
+      extractedItemName = cleanLabel.substring(12, rPbIndex).trim();
+    }
 
-    if (parts.length >= 4) {
-      String firstPart = parts[0];
-      String thirdPart = parts[2];  // Get the third part (AB50)
-      String poNumberPart = parts[3];
-      String lotNumberPart = parts.last;
-
-      print('First Part: $firstPart');
-      print('Third Part (QTY): $thirdPart');
-      print('PO Number Part: $poNumberPart');
-      print('Lot Number Part: $lotNumberPart');
-
-      // Extract item name from first part
-      if (firstPart.length >= 12) {
-        String extractedItemName = firstPart.substring(12);
-        print('Extracted Item Name: $extractedItemName');
-
-        // Extract PO number - look for the first 10 digits
-        RegExp poRegExp = RegExp(r'(\d{10})');
-        Match? poMatch = poRegExp.firstMatch(poNumberPart);
-        String extractedPoNo = poMatch?.group(1) ?? '';
-        print('Extracted PO No: $extractedPoNo');
-
-        // Extract QTY from third part - get the numbers after 2 letters
-        RegExp qtyRegExp = RegExp(r'[A-Z]{2}(\d+)');
-        Match? qtyMatch = qtyRegExp.firstMatch(thirdPart);
-        String qtyPerBox = qtyMatch?.group(1) ?? '';
-        print('Extracted QTY from third part: $qtyPerBox');
-
-        if (extractedItemName.trim() != itemName || extractedPoNo != poNo) {
-          setState(() {
-            isError = true;
-            print('Validation Failed:');
-            print('Expected Item Name: $itemName, Got: ${extractedItemName.trim()}');
-            print('Expected PO No: $poNo, Got: $extractedPoNo');
-          });
-        } else {
-          setState(() {
-            isError = false;
-            String lotNumber = lotNumberPart.trim();
-            print('Extracted Lot Number: $lotNumber');
-            print('Extracted Qty: $qtyPerBox');
-
-            lotNumberController.text = lotNumber;
-            qtyController.text = qtyPerBox;
-          });
-        }
-      } else {
-        setState(() {
-          isError = true;
-          print('Error: First part too short');
-        });
+    // Extract QTY - find pattern of 2 letters followed by numbers after "R-Pb"
+    String qtyPerBox = "";
+    if (rPbIndex != -1) {
+      // Look for pattern of 2 letters followed by numbers after R-Pb
+      RegExp qtyRegExp = RegExp(r'[A-Z]{2}(\d+)');
+      Match? qtyMatch = qtyRegExp.firstMatch(cleanLabel.substring(rPbIndex));
+      if (qtyMatch != null) {
+        qtyPerBox = qtyMatch.group(1) ?? ""; // Get just the number part
       }
-    } else {
+    }
+
+    // Extract lot number (last part)
+    String lotNumber = cleanLabel.split(' ').last;
+
+    // Extract PO number (10 digits before sequence number)
+    RegExp poRegExp = RegExp(r'(\d{10})');
+    Match? poMatch = poRegExp.firstMatch(cleanLabel);
+    String extractedPoNo = poMatch?.group(1) ?? '';
+
+    print('Extracted Item Name: $extractedItemName');
+    print('Extracted PO No: $extractedPoNo');
+    print('QTY per box: $qtyPerBox');
+    print('Lot Number: $lotNumber');
+
+    if (extractedItemName.trim() != itemName || extractedPoNo != poNo) {
       setState(() {
         isError = true;
-        print('Error: Not enough parts after splitting');
+        print('Validation Failed:');
+        print('Expected Item Name: $itemName, Got: ${extractedItemName.trim()}');
+        print('Expected PO No: $poNo, Got: $extractedPoNo');
+      });
+    } else {
+      setState(() {
+        isError = false;
+        lotNumberController.text = lotNumber;
+        qtyController.text = qtyPerBox;
       });
     }
   }
@@ -243,98 +229,6 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                           ),
                           onChanged: _validateArticleLabel,
-                          onFieldSubmitted: (_) async {
-                            // When Enter is pressed and there's no error, proceed
-                            if (!isError) {
-                              print('\n=== Article Label Processing (Enter pressed) ===');
-                              print('Item Name: $itemName');
-                              print('Starting database query...');
-                              
-                              // Get the item details from database to get the registered label content
-                              final items = await DatabaseHelper().getItems();
-                              print('Retrieved ${items.length} items from database');
-                              
-                              final matchingItem = items.firstWhere(
-                                (item) {
-                                  print('Checking item: ${item['itemCode']} against $itemName');
-                                  return item['itemCode'] == itemName;
-                                },
-                                orElse: () => <String, dynamic>{},
-                              );
-                              print('Found matching item: ${matchingItem.isNotEmpty}');
-                              print('Matching item details: $matchingItem');
-
-                              String labelContent = '';
-                              if (matchingItem.isNotEmpty) {
-                                final codes = matchingItem['codes'] as List;
-                                print('Found codes: $codes');
-                                
-                                // First try to find Counting code
-                                final countingCode = codes.firstWhere(
-                                  (code) => code['category'] == 'Counting',
-                                  orElse: () => <String, dynamic>{},
-                                );
-                                
-                                // If no Counting code, look for Non-Counting code
-                                final nonCountingCode = codes.firstWhere(
-                                  (code) => code['category'] == 'Non-Counting',
-                                  orElse: () => <String, dynamic>{},
-                                );
-                                
-                                String baseContent = '';
-                                if (countingCode.isNotEmpty) {
-                                  baseContent = countingCode['content'] ?? '';
-                                  print('Retrieved Base Label Content (Counting): $baseContent');
-                                } else if (nonCountingCode.isNotEmpty) {
-                                  baseContent = nonCountingCode['content'] ?? '';
-                                  print('Retrieved Base Label Content (Non-Counting): $baseContent');
-                                }
-                                
-                                // Combine with lot number based on category
-                                if (countingCode.isNotEmpty) {
-                                  // For Counting items, format lot number
-                                  String formattedLotNumber = lotNumberController.text.contains('-') 
-                                    ? lotNumberController.text.split('-').join('')
-                                    : lotNumberController.text;
-                                  labelContent = baseContent + formattedLotNumber;
-                                } else if (nonCountingCode.isNotEmpty) {
-                                  // For Non-Counting items, use original lot number
-                                  labelContent = baseContent + lotNumberController.text;
-                                }
-                                
-                                print('Base Content: $baseContent');
-                                print('Lot Number: ${lotNumberController.text}');
-                                print('Final Content to be passed: $labelContent');
-                              }
-
-                              // Save the article label data to database
-                              await DatabaseHelper().insertArticleLabel({
-                                'operatorScanId': operatorScanId,
-                                'articleLabel': articleLabelController.text,
-                                'lotNumber': lotNumberController.text,
-                                'qtyPerBox': qtyController.text,
-                                'content': labelContent,  // Use the combined content
-                                'createdAt': DateTime.now().toIso8601String(),
-                              });
-
-                              // Navigate to ScanItem page
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ScanItem(
-                                    scanData: {
-                                      'itemName': itemName,
-                                      'poNo': poNo,
-                                      'lotNumber': lotNumberController.text,
-                                      'content': labelContent,  // Use the combined content
-                                      'qtyPerBox': qtyController.text,
-                                      'operatorScanId': operatorScanId,
-                                      'totalQty': totalQty,
-                                    },
-                                  ),
-                                ),
-                              );
-                            }
-                          },
                         ),
                         const SizedBox(height: 16),
                         // Error message
