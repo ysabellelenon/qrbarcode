@@ -88,6 +88,20 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
       return code['hasSubLot'] == 1 || code['hasSubLot'] == true;
     });
 
+    // Format the timestamp
+    String lastUpdated = '';
+    if (item['lastUpdated'] != null) {
+      try {
+        final DateTime updateTime = DateTime.parse(item['lastUpdated']);
+        lastUpdated = '${updateTime.year}-${updateTime.month.toString().padLeft(2, '0')}-${updateTime.day.toString().padLeft(2, '0')} '
+            '${updateTime.hour.toString().padLeft(2, '0')}:${updateTime.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        lastUpdated = 'N/A';
+      }
+    } else {
+      lastUpdated = 'N/A';
+    }
+
     return Column(
       children: [
         Material(
@@ -144,6 +158,15 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                             ? (hasSubLotEnabled ? Colors.green : Colors.red)
                             : Colors.grey,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      lastUpdated,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
                       ),
                     ),
                   ),
@@ -419,6 +442,7 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                       const Expanded(child: Text('REV.')),
                                       const Expanded(child: Text('Category')),
                                       const Expanded(child: Text('Sub-Lot')),
+                                      const Expanded(child: Text('Last Updated')),
                                       const SizedBox(
                                           width: 100, child: Text('Actions')),
                                       const SizedBox(

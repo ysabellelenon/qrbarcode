@@ -112,24 +112,33 @@ class _ReviseSublotState extends State<ReviseSublot> {
 
   Future<void> _updateItem() async {
     try {
+      final now = DateTime.now().toIso8601String();
       // Update the allCodes with new sublot configurations
       final updatedCodes = widget.allCodes.map((code) {
         if (code['category'] == 'Counting') {
           return {
             ...code,
-            'hasSubLot': enableRules[code['content']] ?? false,
+            'hasSubLot': enableRules[code['content']] == true ? 1 : 0,
             'serialCount': selectedSerialCounts[code['content']] ?? '1',
+            'isActive': 1,
+            'lastUpdated': now,
           };
         }
-        return code;
+        return {
+          ...code,
+          'isActive': 1,
+          'lastUpdated': now,
+        };
       }).toList();
 
-      // Prepare the updated item data
+      // Prepare the complete updated item data
       final updatedItem = {
         'itemCode': widget.itemName,
         'revision': widget.revision,
         'codeCount': widget.allCodes.length.toString(),
         'codes': updatedCodes,
+        'isActive': 1,
+        'lastUpdated': now,
       };
 
       // Update the item in the database
@@ -143,7 +152,6 @@ class _ReviseSublotState extends State<ReviseSublot> {
           ),
         );
 
-        // Navigate back to ItemMasterlist
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

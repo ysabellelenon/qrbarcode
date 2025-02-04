@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -157,6 +157,19 @@ class DatabaseHelper {
           await db.execute('DROP TABLE IF EXISTS article_labels');
           await db.execute('DROP TABLE IF EXISTS scan_contents');
         }
+        if (oldVersion < 8) {
+          // Add new columns to items table
+          await db.execute('ALTER TABLE items ADD COLUMN lastUpdated DATETIME');
+          await db.execute('ALTER TABLE items ADD COLUMN isActive INTEGER DEFAULT 1');
+          
+          // Update existing records with default values
+          await db.execute('''
+            UPDATE items 
+            SET lastUpdated = createdAt,
+                isActive = 1
+            WHERE lastUpdated IS NULL
+          ''');
+        }
       },
       onOpen: (db) async {
         print('Database opened successfully');
@@ -184,7 +197,9 @@ class DatabaseHelper {
         itemCode TEXT,
         revision TEXT,
         codeCount TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        lastUpdated DATETIME,
+        isActive INTEGER DEFAULT 1
       )
     ''');
 
@@ -439,39 +454,46 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> updateItem(int itemId, Map<String, dynamic> item) async {
+  Future<void> updateItem(int id, Map<String, dynamic> item) async {
     final db = await database;
+    
+    try {
+      await db.transaction((txn) async {
+        // Update the main item
+        await txn.update(
+          'items',
+          {
+            'itemCode': item['itemCode'],
+            'revision': item['revision'],
+            'codeCount': item['codeCount'],
+            'lastUpdated': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [id],
+        );
 
-    await db.transaction((txn) async {
-      await txn.update(
-        'items',
-        {
-          'itemCode': item['itemCode'],
-          'revision': item['revision'],
-          'codeCount': item['codeCount'],
-        },
-        where: 'id = ?',
-        whereArgs: [itemId],
-      );
+        // Delete existing codes
+        await txn.delete(
+          'item_codes',
+          where: 'itemId = ?',
+          whereArgs: [id],
+        );
 
-      await txn.delete(
-        'item_codes',
-        where: 'itemId = ?',
-        whereArgs: [itemId],
-      );
-
-      for (var code in (item['codes'] as List)) {
-        final hasSubLot =
-            (code['hasSubLot'] == true || code['hasSubLot'] == 1) ? 1 : 0;
-        await txn.insert('item_codes', {
-          'itemId': itemId,
-          'category': code['category'],
-          'content': code['content'],
-          'hasSubLot': hasSubLot,
-          'serialCount': code['serialCount'],
-        });
-      }
-    });
+        // Insert new codes
+        for (var code in (item['codes'] as List)) {
+          await txn.insert('item_codes', {
+            'itemId': id,
+            'category': code['category'],
+            'content': code['content'],
+            'hasSubLot': code['hasSubLot'] is bool ? (code['hasSubLot'] ? 1 : 0) : code['hasSubLot'],
+            'serialCount': code['serialCount']?.toString() ?? '0',
+          });
+        }
+      });
+    } catch (e) {
+      print('Error in updateItem: $e');
+      throw e;
+    }
   }
 
   Future<void> deleteItems(List<int> ids) async {

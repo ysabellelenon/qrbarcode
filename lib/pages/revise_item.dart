@@ -345,19 +345,28 @@ class _ReviseItemState extends State<ReviseItem> {
 
   void _updateItem(List<Map<String, dynamic>> codes) async {
     try {
+      final now = DateTime.now().toIso8601String();
       // Prepare the complete updated item data
       final updatedItem = {
         'itemCode': _itemNameController.text,
         'revision': _selectedRevision,
         'codeCount': _selectedCodeCount,
-        'codes': codes,
+        'codes': codes.map((code) => {
+          'category': code['category'],
+          'content': code['content'],
+          'hasSubLot': code['hasSubLot'] ? 1 : 0,
+          'serialCount': code['serialCount'] ?? '0',
+          'isActive': 1,
+          'lastUpdated': now,
+        }).toList(),
+        'isActive': 1,
+        'lastUpdated': now,
       };
 
-      // Call the update method with complete item data
+      // Update the item in the database
       await DatabaseHelper().updateItem(widget.item['id'], updatedItem);
 
       if (mounted) {
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Item updated successfully'),
@@ -365,7 +374,6 @@ class _ReviseItemState extends State<ReviseItem> {
           ),
         );
 
-        // Navigate back to ItemMasterlist
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -374,7 +382,6 @@ class _ReviseItemState extends State<ReviseItem> {
         );
       }
     } catch (e) {
-      // Show error message if update fails
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
