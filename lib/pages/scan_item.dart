@@ -673,12 +673,35 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       } else {
-        // Non-counting item validation remains unchanged
+        // For non-counting items
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+        
         if (value != _displayContent) {
           result = 'No Good';
         } else {
           result = 'Good';
         }
+
+        // Calculate group information immediately
+        int previousScans = _tableData
+            .where((row) => 
+                row['result']?.isNotEmpty == true && 
+                _tableData.indexOf(row) < index)
+            .length;
+        
+        // Calculate current group number (1-based)
+        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+        
+        setState(() {
+          // Show row number if:
+          // 1. This is the first scan in a group, OR
+          // 2. Previous group is complete and this is a new scan
+          bool isFirstInGroup = previousScans % noOfCodes == 0;
+          bool previousGroupComplete = previousScans > 0 && previousScans % noOfCodes == 0;
+          
+          _tableData[index]['showRowNumber'] = isFirstInGroup;
+          _tableData[index]['rowNumber'] = currentGroup;
+        });
       }
     }
 
