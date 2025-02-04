@@ -372,28 +372,32 @@ class _ScanItemState extends State<ScanItem> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Information'),
-        content: const Text('QTY per box has been reached'),
-        actions: [
-          // Only show Scan New Article Label button
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => ArticleLabel(
-                    itemName: itemName,
-                    poNo: poNo,
-                    operatorScanId: operatorScanId,
-                    totalQty: totalQty,
-                    resumeData: widget.resumeData,
+      barrierDismissible: false, // Prevent dismissing by clicking outside
+      builder: (context) => WillPopScope( // Also prevent dismissing with back button
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: const Text('Information'),
+          content: const Text('QTY per box has been reached'),
+          actions: [
+            // Only show Scan New Article Label button
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => ArticleLabel(
+                      itemName: itemName,
+                      poNo: poNo,
+                      operatorScanId: operatorScanId,
+                      totalQty: totalQty,
+                      resumeData: widget.resumeData,
+                    ),
                   ),
-                ),
-              );
-            },
-            child: const Text('Scan New Article Label'),
-          ),
-        ],
+                );
+              },
+              child: const Text('Scan New Article Label'),
+            ),
+          ],
+        ),
       ),
     );
   }
