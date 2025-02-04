@@ -642,84 +642,43 @@ class _ScanItemState extends State<ScanItem> {
       bool isCountingItem = countingCode.isNotEmpty;
       
       if (isCountingItem) {
-        // Get the base label content that should be at the start
-        String baseContent = countingCode['content'] ?? '';
-        print('Base Label Content: $baseContent');
+        // Get the serial count for validation
+        int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
         
-        // Check if the scanned value starts with the exact base content
-        // First remove any spaces from both strings for comparison
-        String cleanedValue = value.replaceAll(' ', '');
-        String cleanedBaseContent = baseContent.replaceAll(' ', '');
+        // Get the base content (everything before the serial number)
+        String baseDisplayContent = _displayContent.substring(0, _displayContent.length - serialCount);
+        String scannedBaseContent = value.substring(0, value.length - serialCount);
         
-        if (!cleanedValue.startsWith(cleanedBaseContent)) {
-          print('Scanned content does not start with the correct base label content');
+        print('Base Display Content: "$baseDisplayContent"');
+        print('Scanned Base Content: "$scannedBaseContent"');
+        
+        // Exact comparison of base content
+        if (baseDisplayContent != scannedBaseContent) {
+          print('Base content mismatch');
           result = 'No Good';
         } else {
-          // Now check the lot number and serial part
-          String mainLotPart = lotNumber.split('-')[0]; // e.g., "241126"
-          String subLotPart = lotNumber.split('-')[1]; // e.g., "02"
-          // Convert sub-lot to number and back to string to remove leading zeros
-          int subLotNum = int.tryParse(subLotPart) ?? 0;
-          String normalizedSubLot = subLotNum.toString();
-          int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
-          
-          // Find where the lot number starts in the scanned value
-          int lotIndex = value.indexOf(mainLotPart);
-          if (lotIndex != -1) {
-            // Get the remaining digits after the lot number
-            String remainingDigits = value.substring(lotIndex + mainLotPart.length);
+          // Validate the serial part
+          String serialPart = value.substring(value.length - serialCount);
+          if (serialPart.length == serialCount) {
+            // Check for duplicates
+            bool isDuplicate = _tableData.any((row) {
+              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+              return row['content'] == value;
+            });
             
-            // Get the scanned sub-lot and normalize it (remove leading zeros)
-            String scannedSubLot = remainingDigits.substring(0, remainingDigits.length - serialCount);
-            int scannedSubLotNum = int.tryParse(scannedSubLot) ?? 0;
-            String normalizedScannedSubLot = scannedSubLotNum.toString();
-            
-            // Get the serial part
-            String serialPart = remainingDigits.substring(remainingDigits.length - serialCount);
-            
-            // Compare normalized sub-lot numbers and check serial part length
-            if (normalizedScannedSubLot == normalizedSubLot && serialPart.length == serialCount) {
-              // Check for duplicates
-              bool isDuplicate = _tableData.any((row) {
-                if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
-                return row['content'] == value;
-              });
-              
-              result = isDuplicate ? 'No Good' : 'Good';
-            }
+            result = isDuplicate ? 'No Good' : 'Good';
+          } else {
+            print('Serial part length mismatch');
+            result = 'No Good';
           }
         }
       } else {
-        // For Non-Counting items
-        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-        
-        // Check if the scanned value matches the display content
+        // Non-counting item validation remains unchanged
         if (value != _displayContent) {
           result = 'No Good';
         } else {
           result = 'Good';
         }
-
-        // Get total number of previous scans
-        int previousScans = _tableData
-            .where((row) => 
-                row['result']?.isNotEmpty == true && 
-                _tableData.indexOf(row) < index)
-            .length;
-
-        // Calculate current group number (1-based)
-        int currentGroup = (previousScans ~/ noOfCodes) + 1;
-
-        setState(() {
-          // Show row number if:
-          // 1. This is the first scan in a group, OR
-          // 2. Previous group is complete and this is a new scan
-          bool isFirstInGroup = previousScans % noOfCodes == 0;
-          bool previousGroupComplete = previousScans > 0 && previousScans % noOfCodes == 0;
-          
-          _tableData[index]['showRowNumber'] = isFirstInGroup || previousGroupComplete;
-          _tableData[index]['rowNumber'] = currentGroup;
-        });
       }
     }
 
