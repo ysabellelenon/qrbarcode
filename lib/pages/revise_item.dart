@@ -5,6 +5,7 @@ import '../database_helper.dart';
 import 'sublot_config.dart';
 import '../utils/logout_helper.dart';
 import '../widgets/code_container.dart';
+import 'revise_sublot.dart';
 
 class ReviseItem extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -284,62 +285,48 @@ class _ReviseItemState extends State<ReviseItem> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                onPressed: () async {
+                                onPressed: () {
                                   if (_formKey.currentState!.validate()) {
-                                    try {
-                                      // Gather data to update
-                                      final updatedItem = {
-                                        'itemCode': _itemNameController.text,
-                                        'revision': _selectedRevision,
-                                        'codeCount': _selectedCodeCount,
-                                        'codes': codeContainers.map((container) {
-                                          return {
-                                            'category':
-                                                container.selectedCategory,
-                                            'content':
-                                                container.labelController.text,
-                                            'hasSubLot':
-                                                container.hasSubLot,
-                                            'serialCount': container.serialCount,
-                                          };
-                                        }).toList(),
+                                    // Gather the codes data
+                                    final allCodes = codeContainers.map((container) {
+                                      return {
+                                        'category': container.selectedCategory,
+                                        'content': container.labelController.text,
+                                        'hasSubLot': container.hasSubLot,
+                                        'serialCount': container.serialCount,
                                       };
+                                    }).toList();
 
-                                      // Call the update method
-                                      await DatabaseHelper().updateItem(
-                                          widget.item['id'], updatedItem);
+                                    // Get only counting codes
+                                    final countingCodes = allCodes
+                                        .where((code) => code['category'] == 'Counting')
+                                        .map((code) => {
+                                              'category': code['category'].toString(),
+                                              'content': code['content'].toString(),
+                                            })
+                                        .toList();
 
-                                      if (mounted) {
-                                        // Show success message
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Item updated successfully'),
-                                            backgroundColor: Colors.green,
+                                    if (countingCodes.isNotEmpty) {
+                                      // Navigate to ReviseSublot if there are counting codes
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ReviseSublot(
+                                            itemId: widget.item['id'],
+                                            itemName: _itemNameController.text,
+                                            revision: _selectedRevision!,
+                                            countingCodes: countingCodes as List<Map<String, String>>,
+                                            allCodes: allCodes,
                                           ),
-                                        );
-
-                                        // Navigate back to ItemMasterlist with refresh flag
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => const ItemMasterlist(),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      // Show error message if update fails
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error updating item: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
+                                        ),
+                                      );
+                                    } else {
+                                      // If no counting codes, update directly
+                                      _updateItem(allCodes);
                                     }
                                   }
                                 },
-                                child: const Text('Save Changes'),
+                                child: const Text('Proceed'),
                               ),
                             ),
                           ],
@@ -354,5 +341,48 @@ class _ReviseItemState extends State<ReviseItem> {
         ],
       ),
     );
+  }
+
+  void _updateItem(List<Map<String, dynamic>> codes) async {
+    try {
+      // Prepare the complete updated item data
+      final updatedItem = {
+        'itemCode': _itemNameController.text,
+        'revision': _selectedRevision,
+        'codeCount': _selectedCodeCount,
+        'codes': codes,
+      };
+
+      // Call the update method with complete item data
+      await DatabaseHelper().updateItem(widget.item['id'], updatedItem);
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate back to ItemMasterlist
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ItemMasterlist(),
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error message if update fails
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating item: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
