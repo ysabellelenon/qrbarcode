@@ -120,6 +120,12 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _addRow() {
+    // Don't add new rows if QTY per box is reached
+    if (_isQtyPerBoxReached) {
+      _showQtyReachedDialog();
+      return;
+    }
+
     setState(() {
       _tableData.add({
         'content': '',
@@ -287,8 +293,20 @@ class _ScanItemState extends State<ScanItem> {
         _isTotalQtyReached = totalCompleteGroups >= totalQty;
         
         // Check if QTY per box is reached
-        int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 60;
+        int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
         _isQtyPerBoxReached = totalCompleteGroups > 0 && totalCompleteGroups == targetQtyPerBox;
+
+        // Remove the empty row if QTY is reached
+        if ((_isQtyPerBoxReached || _isTotalQtyReached) && _tableData.isNotEmpty) {
+          // Remove the last row if it's empty
+          if (_tableData.last['content']?.isEmpty == true) {
+            _tableData.removeLast();
+            if (_focusNodes.isNotEmpty) {
+              _focusNodes.last.dispose();
+              _focusNodes.removeLast();
+            }
+          }
+        }
       });
       
       // Show QTY per box dialog if reached and total QTY not reached
@@ -322,12 +340,20 @@ class _ScanItemState extends State<ScanItem> {
 
         _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
 
-        // Only set QTY per box reached if total QTY is not reached
+        // Check if QTY per box is reached
         if (targetQty > 0 && populatedRowCount >= targetQty && !_isTotalQtyReached) {
           _isQtyPerBoxReached = true;
-          if (!_hasShownQtyReachedDialog) {
-            _hasShownQtyReachedDialog = true;
-            _showQtyReachedDialog();
+        }
+
+        // Remove the empty row if QTY is reached
+        if ((_isQtyPerBoxReached || _isTotalQtyReached) && _tableData.isNotEmpty) {
+          // Remove the last row if it's empty
+          if (_tableData.last['content']?.isEmpty == true) {
+            _tableData.removeLast();
+            if (_focusNodes.isNotEmpty) {
+              _focusNodes.last.dispose();
+              _focusNodes.removeLast();
+            }
           }
         }
       });
@@ -610,6 +636,12 @@ class _ScanItemState extends State<ScanItem> {
     print('Label Content from Database: $_labelContent');
     print('Scanned Value: $value');
     print('Item Category: $_itemCategory');
+
+    // If QTY per box is reached, don't allow new scans
+    if (_isQtyPerBoxReached) {
+      _showQtyReachedDialog();
+      return;
+    }
 
     // If this row already has a result, don't validate again
     if (_tableData[index]['result']?.isNotEmpty == true) {
@@ -1249,8 +1281,8 @@ class _ScanItemState extends State<ScanItem> {
                                   onPressed: _handleReviewSummary,
                                   child: const Text('Review Summary'),
                                 )
-                              else
-                                // Show Add Row button
+                              else if (!_isQtyPerBoxReached && !_isTotalQtyReached)
+                                // Only show Add Row button if neither QTY limit is reached
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.deepPurple,
