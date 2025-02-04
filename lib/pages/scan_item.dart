@@ -350,30 +350,23 @@ class _ScanItemState extends State<ScanItem> {
         title: const Text('Information'),
         content: const Text('QTY per box has been reached'),
         actions: [
+          // Only show Scan New Article Label button
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK'),
-          ),
-          // Only show Scan New Article Label button if total QTY is not reached
-          if (!_isTotalQtyReached)
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => ArticleLabel(
-                      itemName: itemName,
-                      poNo: poNo,
-                      operatorScanId: operatorScanId,
-                      totalQty: totalQty,
-                      resumeData: widget.resumeData,
-                    ),
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => ArticleLabel(
+                    itemName: itemName,
+                    poNo: poNo,
+                    operatorScanId: operatorScanId,
+                    totalQty: totalQty,
+                    resumeData: widget.resumeData,
                   ),
-                );
-              },
-              child: const Text('Scan New Article Label'),
-            ),
+                ),
+              );
+            },
+            child: const Text('Scan New Article Label'),
+          ),
         ],
       ),
     );
