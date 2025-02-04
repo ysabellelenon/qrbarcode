@@ -232,36 +232,68 @@ class _ScanItemState extends State<ScanItem> {
 
   void _checkAndUpdateQtyStatus() async {
     if (_itemCategory == 'Non-Counting') {
-      // For Non-Counting items, count by groups
-      int noOfCodes = int.parse((await DatabaseHelper().getItems())
-          .firstWhere((item) => item['itemCode'] == itemName)['codeCount'] ?? '1');
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == itemName,
+        orElse: () => {},
+      );
+      int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
       
-      // Get total scans
-      int totalScans = _tableData
-          .where((row) => row['result']?.isNotEmpty == true)
-          .length;
+      // Count complete groups and their results
+      int goodGroups = 0;
+      int noGoodGroups = 0;
       
-      // Calculate number of complete groups
-      int groupCount = totalScans ~/ noOfCodes;
+      // Initialize groups map with empty lists
+      Map<int, List<Map<String, dynamic>>> groups = {};
+      
+      // Group scans by their position in sequence
+      for (int i = 0; i < _tableData.length; i++) {
+        if (_tableData[i]['result']?.isNotEmpty == true) {
+          int currentGroup = i ~/ noOfCodes;
+          // Initialize the list for this group if it doesn't exist
+          groups.putIfAbsent(currentGroup, () => <Map<String, dynamic>>[]);
+          // Now we can safely add to the list
+          groups[currentGroup]!.add(_tableData[i]);
+        }
+      }
+      
+      // Evaluate each complete group
+      groups.forEach((groupIndex, scans) {
+        if (scans.length == noOfCodes) {
+          // A group is "Good" only if all scans in the group are "Good"
+          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
+          if (isGroupGood) {
+            goodGroups++;
+          } else {
+            noGoodGroups++;
+          }
+        }
+      });
       
       setState(() {
+        // Update the good/no good counts based on complete groups
+        goodCountController.text = goodGroups.toString();
+        noGoodCountController.text = noGoodGroups.toString();
+        
         // Update inspection quantity based on complete groups
-        inspectionQtyController.text = groupCount.toString();
+        int totalCompleteGroups = goodGroups + noGoodGroups;
+        inspectionQtyController.text = totalCompleteGroups.toString();
         
         // Update QTY per box based on complete groups
-        qtyPerBoxController.text = groupCount.toString();
+        qtyPerBoxController.text = totalCompleteGroups.toString();
         
         // Check if total quantity is reached
         int totalQty = int.tryParse(totalQtyController.text) ?? 0;
-        _isTotalQtyReached = groupCount >= totalQty;
+        _isTotalQtyReached = totalCompleteGroups >= totalQty;
         
         // Check if QTY per box is reached
         int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 60;
-        _isQtyPerBoxReached = groupCount > 0 && groupCount == targetQtyPerBox;
+        _isQtyPerBoxReached = totalCompleteGroups > 0 && totalCompleteGroups == targetQtyPerBox;
       });
       
-      // Only show QTY per box dialog if total QTY is not reached
-      if (_isQtyPerBoxReached && !_isTotalQtyReached) {
+      // Show QTY per box dialog if reached and total QTY not reached
+      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+        _hasShownQtyReachedDialog = true;
         _showQtyReachedDialog();
       }
       
