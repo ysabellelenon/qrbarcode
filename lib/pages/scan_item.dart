@@ -973,55 +973,23 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    // Only respond to direct button clicks
-                    if (FocusScope.of(context).hasFocus) return;
-                    
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => WillPopScope(
-                        onWillPop: () async => false,
-                        child: AlertDialog(
-                          title: const Text('Emergency Stop'),
-                          content: const Text('Are you sure you want to stop the operation?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => EmergencyStop(
-                                    itemName: itemName,
-                                    lotNumber: lotNumber,
-                                    content: _labelContent ?? content,
-                                    poNo: poNo,
-                                    quantity: qtyPerBoxController.text,
-                                    tableData: _tableData
-                                        .where((item) => item['content']?.isNotEmpty == true)
-                                        .map((item) => Map<String, dynamic>.from(item))
-                                        .toList(),
-                                    username: 'operator',
-                                  ),
-                                );
-                              },
-                              child: const Text('Confirm Stop'),
-                            ),
-                          ],
-                        ),
+                      builder: (context) => EmergencyStop(
+                        itemName: itemName,
+                        lotNumber: lotNumber,
+                        content: _labelContent ?? content,
+                        poNo: poNo,
+                        quantity: qtyPerBoxController.text,
+                        tableData: _tableData
+                            .where((item) => item['content']?.isNotEmpty == true)
+                            .map((item) => Map<String, dynamic>.from(item))
+                            .toList(),
+                        username: 'operator',
                       ),
                     );
                   },
-                  // Prevent keyboard focus
-                  focusNode: AlwaysDisabledFocusNode(),
                   child: const Text('Emergency'),
                 ),
               ],
