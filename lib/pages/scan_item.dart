@@ -1209,10 +1209,10 @@ class _ScanItemState extends State<ScanItem> {
                             const SizedBox(height: 16),
                             Row(
                               children: [
-                                const SizedBox(
+                                SizedBox(
                                   width: 100,
                                   child: SelectableText(
-                                    'QTY per box',
+                                    'QTY per box (${widget.scanData?['qtyPerBox'] ?? ''})',
                                     style: TextStyle(fontSize: 16),
                                   ),
                                 ),
