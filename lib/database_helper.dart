@@ -281,6 +281,21 @@ class DatabaseHelper {
         user_id INTEGER
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS scans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operatorScanId INTEGER,
+        content TEXT,
+        result TEXT,
+        groupNumber INTEGER,
+        groupPosition INTEGER,
+        codesInGroup INTEGER,
+        sessionId TEXT,
+        timestamp TEXT,
+        FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _addNewTablesIfNotExist(Database db) async {
@@ -683,28 +698,13 @@ class DatabaseHelper {
   Future<int> getTotalScansForItem(String itemName) async {
     final db = await database;
     final result = await db.rawQuery('''
-      WITH GroupedScans AS (
-        SELECT 
-          s.groupNumber,
-          COUNT(*) as scans_in_group
-        FROM individual_scans s
-        JOIN scanning_sessions ss ON s.sessionId = ss.id
-        WHERE ss.itemName = ?
-        GROUP BY s.groupNumber
-      )
-      SELECT COUNT(*) as completed_groups
-      FROM GroupedScans
-      WHERE scans_in_group = (
-        SELECT CAST(codeCount AS INTEGER)
-        FROM items 
-        WHERE itemCode = ?
-      )
-    ''', [itemName, itemName]);
+      SELECT COUNT(DISTINCT groupNumber) as group_count
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
+    ''', [itemName]);
 
-    // Print debug information
-    print('Total completed groups for $itemName: ${result.first['completed_groups']}');
-    
-    return result.first['completed_groups'] as int? ?? 0;
+    return result.first['group_count'] as int? ?? 0;
   }
 
   Future<int> getHistoricalScansCount(String itemName) async {
@@ -725,6 +725,7 @@ class DatabaseHelper {
     int? groupNumber,
     int? groupPosition,
     int? codesInGroup,
+    String? sessionId,
   }) async {
     final db = await database;
     await db.insert(
@@ -736,7 +737,6 @@ class DatabaseHelper {
         'groupNumber': groupNumber,
         'created_at': DateTime.now().toIso8601String(),
       },
-      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -750,46 +750,41 @@ class DatabaseHelper {
     );
   }
 
-  Future<Map<String, int>> getTotalGoodNoGoodCounts(String itemName) async {
+  Future<Map<String, int>> getTotalGoodNoGoodCounts(
+    String itemName, {
+    String? excludeSessionId,
+  }) async {
     final db = await database;
-    final result = await db.rawQuery('''
+    
+    String query = '''
       WITH GroupedScans AS (
         SELECT 
+          s.sessionId,
           s.groupNumber,
-          COUNT(*) as scans_in_group,
-          MIN(s.result) as group_result
+          CASE 
+            WHEN COUNT(CASE WHEN result = 'No Good' THEN 1 END) > 0 THEN 'No Good'
+            ELSE 'Good'
+          END as group_result
         FROM individual_scans s
         JOIN scanning_sessions ss ON s.sessionId = ss.id
         WHERE ss.itemName = ?
-        GROUP BY s.groupNumber
+        GROUP BY s.sessionId, s.groupNumber
       )
       SELECT 
-        SUM(CASE 
-          WHEN scans_in_group = (
-            SELECT CAST(codeCount AS INTEGER)
-            FROM items 
-            WHERE itemCode = ?
-          ) AND group_result = 'Good' 
-          THEN 1 
-          ELSE 0 
-        END) as goodCount,
-        SUM(CASE 
-          WHEN scans_in_group = (
-            SELECT CAST(codeCount AS INTEGER)
-            FROM items 
-            WHERE itemCode = ?
-          ) AND group_result != 'Good' 
-          THEN 1 
-          ELSE 0 
-        END) as noGoodCount
+        SUM(CASE WHEN group_result = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN group_result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
       FROM GroupedScans
-    ''', [itemName, itemName, itemName]);
+    ''';
 
-    // Print debug information
-    print('Total Good/No Good counts for $itemName:');
-    print('Good count: ${result.first['goodCount']}');
-    print('No Good count: ${result.first['noGoodCount']}');
+    List<dynamic> args = [itemName];
 
+    if (excludeSessionId != null) {
+      query += ' WHERE sessionId != ?';
+      args.add(excludeSessionId);
+    }
+
+    final result = await db.rawQuery(query, args);
+    
     return {
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
@@ -899,5 +894,38 @@ class DatabaseHelper {
     ''', [operatorScanId, operatorScanId, codesPerGroup]);
 
     return result.first['completed_groups'] as int? ?? 0;
+  }
+
+  // Add this helper method to get current session group counts
+  Future<Map<String, int>> getCurrentSessionCounts(
+    String itemName,
+    String sessionId,
+  ) async {
+    final db = await database;
+    
+    final result = await db.rawQuery('''
+      WITH GroupedScans AS (
+        SELECT 
+          groupNumber,
+          CASE 
+            WHEN COUNT(CASE WHEN result = 'No Good' THEN 1 END) > 0 THEN 'No Good'
+            ELSE 'Good'
+          END as group_result
+        FROM individual_scans
+        WHERE sessionId = ?
+        GROUP BY groupNumber
+      )
+      SELECT 
+        COUNT(DISTINCT groupNumber) as group_count,
+        SUM(CASE WHEN group_result = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN group_result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+      FROM GroupedScans
+    ''', [sessionId]);
+    
+    return {
+      'groupCount': result.first['group_count'] as int? ?? 0,
+      'goodCount': result.first['goodCount'] as int? ?? 0,
+      'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
+    };
   }
 }

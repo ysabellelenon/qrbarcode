@@ -68,6 +68,8 @@ class _ScanItemState extends State<ScanItem> {
   int get totalQty =>
       widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
 
+  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+
   // Add this method to convert sub-lot numbers
   String _convertSubLotNumber(String lotNumber) {
     if (!_hasSubLotRules || lotNumber.isEmpty) return lotNumber;
@@ -101,14 +103,28 @@ class _ScanItemState extends State<ScanItem> {
   // Add new method to fetch total counts
   Future<void> _updateTotalGoodNoGoodCounts() async {
     try {
-      final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
-      print('Updating Good/No Good counts:');
-      print('Good: ${counts['goodCount']}');
-      print('No Good: ${counts['noGoodCount']}');
+      // Get historical counts
+      final historicalCounts = await DatabaseHelper().getTotalGoodNoGoodCounts(
+        itemName,
+        excludeSessionId: _sessionId,
+      );
+      
+      // Get current session counts
+      final currentCounts = await DatabaseHelper().getCurrentSessionCounts(
+        itemName,
+        _sessionId,
+      );
       
       setState(() {
-        goodCountController.text = counts['goodCount'].toString();
-        noGoodCountController.text = counts['noGoodCount'].toString();
+        goodCountController.text = 
+          ((historicalCounts['goodCount'] ?? 0) + (currentCounts['goodCount'] ?? 0)).toString();
+        noGoodCountController.text = 
+          ((historicalCounts['noGoodCount'] ?? 0) + (currentCounts['noGoodCount'] ?? 0)).toString();
+        
+        // Update inspection QTY with group count
+        inspectionQtyController.text = 
+          ((historicalCounts['goodCount'] ?? 0) + (historicalCounts['noGoodCount'] ?? 0) + 
+           (currentCounts['groupCount'] ?? 0)).toString();
       });
     } catch (e) {
       print('Error updating total Good/No Good counts: $e');
@@ -117,14 +133,24 @@ class _ScanItemState extends State<ScanItem> {
 
   Future<void> _updateTotalInspectionQty() async {
     try {
-      // Get total completed groups for this item
-      final completedGroups = await DatabaseHelper().getTotalScansForItem(itemName);
+      // Get historical completed groups for this item
+      final historicalGroups = await DatabaseHelper().getTotalScansForItem(itemName);
+      
+      // Count current groups (not individual scans)
+      Set<dynamic> uniqueGroups = _tableData
+        .where((item) => item['result']?.isNotEmpty == true)
+        .map((item) => item['groupNumber'] ?? item)
+        .toSet();
+      final currentGroups = uniqueGroups.length;
       
       print('Updating Inspection QTY:');
-      print('Completed groups: $completedGroups');
+      print('Historical groups: $historicalGroups');
+      print('Current groups: $currentGroups');
 
       setState(() {
-        inspectionQtyController.text = completedGroups.toString();
+        // Total inspection QTY is historical + current groups
+        inspectionQtyController.text = 
+          ((historicalGroups ?? 0) + currentGroups).toString();
       });
     } catch (e) {
       print('Error updating total inspection quantity: $e');
@@ -251,98 +277,32 @@ class _ScanItemState extends State<ScanItem> {
 
   void _checkAndUpdateQtyStatus() async {
     try {
-      if (_itemCategory == 'Non-Counting') {
-        final items = await DatabaseHelper().getItems();
-        final matchingItem = items.firstWhere(
-          (item) => item['itemCode'] == itemName,
-          orElse: () => {},
-        );
-        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+      int currentGroupCount = _getCurrentGroupCount();
+      
+      setState(() {
+        // Update QTY per box with current group count
+        qtyPerBoxController.text = currentGroupCount.toString();
 
-        // Add try-catch around database operation
-        int completedGroups = 0;
-        try {
-          completedGroups = await DatabaseHelper()
-              .getCompletedGroupsCount(operatorScanId, noOfCodes);
-        } catch (e) {
-          print('Error getting completed groups: $e');
-          // Set default value if database operation fails
-          completedGroups = 0;
-        }
-        
-        setState(() {
-          // Update inspection quantity based on completed groups
-          inspectionQtyController.text = completedGroups.toString();
-          
-          // Update QTY per box
-          qtyPerBoxController.text = completedGroups.toString();
+        // Check if QTY per box is reached
+        String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
+        int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
+        _isQtyPerBoxReached = targetQty > 0 && currentGroupCount >= targetQty;
 
-          // Check if total quantity is reached
-          int totalQty = int.tryParse(totalQtyController.text) ?? 0;
-          _isTotalQtyReached = completedGroups >= totalQty;
+        // Check if total QTY has been reached
+        int totalInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+        int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+        _isTotalQtyReached = totalInspectionQty >= totalTargetQty;
+      });
 
-          // Check if QTY per box is reached
-          int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
-          _isQtyPerBoxReached = completedGroups > 0 && completedGroups >= targetQtyPerBox;
-        });
+      // Show dialogs if needed
+      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+        _hasShownQtyReachedDialog = true;
+        _showQtyReachedDialog();
+      }
 
-        // Show appropriate dialogs
-        if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;
-          _showQtyReachedDialog();
-        }
-
-        if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;
-          _showTotalQtyReachedDialog();
-        }
-      } else {
-        // For Counting items - keep existing logic
-        int populatedRowCount = _tableData
-            .where((data) => data['content']?.isNotEmpty == true)
-            .length;
-
-        setState(() {
-          // Update QTY per box
-          qtyPerBoxController.text = populatedRowCount.toString();
-
-          // Check if we've reached the QTY per box
-          String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
-          int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-
-          // Check if total QTY has been reached
-          int currentInspectionQty =
-              int.tryParse(inspectionQtyController.text) ?? 0;
-          int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
-
-          _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
-
-          // Check if QTY per box is reached
-          if (targetQty > 0 &&
-              populatedRowCount >= targetQty &&
-              !_isTotalQtyReached) {
-            _isQtyPerBoxReached = true;
-          }
-
-          // Remove the empty row if QTY is reached
-          if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
-              _tableData.isNotEmpty) {
-            // Remove the last row if it's empty
-            if (_tableData.last['content']?.isEmpty == true) {
-              _tableData.removeLast();
-              if (_focusNodes.isNotEmpty) {
-                _focusNodes.last.dispose();
-                _focusNodes.removeLast();
-              }
-            }
-          }
-        });
-
-        // Show total QTY dialog if reached
-        if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-          _hasShownQtyReachedDialog = true;
-          _showTotalQtyReachedDialog();
-        }
+      if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+        _hasShownQtyReachedDialog = true;
+        _showTotalQtyReachedDialog();
       }
     } catch (e) {
       print('Error in _checkAndUpdateQtyStatus: $e');
@@ -778,8 +738,9 @@ class _ScanItemState extends State<ScanItem> {
           value,
           result,
           groupNumber: currentGroup,
-          groupPosition: positionInGroup + 1, // Convert to 1-based position
+          groupPosition: positionInGroup + 1,
           codesInGroup: noOfCodes,
+          sessionId: _sessionId,
         );
       } else {
         // For counting items, no group information needed
@@ -787,6 +748,7 @@ class _ScanItemState extends State<ScanItem> {
           operatorScanId,
           value,
           result,
+          sessionId: _sessionId,
         );
       }
 
@@ -796,8 +758,17 @@ class _ScanItemState extends State<ScanItem> {
         _tableData[index]['groupNumber'] = _itemCategory == 'Non-Counting'
             ? (index ~/ int.parse(matchingItem['codeCount'] ?? '1')) + 1
             : null;
+
+        // Update QTY per box count
+        int completedScans = _tableData.where((item) => 
+          item['result']?.isNotEmpty == true).length;
+        qtyPerBoxController.text = completedScans.toString();
+        
+        // Update inspection QTY
+        inspectionQtyController.text = completedScans.toString();
       });
 
+      // Update totals after the state is updated
       await _updateTotalInspectionQty();
       await _updateTotalGoodNoGoodCounts();
       _checkAndUpdateQtyStatus();
@@ -1018,6 +989,11 @@ class _ScanItemState extends State<ScanItem> {
                       // Add a small delay to prevent accidental triggers
                       Future.delayed(const Duration(milliseconds: 100), () {
                         if (mounted) {
+                          // Calculate progress info
+                          final int currentQty = int.tryParse(qtyPerBoxController.text) ?? 0;
+                          final int targetQty = int.tryParse(widget.scanData?['qtyPerBox'] ?? '0') ?? 0;
+                          final bool isIncomplete = currentQty < targetQty;
+                          
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -1032,6 +1008,8 @@ class _ScanItemState extends State<ScanItem> {
                                   .map((item) => Map<String, dynamic>.from(item))
                                   .toList(),
                               username: 'operator',
+                              isIncomplete: isIncomplete, // Add this flag
+                              targetQty: targetQty,       // Add target quantity info
                             ),
                           );
                         }
@@ -1446,6 +1424,25 @@ class _ScanItemState extends State<ScanItem> {
     }
     _contentControllers[index].text = _tableData[index]['content'] ?? '';
     return _contentControllers[index];
+  }
+
+  // Add this helper method to get the current group count
+  int _getCurrentGroupCount() {
+    if (_itemCategory == 'Non-Counting') {
+      // For non-counting items, use the No. column to count groups
+      return _tableData
+        .where((item) => item['result']?.isNotEmpty == true)
+        .map((item) => item['rowNumber'] ?? 0)
+        .toSet()
+        .length;
+    } else {
+      // For counting items, count rows with the same No. as one group
+      return _tableData
+        .where((item) => item['result']?.isNotEmpty == true)
+        .map((item) => item['No.'] ?? item['rowNumber'])
+        .toSet()
+        .length;
+    }
   }
 }
 

@@ -16,6 +16,8 @@ class EmergencyStop extends StatefulWidget {
   final String quantity;
   final List<Map<String, dynamic>> tableData;
   final String username;
+  final bool isIncomplete;
+  final int targetQty;
 
   const EmergencyStop({
     Key? key,
@@ -26,6 +28,8 @@ class EmergencyStop extends StatefulWidget {
     required this.quantity,
     required this.tableData,
     required this.username,
+    this.isIncomplete = false,
+    this.targetQty = 0,
   }) : super(key: key);
 
   @override
