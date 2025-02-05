@@ -388,7 +388,6 @@ class _ScanItemState extends State<ScanItem> {
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
-            // Only show Scan New Article Label button
             TextButton(
               onPressed: () {
                 Navigator.of(context).pushReplacement(
@@ -399,6 +398,7 @@ class _ScanItemState extends State<ScanItem> {
                       operatorScanId: operatorScanId,
                       totalQty: totalQty,
                       resumeData: widget.resumeData,
+                      hideBackButton: true,
                     ),
                   ),
                 );
@@ -512,6 +512,11 @@ class _ScanItemState extends State<ScanItem> {
                     data['content'] = value;
                   });
                 },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-Z0-9\-_.*]')),
+                ],
+                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
@@ -596,11 +601,18 @@ class _ScanItemState extends State<ScanItem> {
                     data['content'] = value;
                   });
                 },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-Z0-9\-_.*]')),
+                ],
+                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
                       !(data['isLocked'] == true)) {
-                    _validateContent(value, index);
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      _validateContent(value, index);
+                    });
                   }
                 },
                 decoration: InputDecoration(
@@ -756,11 +768,33 @@ class _ScanItemState extends State<ScanItem> {
 
     // Save to database and update UI
     try {
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        result,
-      );
+      if (_itemCategory == 'Non-Counting') {
+        // Calculate current group number
+        int previousScans = _tableData
+            .where((row) =>
+                row['result']?.isNotEmpty == true &&
+                _tableData.indexOf(row) < index)
+            .length;
+
+        // Get noOfCodes from matchingItem
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+
+        // Save to database with group number
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+          groupNumber: currentGroup,
+        );
+      } else {
+        // For counting items, no group number needed
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+        );
+      }
 
       setState(() {
         _tableData[index]['result'] = result;
@@ -1387,6 +1421,7 @@ class _ScanItemState extends State<ScanItem> {
                                           operatorScanId: operatorScanId,
                                           totalQty: totalQty,
                                           resumeData: widget.resumeData,
+                                          hideBackButton: true,
                                         ),
                                       ),
                                     );

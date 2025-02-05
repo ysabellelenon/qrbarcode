@@ -9,6 +9,7 @@ class ArticleLabel extends StatefulWidget {
   final int? operatorScanId;
   final int? totalQty;
   final Map<String, dynamic>? resumeData;
+  final bool hideBackButton;
 
   const ArticleLabel({
     Key? key,
@@ -17,6 +18,7 @@ class ArticleLabel extends StatefulWidget {
     this.operatorScanId,
     this.totalQty,
     this.resumeData,
+    this.hideBackButton = false,
   }) : super(key: key);
 
   @override
@@ -151,17 +153,19 @@ class _ArticleLabelState extends State<ArticleLabel> {
             ),
           ),
 
-          // Back Button
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Back'),
+          // Conditionally show Back Button
+          if (!widget.hideBackButton) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Back'),
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 20),
 
           // Heading

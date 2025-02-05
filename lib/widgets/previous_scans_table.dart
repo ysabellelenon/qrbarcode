@@ -158,6 +158,17 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
     await _loadHistoricalData();
   }
 
+  String formatDate(String? dateStr) {
+    if (dateStr == null) return 'N/A';
+    try {
+      final DateTime date = DateTime.parse(dateStr);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+          '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Invalid Date';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -223,58 +234,33 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                           ),
                         ),
                         child: DataTable(
-                          columns: [
-                            DataColumn(
-                              label: const SelectableText('Date'),
-                              onSort: (_, __) => _sort<String>(
-                                  'created_at', (item) => item['created_at']),
-                            ),
-                            DataColumn(
-                              label: const SelectableText('Item Name'),
-                              onSort: (_, __) => _sort<String>(
-                                  'itemName', (item) => item['itemName'] ?? ''),
-                            ),
-                            DataColumn(
-                              label: const SelectableText('PO No'),
-                              onSort: (_, __) => _sort<String>(
-                                  'poNo', (item) => item['poNo'] ?? ''),
-                            ),
-                            DataColumn(
-                              label: const SelectableText('Content'),
-                              onSort: (_, __) => _sort<String>(
-                                  'content', (item) => item['content'] ?? ''),
-                            ),
-                            DataColumn(
-                              label: const SelectableText('Result'),
-                              onSort: (_, __) => _sort<String>(
-                                  'result', (item) => item['result'] ?? ''),
-                            ),
+                          columns: const [
+                            DataColumn(label: Text('No.')),
+                            DataColumn(label: Text('Content')),
+                            DataColumn(label: Text('Result')),
+                            DataColumn(label: Text('Date')),
                           ],
-                          rows: _getFilteredData().map((item) {
-                            final DateTime createdAt =
-                                DateTime.parse(item['created_at']);
-                            final formattedDate =
-                                '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} '
-                                '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}:${createdAt.second.toString().padLeft(2, '0')}';
+                          rows: _getFilteredData().map((scan) {
+                            // For the No. column, use display_group_number if available
+                            String displayNumber = '';
+                            if (scan['display_group_number'] != null) {
+                              displayNumber = scan['display_group_number'].toString();
+                            }
 
                             return DataRow(
                               cells: [
-                                DataCell(SelectableText(formattedDate)),
+                                DataCell(Text(displayNumber)),
+                                DataCell(Text(scan['content'] ?? '')),
                                 DataCell(
-                                    SelectableText(item['itemName'] ?? '')),
-                                DataCell(SelectableText(item['poNo'] ?? '')),
-                                DataCell(SelectableText(item['content'] ?? '')),
-                                DataCell(
-                                  SelectableText(
-                                    item['result'] ?? '',
+                                  Text(
+                                    scan['result'] ?? '',
                                     style: TextStyle(
-                                      color: item['result'] == 'Good'
-                                          ? Colors.green
-                                          : Colors.red,
+                                      color: scan['result'] == 'Good' ? Colors.green : Colors.red,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
+                                DataCell(Text(formatDate(scan['created_at']))),
                               ],
                             );
                           }).toList(),
