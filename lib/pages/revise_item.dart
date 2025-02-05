@@ -287,11 +287,37 @@ class _ReviseItemState extends State<ReviseItem> {
                                 ),
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
+                                    bool allCodesValid = true;
+
+                                    for (var container in codeContainers) {
+                                      String? category = selectedCategories[
+                                          container.codeNumber];
+                                      if (category == null ||
+                                          (category != 'Counting' &&
+                                              category != 'Non-Counting')) {
+                                        allCodesValid = false;
+                                        break;
+                                      }
+                                    }
+
+                                    if (!allCodesValid) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Please select "Counting" or "Non-Counting" for each code.'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
                                     // Gather the codes data
-                                    final allCodes = codeContainers.map((container) {
+                                    final allCodes =
+                                        codeContainers.map((container) {
                                       return {
                                         'category': container.selectedCategory,
-                                        'content': container.labelController.text,
+                                        'content':
+                                            container.labelController.text,
                                         'hasSubLot': container.hasSubLot,
                                         'serialCount': container.serialCount,
                                       };
@@ -299,10 +325,13 @@ class _ReviseItemState extends State<ReviseItem> {
 
                                     // Get only counting codes
                                     final countingCodes = allCodes
-                                        .where((code) => code['category'] == 'Counting')
+                                        .where((code) =>
+                                            code['category'] == 'Counting')
                                         .map((code) => {
-                                              'category': code['category'].toString(),
-                                              'content': code['content'].toString(),
+                                              'category':
+                                                  code['category'].toString(),
+                                              'content':
+                                                  code['content'].toString(),
                                             })
                                         .toList();
 
@@ -315,7 +344,8 @@ class _ReviseItemState extends State<ReviseItem> {
                                             itemId: widget.item['id'],
                                             itemName: _itemNameController.text,
                                             revision: _selectedRevision!,
-                                            countingCodes: countingCodes as List<Map<String, String>>,
+                                            countingCodes: countingCodes
+                                                as List<Map<String, String>>,
                                             allCodes: allCodes,
                                           ),
                                         ),
@@ -351,14 +381,16 @@ class _ReviseItemState extends State<ReviseItem> {
         'itemCode': _itemNameController.text,
         'revision': _selectedRevision,
         'codeCount': _selectedCodeCount,
-        'codes': codes.map((code) => {
-          'category': code['category'],
-          'content': code['content'],
-          'hasSubLot': code['hasSubLot'] ? 1 : 0,
-          'serialCount': code['serialCount'] ?? '0',
-          'isActive': 1,
-          'lastUpdated': now,
-        }).toList(),
+        'codes': codes
+            .map((code) => {
+                  'category': code['category'],
+                  'content': code['content'],
+                  'hasSubLot': code['hasSubLot'] ? 1 : 0,
+                  'serialCount': code['serialCount'] ?? '0',
+                  'isActive': 1,
+                  'lastUpdated': now,
+                })
+            .toList(),
         'isActive': 1,
         'lastUpdated': now,
       };

@@ -50,6 +50,25 @@ class _RegisterItemState extends State<RegisterItem> {
 
   void _handleSubmit() {
     if (_formKey.currentState!.validate()) {
+      bool allCodesValid = true;
+
+      for (var container in codeContainers) {
+        String? category = selectedCategories[container.codeNumber];
+        if (category == null || (category != 'Counting' && category != 'Non-Counting')) {
+          allCodesValid = false;
+          break;
+        }
+      }
+
+      if (!allCodesValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please select "Counting" or "Non-Counting" for each code.'),
+          ),
+        );
+        return;
+      }
+
       final allCodes = codeContainers
           .map((container) => {
                 'category': selectedCategories[container.codeNumber] ?? '',
