@@ -49,19 +49,27 @@ class _LoginPageState extends State<LoginPage> {
           password,
         );
 
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+        if (user != null) {
+          // Store the current user ID
+          await DatabaseHelper().setCurrentUserId(user['id'] as int);
+          
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
 
-          if (user != null) {
             // Check the category/line number
             if (user['lineNo'] == 'Assembly') {
               Navigator.pushReplacementNamed(context, '/operator-login');
             } else {
               Navigator.pushReplacementNamed(context, '/engineer-login');
             }
-          } else {
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;  // Set loading to false when login fails
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Invalid username or password'),

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -47,7 +48,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -184,6 +185,15 @@ class DatabaseHelper {
             // If column already exists, this will fail silently
           }
         }
+        if (oldVersion < 10) {
+          // Add current_user table in upgrade
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS current_user(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER
+            )
+          ''');
+        }
       },
       onOpen: (db) async {
         print('Database opened successfully');
@@ -261,6 +271,14 @@ class DatabaseHelper {
         groupNumber INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Add current_user table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS current_user(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER
       )
     ''');
   }
@@ -761,5 +779,58 @@ class DatabaseHelper {
       where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
       whereArgs: sessionIds,
     );
+  }
+
+  Future<Map<String, dynamic>?> getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('userId');
+    
+    if (userId == null) return null;
+
+    final db = await database;
+    final List<Map<String, dynamic>> users = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+
+    return users.isNotEmpty ? users.first : null;
+  }
+
+  Future<void> setCurrentUserId(int userId) async {
+    final db = await database;
+    try {
+      // First delete any existing entries
+      await db.delete('current_user');
+      
+      // Then insert the new user ID
+      await db.insert(
+        'current_user',
+        {'user_id': userId},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      print('Error setting current user ID: $e');
+      // If there's an error, try to create the table and retry
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS current_user(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER
+        )
+      ''');
+      // Retry the insert
+      await db.insert(
+        'current_user',
+        {'user_id': userId},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
+  Future<int?> getCurrentUserId() async {
+    final db = await database;
+    final result = await db.query('current_user', limit: 1);
+    return result.isNotEmpty ? result.first['user_id'] as int : null;
   }
 }

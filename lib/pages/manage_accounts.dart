@@ -4,7 +4,6 @@ import 'login_page.dart';
 import '../database_helper.dart';
 import 'edit_user.dart';
 import '../utils/logout_helper.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ManageAccounts extends StatefulWidget {
   const ManageAccounts({super.key});
@@ -14,18 +13,18 @@ class ManageAccounts extends StatefulWidget {
 }
 
 class _ManageAccountsState extends State<ManageAccounts> {
-  int? currentUserId;
   final Set<int> selectedUsers = {};
   bool selectAll = false;
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> filteredUsers = [];
   final TextEditingController searchController = TextEditingController();
+  int? currentUserId;  // Store the current user's ID
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();  // Load current user when initializing
     _loadUsers();
-    _getCurrentUser();
     searchController.addListener(_filterUsers);
   }
 
@@ -56,10 +55,10 @@ class _ManageAccountsState extends State<ManageAccounts> {
     });
   }
 
-  Future<void> _getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _loadCurrentUser() async {
+    final currentUserId = await DatabaseHelper().getCurrentUserId();
     setState(() {
-      currentUserId = prefs.getInt('userId');
+      this.currentUserId = currentUserId;
     });
   }
 
@@ -73,27 +72,27 @@ class _ManageAccountsState extends State<ManageAccounts> {
     });
   }
 
-  void _handleSelectAll(bool? value) {
-    setState(() {
-      selectAll = value ?? false;
-      if (selectAll) {
-        selectedUsers.clear();
-        for (var user in filteredUsers) {
-          if (user['id'] != currentUserId) {
-            selectedUsers.add(user['id'] as int);
-          }
-        }
-      } else {
-        selectedUsers.clear();
-      }
-    });
-  }
-
   Future<void> _deleteSelectedUsers() async {
     try {
       // Get the IDs of selected users
       final selectedIds = selectedUsers.toList();
       
+      // Get current user ID
+      final currentId = await DatabaseHelper().getCurrentUserId();
+      
+      // Safety check - don't delete if current user is in selection
+      if (currentId != null && selectedIds.contains(currentId)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot delete your own account'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       // Delete from database
       final db = await DatabaseHelper().database;
       await db.delete(
@@ -102,13 +101,10 @@ class _ManageAccountsState extends State<ManageAccounts> {
         whereArgs: selectedIds,
       );
 
-      // Refresh the users list from database
-      final updatedUsers = await DatabaseHelper().getUsers();
+      // Refresh the users list
+      await _loadUsers();
       
-      // Update state with new data
       setState(() {
-        users = updatedUsers;
-        filteredUsers = updatedUsers;
         selectedUsers.clear();
         selectAll = false;
       });
@@ -236,7 +232,21 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     DataColumn(
                                       label: Checkbox(
                                         value: selectAll,
-                                        onChanged: _handleSelectAll,
+                                        onChanged: (bool? value) {
+                                          setState(() {
+                                            selectAll = value ?? false;
+                                            if (selectAll) {
+                                              selectedUsers.clear();
+                                              for (var user in filteredUsers) {
+                                                if (user['id'] != currentUserId) {  // Don't select current user
+                                                  selectedUsers.add(user['id'] as int);
+                                                }
+                                              }
+                                            } else {
+                                              selectedUsers.clear();
+                                            }
+                                          });
+                                        },
                                       ),
                                     ),
                                     const DataColumn(label: Text('No.')),
@@ -250,26 +260,26 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     filteredUsers.length,
                                     (index) {
                                       final user = filteredUsers[index];
-                                      final isCurrentUser = user['id'] == currentUserId;
-                                      
                                       return DataRow(
                                         cells: [
                                           DataCell(
                                             Checkbox(
                                               value: selectedUsers.contains(user['id']),
-                                              onChanged: isCurrentUser ? null : (bool? value) {
-                                                setState(() {
-                                                  if (value == true) {
-                                                    selectedUsers.add(user['id'] as int);
-                                                    if (selectedUsers.length == filteredUsers.where((u) => u['id'] != currentUserId).length) {
-                                                      selectAll = true;
-                                                    }
-                                                  } else {
-                                                    selectedUsers.remove(user['id'] as int);
-                                                    selectAll = false;
-                                                  }
-                                                });
-                                              },
+                                              onChanged: user['id'] == currentUserId 
+                                                  ? null  // Disable checkbox for current user
+                                                  : (bool? value) {
+                                                      setState(() {
+                                                        if (value == true) {
+                                                          selectedUsers.add(user['id'] as int);
+                                                          if (selectedUsers.length == filteredUsers.length - 1) {  // -1 to account for current user
+                                                            selectAll = true;
+                                                          }
+                                                        } else {
+                                                          selectedUsers.remove(user['id'] as int);
+                                                          selectAll = false;
+                                                        }
+                                                      });
+                                                    },
                                             ),
                                           ),
                                           DataCell(Text('${index + 1}')),
