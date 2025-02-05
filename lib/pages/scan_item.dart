@@ -250,91 +250,102 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   void _checkAndUpdateQtyStatus() async {
-    if (_itemCategory == 'Non-Counting') {
-      final items = await DatabaseHelper().getItems();
-      final matchingItem = items.firstWhere(
-        (item) => item['itemCode'] == itemName,
-        orElse: () => {},
-      );
-      int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+    try {
+      if (_itemCategory == 'Non-Counting') {
+        final items = await DatabaseHelper().getItems();
+        final matchingItem = items.firstWhere(
+          (item) => item['itemCode'] == itemName,
+          orElse: () => {},
+        );
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
 
-      // Get completed groups from database
-      final completedGroups = await DatabaseHelper()
-          .getCompletedGroupsCount(operatorScanId, noOfCodes);
-      
-      setState(() {
-        // Update inspection quantity based on completed groups
-        inspectionQtyController.text = completedGroups.toString();
+        // Add try-catch around database operation
+        int completedGroups = 0;
+        try {
+          completedGroups = await DatabaseHelper()
+              .getCompletedGroupsCount(operatorScanId, noOfCodes);
+        } catch (e) {
+          print('Error getting completed groups: $e');
+          // Set default value if database operation fails
+          completedGroups = 0;
+        }
         
-        // Update QTY per box
-        qtyPerBoxController.text = completedGroups.toString();
+        setState(() {
+          // Update inspection quantity based on completed groups
+          inspectionQtyController.text = completedGroups.toString();
+          
+          // Update QTY per box
+          qtyPerBoxController.text = completedGroups.toString();
 
-        // Check if total quantity is reached
-        int totalQty = int.tryParse(totalQtyController.text) ?? 0;
-        _isTotalQtyReached = completedGroups >= totalQty;
+          // Check if total quantity is reached
+          int totalQty = int.tryParse(totalQtyController.text) ?? 0;
+          _isTotalQtyReached = completedGroups >= totalQty;
 
-        // Check if QTY per box is reached
-        int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
-        _isQtyPerBoxReached = completedGroups > 0 && completedGroups >= targetQtyPerBox;
-      });
+          // Check if QTY per box is reached
+          int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
+          _isQtyPerBoxReached = completedGroups > 0 && completedGroups >= targetQtyPerBox;
+        });
 
-      // Show appropriate dialogs
-      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-        _hasShownQtyReachedDialog = true;
-        _showQtyReachedDialog();
-      }
-
-      if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-        _hasShownQtyReachedDialog = true;
-        _showTotalQtyReachedDialog();
-      }
-    } else {
-      // For Counting items - keep existing logic
-      int populatedRowCount = _tableData
-          .where((data) => data['content']?.isNotEmpty == true)
-          .length;
-
-      setState(() {
-        // Update QTY per box
-        qtyPerBoxController.text = populatedRowCount.toString();
-
-        // Check if we've reached the QTY per box
-        String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
-        int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-
-        // Check if total QTY has been reached
-        int currentInspectionQty =
-            int.tryParse(inspectionQtyController.text) ?? 0;
-        int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
-
-        _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
-
-        // Check if QTY per box is reached
-        if (targetQty > 0 &&
-            populatedRowCount >= targetQty &&
-            !_isTotalQtyReached) {
-          _isQtyPerBoxReached = true;
+        // Show appropriate dialogs
+        if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+          _hasShownQtyReachedDialog = true;
+          _showQtyReachedDialog();
         }
 
-        // Remove the empty row if QTY is reached
-        if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
-            _tableData.isNotEmpty) {
-          // Remove the last row if it's empty
-          if (_tableData.last['content']?.isEmpty == true) {
-            _tableData.removeLast();
-            if (_focusNodes.isNotEmpty) {
-              _focusNodes.last.dispose();
-              _focusNodes.removeLast();
+        if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+          _hasShownQtyReachedDialog = true;
+          _showTotalQtyReachedDialog();
+        }
+      } else {
+        // For Counting items - keep existing logic
+        int populatedRowCount = _tableData
+            .where((data) => data['content']?.isNotEmpty == true)
+            .length;
+
+        setState(() {
+          // Update QTY per box
+          qtyPerBoxController.text = populatedRowCount.toString();
+
+          // Check if we've reached the QTY per box
+          String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
+          int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
+
+          // Check if total QTY has been reached
+          int currentInspectionQty =
+              int.tryParse(inspectionQtyController.text) ?? 0;
+          int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
+
+          _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
+
+          // Check if QTY per box is reached
+          if (targetQty > 0 &&
+              populatedRowCount >= targetQty &&
+              !_isTotalQtyReached) {
+            _isQtyPerBoxReached = true;
+          }
+
+          // Remove the empty row if QTY is reached
+          if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
+              _tableData.isNotEmpty) {
+            // Remove the last row if it's empty
+            if (_tableData.last['content']?.isEmpty == true) {
+              _tableData.removeLast();
+              if (_focusNodes.isNotEmpty) {
+                _focusNodes.last.dispose();
+                _focusNodes.removeLast();
+              }
             }
           }
-        }
-      });
+        });
 
-      // Show total QTY dialog if reached
-      if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
-        _hasShownQtyReachedDialog = true;
-        _showTotalQtyReachedDialog();
+        // Show total QTY dialog if reached
+        if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+          _hasShownQtyReachedDialog = true;
+          _showTotalQtyReachedDialog();
+        }
       }
+    } catch (e) {
+      print('Error in _checkAndUpdateQtyStatus: $e');
     }
   }
 
@@ -473,26 +484,27 @@ class _ScanItemState extends State<ScanItem> {
                 autofocus: index == 0,
                 enabled: !_isTotalQtyReached && !(data['isLocked'] == true),
                 onChanged: (value) {
-                  print("onChanged > value: $value");
-                  // Don't update the controller text here
-                  // Just store the latest value
+                  print("Content field onChanged - value: $value");
                   _scanBuffer = value;
                 },
                 onSubmitted: (value) {
-                  print("onSubmitted > value: $value");
+                  print("Content field onSubmitted - value: $value, buffer: $_scanBuffer");
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
                       !(data['isLocked'] == true)) {
-                    // Update both controller and data with the complete scan
-                    final completeValue = _scanBuffer;
-                    controller.text = completeValue;
-                    setState(() {
-                      data['content'] = completeValue;
-                    });
+                    // Process the scan after a tiny delay to ensure we don't trigger other events
                     Future.delayed(const Duration(milliseconds: 50), () {
-                      _validateContent(completeValue, index);
+                      if (mounted) {
+                        final completeValue = _scanBuffer;
+                        print("Processing scan - complete value: $completeValue");
+                        controller.text = completeValue;
+                        setState(() {
+                          data['content'] = completeValue;
+                        });
+                        _validateContent(completeValue, index);
+                        _scanBuffer = ''; // Clear the buffer
+                      }
                     });
-                    _scanBuffer = ''; // Clear the buffer after using it
                   }
                 },
                 decoration: InputDecoration(
@@ -512,8 +524,7 @@ class _ScanItemState extends State<ScanItem> {
                     vertical: 8,
                   ),
                   filled: data['isLocked'] == true,
-                  fillColor:
-                      data['isLocked'] == true ? Colors.grey.shade100 : null,
+                  fillColor: data['isLocked'] == true ? Colors.grey.shade100 : null,
                 ),
               ),
             ),
@@ -1000,30 +1011,37 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    // Only handle mouse clicks
-                    if (RendererBinding
-                        .instance.mouseTracker.mouseIsConnected) {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => EmergencyStop(
-                          itemName: itemName,
-                          lotNumber: lotNumber,
-                          content: _labelContent ?? content,
-                          poNo: poNo,
-                          quantity: qtyPerBoxController.text,
-                          tableData: _tableData
-                              .where(
-                                  (item) => item['content']?.isNotEmpty == true)
-                              .map((item) => Map<String, dynamic>.from(item))
-                              .toList(),
-                          username: 'operator',
-                        ),
-                      );
+                    print("Emergency button pressed - checking if it's a valid mouse click");
+                    // Only handle direct mouse clicks, ignore keyboard events
+                    if (RendererBinding.instance.mouseTracker.mouseIsConnected) {
+                      print("Mouse is connected - proceeding with emergency stop");
+                      // Add a small delay to prevent accidental triggers
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (mounted) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => EmergencyStop(
+                              itemName: itemName,
+                              lotNumber: lotNumber,
+                              content: _labelContent ?? content,
+                              poNo: poNo,
+                              quantity: qtyPerBoxController.text,
+                              tableData: _tableData
+                                  .where((item) => item['content']?.isNotEmpty == true)
+                                  .map((item) => Map<String, dynamic>.from(item))
+                                  .toList(),
+                              username: 'operator',
+                            ),
+                          );
+                        }
+                      });
+                    } else {
+                      print("Ignoring emergency button press - not from mouse");
                     }
                   },
-                  // Prevent keyboard focus and ensure it's not triggerable by keyboard
-                  focusNode: AlwaysDisabledFocusNode(),
+                  // Make button completely unfocusable
+                  focusNode: NeverFocusableNode(),
                   autofocus: false,
                   onFocusChange: (_) => false,
                   child: const Text('Emergency'),
@@ -1432,7 +1450,12 @@ class _ScanItemState extends State<ScanItem> {
 }
 
 // Add this class at the top of the file or in a separate utilities file
-class AlwaysDisabledFocusNode extends FocusNode {
+class NeverFocusableNode extends FocusNode {
   @override
-  bool get hasFocus => false;
+  bool get canRequestFocus => false;
+  
+  @override
+  bool consumeKeyboardToken() {
+    return false;
+  }
 }

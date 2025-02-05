@@ -886,14 +886,14 @@ class DatabaseHelper {
   Future<int> getCompletedGroupsCount(int operatorScanId, int codesPerGroup) async {
     final db = await database;
     final result = await db.rawQuery('''
-      SELECT COUNT(DISTINCT group_number) as completed_groups
-      FROM scan_contents
-      WHERE operator_scan_id = ?
-      AND group_number IN (
-        SELECT group_number
-        FROM scan_contents
-        WHERE operator_scan_id = ?
-        GROUP BY group_number
+      SELECT COUNT(DISTINCT groupNumber) as completed_groups
+      FROM individual_scans
+      WHERE sessionId = ?
+      AND groupNumber IN (
+        SELECT groupNumber
+        FROM individual_scans
+        WHERE sessionId = ?
+        GROUP BY groupNumber
         HAVING COUNT(*) = ?
       )
     ''', [operatorScanId, operatorScanId, codesPerGroup]);

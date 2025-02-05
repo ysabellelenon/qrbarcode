@@ -295,9 +295,11 @@ class _EmergencyStopState extends State<EmergencyStop> {
             controller: _passwordController,
             obscureText: true,
             autofocus: true,
-            onSubmitted: (_) {
-              _validatePassword();
-            },
+            textInputAction: TextInputAction.none,
+            keyboardType: TextInputType.text,
+            enableInteractiveSelection: true,
+            onEditingComplete: null,
+            onSubmitted: null,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               errorText: _errorMessage.isNotEmpty ? _errorMessage : null,
