@@ -523,38 +523,18 @@ class _FinishedItemState extends State<FinishedItem> {
             ),
             const SizedBox(height: 20),
             Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: ElevatedButton.icon(
-                      onPressed: _printSummary,
-                      icon: const Icon(Icons.print),
-                      label: const Text('Print'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                      ),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: ElevatedButton(
+                  onPressed: _showRemarksDialog,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: ElevatedButton(
-                      onPressed: _showRemarksDialog,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                      ),
-                      child: const Text('Add Remarks'),
-                    ),
-                  ),
-                ],
+                  child: const Text('Add Remarks'),
+                ),
               ),
             ),
           ],
