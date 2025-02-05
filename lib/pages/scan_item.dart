@@ -539,21 +539,26 @@ class _ScanItemState extends State<ScanItem> {
                 enabled: !_isTotalQtyReached &&
                     !(data['isLocked'] == true), // Disable if locked
                 onChanged: (value) {
-                  setState(() {
-                    data['content'] = value;
-                  });
+                  print("Content field onChanged - value: $value");
+                  _scanBuffer = value;
                 },
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-Z0-9\-_.*]')),
-                ],
-                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
+                  print("Content field onSubmitted - value: $value, buffer: $_scanBuffer");
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
                       !(data['isLocked'] == true)) {
+                    // Process the scan after a tiny delay to ensure we don't trigger other events
                     Future.delayed(const Duration(milliseconds: 50), () {
-                      _validateContent(value, index);
+                      if (mounted) {
+                        final completeValue = _scanBuffer;
+                        print("Processing scan - complete value: $completeValue");
+                        contentController.text = completeValue;
+                        setState(() {
+                          data['content'] = completeValue;
+                        });
+                        _validateContent(completeValue, index);
+                        _scanBuffer = ''; // Clear the buffer
+                      }
                     });
                   }
                 },
