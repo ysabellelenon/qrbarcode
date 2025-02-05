@@ -15,7 +15,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
   final _itemNameController = TextEditingController();
   final _poNoController = TextEditingController();
   final _qtyController = TextEditingController();
-  String? _labelContent;
+  List<String> _labelContents = [];
   bool _isItemFound = false;
 
   // Add FocusNode for each text field
@@ -53,16 +53,18 @@ class _OperatorLoginState extends State<OperatorLogin> {
 
     if (mounted) {
       setState(() {
-        if (matchingItem.isNotEmpty &&
-            matchingItem['codes']?.isNotEmpty == true) {
-          _labelContent = matchingItem['codes'][0]['content'];
+        if (matchingItem.isNotEmpty && matchingItem['codes']?.isNotEmpty == true) {
+          // Get all codes and their contents
+          _labelContents = (matchingItem['codes'] as List)
+              .map((code) => code['content'].toString())
+              .toList();
           _isItemFound = true;
           // Automatically move focus to PO No. field when valid item is found
           WidgetsBinding.instance.addPostFrameCallback((_) {
             FocusScope.of(context).requestFocus(_poNoFocus);
           });
         } else {
-          _labelContent = 'Item not found';
+          _labelContents = ['Item not found'];
           _isItemFound = false;
         }
       });
@@ -237,7 +239,7 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                   const Align(
                                     alignment: Alignment.centerLeft,
                                     child: SelectableText(
-                                      'Content:',
+                                      'Contents:',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.normal,
@@ -246,8 +248,21 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  SelectableText(_labelContent ??
-                                      'No content available'), // Display the label content
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: _labelContents.map((content) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                        child: SelectableText(
+                                          content,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
                                   const SizedBox(height: 20),
                                   ElevatedButton(
                                     onPressed:

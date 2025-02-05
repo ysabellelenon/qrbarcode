@@ -4,6 +4,7 @@ import 'login_page.dart';
 import '../database_helper.dart';
 import 'edit_user.dart';
 import '../utils/logout_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ManageAccounts extends StatefulWidget {
   const ManageAccounts({super.key});
@@ -13,6 +14,7 @@ class ManageAccounts extends StatefulWidget {
 }
 
 class _ManageAccountsState extends State<ManageAccounts> {
+  int? currentUserId;
   final Set<int> selectedUsers = {};
   bool selectAll = false;
   List<Map<String, dynamic>> users = [];
@@ -23,6 +25,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
   void initState() {
     super.initState();
     _loadUsers();
+    _getCurrentUser();
     searchController.addListener(_filterUsers);
   }
 
@@ -53,6 +56,13 @@ class _ManageAccountsState extends State<ManageAccounts> {
     });
   }
 
+  Future<void> _getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      currentUserId = prefs.getInt('userId');
+    });
+  }
+
   void _filterUsers() {
     final query = searchController.text.toLowerCase();
     setState(() {
@@ -60,6 +70,22 @@ class _ManageAccountsState extends State<ManageAccounts> {
         final fullName = '${user['firstName']} ${user['middleName']} ${user['lastName']}'.toLowerCase();
         return fullName.contains(query);
       }).toList();
+    });
+  }
+
+  void _handleSelectAll(bool? value) {
+    setState(() {
+      selectAll = value ?? false;
+      if (selectAll) {
+        selectedUsers.clear();
+        for (var user in filteredUsers) {
+          if (user['id'] != currentUserId) {
+            selectedUsers.add(user['id'] as int);
+          }
+        }
+      } else {
+        selectedUsers.clear();
+      }
     });
   }
 
@@ -210,16 +236,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     DataColumn(
                                       label: Checkbox(
                                         value: selectAll,
-                                        onChanged: (bool? value) {
-                                          setState(() {
-                                            selectAll = value ?? false;
-                                            if (selectAll) {
-                                              selectedUsers.addAll(filteredUsers.map((user) => user['id'] as int));
-                                            } else {
-                                              selectedUsers.clear();
-                                            }
-                                          });
-                                        },
+                                        onChanged: _handleSelectAll,
                                       ),
                                     ),
                                     const DataColumn(label: Text('No.')),
@@ -233,16 +250,18 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                     filteredUsers.length,
                                     (index) {
                                       final user = filteredUsers[index];
+                                      final isCurrentUser = user['id'] == currentUserId;
+                                      
                                       return DataRow(
                                         cells: [
                                           DataCell(
                                             Checkbox(
                                               value: selectedUsers.contains(user['id']),
-                                              onChanged: (bool? value) {
+                                              onChanged: isCurrentUser ? null : (bool? value) {
                                                 setState(() {
                                                   if (value == true) {
                                                     selectedUsers.add(user['id'] as int);
-                                                    if (selectedUsers.length == filteredUsers.length) {
+                                                    if (selectedUsers.length == filteredUsers.where((u) => u['id'] != currentUserId).length) {
                                                       selectAll = true;
                                                     }
                                                   } else {
