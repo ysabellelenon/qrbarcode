@@ -372,14 +372,13 @@ class _ScanItemState extends State<ScanItem> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by clicking outside
-      builder: (context) => WillPopScope( // Also prevent dismissing with back button
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
         onWillPop: () async => false,
         child: AlertDialog(
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
-            // Only show Scan New Article Label button
             TextButton(
               onPressed: () {
                 Navigator.of(context).pushReplacement(
@@ -390,6 +389,7 @@ class _ScanItemState extends State<ScanItem> {
                       operatorScanId: operatorScanId,
                       totalQty: totalQty,
                       resumeData: widget.resumeData,
+                      hideBackButton: true,
                     ),
                   ),
                 );
@@ -1375,6 +1375,7 @@ class _ScanItemState extends State<ScanItem> {
                                           operatorScanId: operatorScanId,
                                           totalQty: totalQty,
                                           resumeData: widget.resumeData,
+                                          hideBackButton: true,
                                         ),
                                       ),
                                     );
