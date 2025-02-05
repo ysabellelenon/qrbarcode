@@ -410,6 +410,7 @@ class EmergencySummary extends StatelessWidget {
                   const SizedBox(width: 16),
                   ElevatedButton(
                     onPressed: () {
+                      onPrint();
                       Navigator.of(context)
                           .pushNamedAndRemoveUntil('/login', (route) => false);
                     },

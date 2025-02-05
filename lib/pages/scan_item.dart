@@ -1010,9 +1010,8 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    // Only respond to direct button clicks
-                    if (FocusScope.of(context).hasFocus) return;
-
+                    print('Emergency button pressed');
+                    // Remove focus check to ensure button click is registered
                     showDialog(
                       context: context,
                       barrierDismissible: false,
