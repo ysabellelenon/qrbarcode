@@ -1186,8 +1186,8 @@ class _ScanItemState extends State<ScanItem> {
                           children: [
                             Row(
                               children: [
-                                const SizedBox(
-                                  width: 100,
+                                SizedBox(
+                                  width: 160,
                                   child: SelectableText('Total QTY',
                                       style: TextStyle(fontSize: 16)),
                                 ),
@@ -1210,7 +1210,7 @@ class _ScanItemState extends State<ScanItem> {
                             Row(
                               children: [
                                 SizedBox(
-                                  width: 100,
+                                  width: 160,
                                   child: SelectableText(
                                     'QTY per box (${widget.scanData?['qtyPerBox'] ?? ''})',
                                     style: TextStyle(fontSize: 16),
@@ -1233,8 +1233,8 @@ class _ScanItemState extends State<ScanItem> {
                             const SizedBox(height: 16),
                             Row(
                               children: [
-                                const SizedBox(
-                                  width: 100,
+                                SizedBox(
+                                  width: 160,
                                   child: SelectableText('Inspection QTY',
                                       style: TextStyle(fontSize: 16)),
                                 ),
