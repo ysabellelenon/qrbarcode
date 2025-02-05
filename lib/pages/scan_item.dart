@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import the DatabaseHelper
 import 'article_label.dart'; // Add this import
@@ -1010,57 +1011,30 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    print('Emergency button pressed');
-                    // Remove focus check to ensure button click is registered
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => WillPopScope(
-                        onWillPop: () async => false,
-                        child: AlertDialog(
-                          title: const Text('Emergency Stop'),
-                          content: const Text(
-                              'Are you sure you want to stop the operation?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => EmergencyStop(
-                                    itemName: itemName,
-                                    lotNumber: lotNumber,
-                                    content: _labelContent ?? content,
-                                    poNo: poNo,
-                                    quantity: qtyPerBoxController.text,
-                                    tableData: _tableData
-                                        .where((item) =>
-                                            item['content']?.isNotEmpty == true)
-                                        .map((item) =>
-                                            Map<String, dynamic>.from(item))
-                                        .toList(),
-                                    username: 'operator',
-                                  ),
-                                );
-                              },
-                              child: const Text('Confirm Stop'),
-                            ),
-                          ],
+                    // Only handle mouse clicks
+                    if (RendererBinding.instance.mouseTracker.mouseIsConnected) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => EmergencyStop(
+                          itemName: itemName,
+                          lotNumber: lotNumber,
+                          content: _labelContent ?? content,
+                          poNo: poNo,
+                          quantity: qtyPerBoxController.text,
+                          tableData: _tableData
+                              .where((item) => item['content']?.isNotEmpty == true)
+                              .map((item) => Map<String, dynamic>.from(item))
+                              .toList(),
+                          username: 'operator',
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
-                  // Prevent keyboard focus
+                  // Prevent keyboard focus and ensure it's not triggerable by keyboard
                   focusNode: AlwaysDisabledFocusNode(),
+                  autofocus: false,
+                  onFocusChange: (_) => false,
                   child: const Text('Emergency'),
                 ),
               ],
