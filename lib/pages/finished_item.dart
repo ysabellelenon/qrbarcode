@@ -639,7 +639,8 @@ class _FinishedItemState extends State<FinishedItem> {
     );
   }
 
-  void _saveAndNavigate() async {
+  void _saveAndNavigate() {
+    _printSummary();
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil(
         '/operator-login',
