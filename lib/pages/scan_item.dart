@@ -102,9 +102,13 @@ class _ScanItemState extends State<ScanItem> {
   Future<void> _updateTotalGoodNoGoodCounts() async {
     try {
       final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
+      print('Updating Good/No Good counts:');
+      print('Good: ${counts['goodCount']}');
+      print('No Good: ${counts['noGoodCount']}');
+      
       setState(() {
-        goodCountController.text = (counts['goodCount'] ?? 0).toString();
-        noGoodCountController.text = (counts['noGoodCount'] ?? 0).toString();
+        goodCountController.text = counts['goodCount'].toString();
+        noGoodCountController.text = counts['noGoodCount'].toString();
       });
     } catch (e) {
       print('Error updating total Good/No Good counts: $e');
@@ -252,81 +256,32 @@ class _ScanItemState extends State<ScanItem> {
       );
       int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
 
-      // Count complete groups and their results
-      int goodGroups = 0;
-      int noGoodGroups = 0;
-
-      // Initialize groups map with empty lists
-      Map<int, List<Map<String, dynamic>>> groups = {};
-
-      // Group scans by their position in sequence
-      for (int i = 0; i < _tableData.length; i++) {
-        if (_tableData[i]['result']?.isNotEmpty == true) {
-          int currentGroup = i ~/ noOfCodes;
-          // Initialize the list for this group if it doesn't exist
-          groups.putIfAbsent(currentGroup, () => <Map<String, dynamic>>[]);
-          // Now we can safely add to the list
-          groups[currentGroup]!.add(_tableData[i]);
-        }
-      }
-
-      // Evaluate each complete group
-      groups.forEach((groupIndex, scans) {
-        if (scans.length == noOfCodes) {
-          // A group is "Good" only if all scans in the group are "Good"
-          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-          if (isGroupGood) {
-            goodGroups++;
-          } else {
-            noGoodGroups++;
-          }
-        }
-      });
-
+      // Get completed groups from database
+      final completedGroups = await DatabaseHelper()
+          .getCompletedGroupsCount(operatorScanId, noOfCodes);
+      
       setState(() {
-        // Update the good/no good counts based on complete groups
-        goodCountController.text = goodGroups.toString();
-        noGoodCountController.text = noGoodGroups.toString();
-
-        // Update inspection quantity based on complete groups
-        int totalCompleteGroups = goodGroups + noGoodGroups;
-        inspectionQtyController.text = totalCompleteGroups.toString();
-
-        // Update QTY per box based on complete groups
-        qtyPerBoxController.text = totalCompleteGroups.toString();
+        // Update inspection quantity based on completed groups
+        inspectionQtyController.text = completedGroups.toString();
+        
+        // Update QTY per box
+        qtyPerBoxController.text = completedGroups.toString();
 
         // Check if total quantity is reached
         int totalQty = int.tryParse(totalQtyController.text) ?? 0;
-        _isTotalQtyReached = totalCompleteGroups >= totalQty;
+        _isTotalQtyReached = completedGroups >= totalQty;
 
         // Check if QTY per box is reached
         int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
-        _isQtyPerBoxReached =
-            totalCompleteGroups > 0 && totalCompleteGroups == targetQtyPerBox;
-
-        // Remove the empty row if QTY is reached
-        if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
-            _tableData.isNotEmpty) {
-          // Remove the last row if it's empty
-          if (_tableData.last['content']?.isEmpty == true) {
-            _tableData.removeLast();
-            if (_focusNodes.isNotEmpty) {
-              _focusNodes.last.dispose();
-              _focusNodes.removeLast();
-            }
-          }
-        }
+        _isQtyPerBoxReached = completedGroups > 0 && completedGroups >= targetQtyPerBox;
       });
 
-      // Show QTY per box dialog if reached and total QTY not reached
-      if (_isQtyPerBoxReached &&
-          !_isTotalQtyReached &&
-          !_hasShownQtyReachedDialog) {
+      // Show appropriate dialogs
+      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
         _showQtyReachedDialog();
       }
 
-      // Show total QTY dialog if reached
       if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
         _showTotalQtyReachedDialog();
@@ -784,25 +739,37 @@ class _ScanItemState extends State<ScanItem> {
     try {
       if (_itemCategory == 'Non-Counting') {
         // Calculate current group number
-        int previousScans = _tableData
-            .where((row) =>
-                row['result']?.isNotEmpty == true &&
-                _tableData.indexOf(row) < index)
-            .length;
-
-        // Get noOfCodes from matchingItem
+        final items = await DatabaseHelper().getItems();
+        final matchingItem = items.firstWhere(
+          (item) => item['itemCode'] == itemName,
+          orElse: () => {},
+        );
         int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+        
+        // Calculate the group number based on completed scans
+        int previousCompletedGroups = (_tableData
+                .where((row) => row['result']?.isNotEmpty == true)
+                .length ~/
+            noOfCodes);
+        int currentGroup = previousCompletedGroups + 1;
 
-        // Save to database with group number
+        // Get position within current group (0-based)
+        int positionInGroup = _tableData
+                .where((row) => row['result']?.isNotEmpty == true)
+                .length %
+            noOfCodes;
+
+        // Save to database with group information
         await DatabaseHelper().insertScanContent(
           operatorScanId,
           value,
           result,
           groupNumber: currentGroup,
+          groupPosition: positionInGroup + 1, // Convert to 1-based position
+          codesInGroup: noOfCodes,
         );
       } else {
-        // For counting items, no group number needed
+        // For counting items, no group information needed
         await DatabaseHelper().insertScanContent(
           operatorScanId,
           value,
@@ -813,6 +780,9 @@ class _ScanItemState extends State<ScanItem> {
       setState(() {
         _tableData[index]['result'] = result;
         _tableData[index]['isLocked'] = true;
+        _tableData[index]['groupNumber'] = _itemCategory == 'Non-Counting'
+            ? (index ~/ int.parse(matchingItem['codeCount'] ?? '1')) + 1
+            : null;
       });
 
       await _updateTotalInspectionQty();

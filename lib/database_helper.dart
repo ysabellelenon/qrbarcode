@@ -702,16 +702,26 @@ class DatabaseHelper {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  Future<int> insertScanContent(
-      int sessionId, String content, String result, {int? groupNumber}) async {
+  Future<void> insertScanContent(
+    int operatorScanId,
+    String content,
+    String result, {
+    int? groupNumber,
+    int? groupPosition,
+    int? codesInGroup,
+  }) async {
     final db = await database;
-    return await db.insert('individual_scans', {
-      'sessionId': sessionId,
-      'content': content,
-      'result': result,
-      'groupNumber': groupNumber,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    await db.insert(
+      'individual_scans',
+      {
+        'sessionId': operatorScanId,
+        'content': content,
+        'result': result,
+        'groupNumber': groupNumber,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getScanContents(int sessionId) async {
@@ -726,24 +736,47 @@ class DatabaseHelper {
 
   Future<Map<String, int>> getTotalGoodNoGoodCounts(String itemName) async {
     final db = await database;
+    final result = await db.rawQuery('''
+      WITH GroupedScans AS (
+        SELECT 
+          s.groupNumber,
+          COUNT(*) as scans_in_group,
+          MIN(s.result) as group_result
+        FROM individual_scans s
+        JOIN scanning_sessions ss ON s.sessionId = ss.id
+        WHERE ss.itemName = ?
+        GROUP BY s.groupNumber
+      )
+      SELECT 
+        SUM(CASE 
+          WHEN scans_in_group = (
+            SELECT CAST(codeCount AS INTEGER)
+            FROM items 
+            WHERE itemCode = ?
+          ) AND group_result = 'Good' 
+          THEN 1 
+          ELSE 0 
+        END) as goodCount,
+        SUM(CASE 
+          WHEN scans_in_group = (
+            SELECT CAST(codeCount AS INTEGER)
+            FROM items 
+            WHERE itemCode = ?
+          ) AND group_result != 'Good' 
+          THEN 1 
+          ELSE 0 
+        END) as noGoodCount
+      FROM GroupedScans
+    ''', [itemName, itemName, itemName]);
 
-    final List<Map<String, dynamic>> goodCount = await db.rawQuery('''
-      SELECT COUNT(*) as count 
-      FROM individual_scans s
-      JOIN scanning_sessions ss ON s.sessionId = ss.id
-      WHERE ss.itemName = ? AND s.result = 'Good'
-    ''', [itemName]);
-
-    final List<Map<String, dynamic>> noGoodCount = await db.rawQuery('''
-      SELECT COUNT(*) as count 
-      FROM individual_scans s
-      JOIN scanning_sessions ss ON s.sessionId = ss.id
-      WHERE ss.itemName = ? AND s.result = 'No Good'
-    ''', [itemName]);
+    // Print debug information
+    print('Total Good/No Good counts for $itemName:');
+    print('Good count: ${result.first['goodCount']}');
+    print('No Good count: ${result.first['noGoodCount']}');
 
     return {
-      'goodCount': Sqflite.firstIntValue(goodCount) ?? 0,
-      'noGoodCount': Sqflite.firstIntValue(noGoodCount) ?? 0,
+      'goodCount': result.first['goodCount'] as int? ?? 0,
+      'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };
   }
 
@@ -832,5 +865,23 @@ class DatabaseHelper {
     final db = await database;
     final result = await db.query('current_user', limit: 1);
     return result.isNotEmpty ? result.first['user_id'] as int : null;
+  }
+
+  Future<int> getCompletedGroupsCount(int operatorScanId, int codesPerGroup) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(DISTINCT group_number) as completed_groups
+      FROM scan_contents
+      WHERE operator_scan_id = ?
+      AND group_number IN (
+        SELECT group_number
+        FROM scan_contents
+        WHERE operator_scan_id = ?
+        GROUP BY group_number
+        HAVING COUNT(*) = ?
+      )
+    ''', [operatorScanId, operatorScanId, codesPerGroup]);
+
+    return result.first['completed_groups'] as int? ?? 0;
   }
 }
