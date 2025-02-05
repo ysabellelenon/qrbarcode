@@ -70,20 +70,31 @@ class _ReviseItemState extends State<ReviseItem> {
 
     setState(() {
       int numberOfCodes = int.parse(count);
-      codeContainers = List.generate(
-        numberOfCodes,
-        (index) => CodeContainer(
-          codeNumber: index + 1,
-          selectedCategory: selectedCategories[index + 1] ?? 'Default Category',
-          onCategoryChanged: (value) {
-            setState(() {
-              selectedCategories[index + 1] = value;
-            });
-          },
-          labelController: TextEditingController(),
-          hasSubLot: false,
-        ),
-      );
+      List<CodeContainer> newContainers = [];
+
+      // Create new containers while preserving existing data
+      for (int i = 0; i < numberOfCodes; i++) {
+        if (i < codeContainers.length) {
+          // Preserve existing container data
+          newContainers.add(codeContainers[i]);
+        } else {
+          // Add new container with default values
+          newContainers.add(
+            CodeContainer(
+              codeNumber: i + 1,
+              selectedCategory: selectedCategories[i + 1] ?? 'Default Category',
+              onCategoryChanged: (value) {
+                setState(() {
+                  selectedCategories[i + 1] = value;
+                });
+              },
+              labelController: TextEditingController(),
+              hasSubLot: false,
+            ),
+          );
+        }
+      }
+      codeContainers = newContainers;
     });
   }
 
@@ -285,77 +296,7 @@ class _ReviseItemState extends State<ReviseItem> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                onPressed: () {
-                                  if (_formKey.currentState!.validate()) {
-                                    bool allCodesValid = true;
-
-                                    for (var container in codeContainers) {
-                                      String? category = selectedCategories[
-                                          container.codeNumber];
-                                      if (category == null ||
-                                          (category != 'Counting' &&
-                                              category != 'Non-Counting')) {
-                                        allCodesValid = false;
-                                        break;
-                                      }
-                                    }
-
-                                    if (!allCodesValid) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Please select "Counting" or "Non-Counting" for each code.'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // Gather the codes data
-                                    final allCodes =
-                                        codeContainers.map((container) {
-                                      return {
-                                        'category': container.selectedCategory,
-                                        'content':
-                                            container.labelController.text,
-                                        'hasSubLot': container.hasSubLot,
-                                        'serialCount': container.serialCount,
-                                      };
-                                    }).toList();
-
-                                    // Get only counting codes
-                                    final countingCodes = allCodes
-                                        .where((code) =>
-                                            code['category'] == 'Counting')
-                                        .map((code) => {
-                                              'category':
-                                                  code['category'].toString(),
-                                              'content':
-                                                  code['content'].toString(),
-                                            })
-                                        .toList();
-
-                                    if (countingCodes.isNotEmpty) {
-                                      // Navigate to ReviseSublot if there are counting codes
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ReviseSublot(
-                                            itemId: widget.item['id'],
-                                            itemName: _itemNameController.text,
-                                            revision: _selectedRevision!,
-                                            countingCodes: countingCodes
-                                                as List<Map<String, String>>,
-                                            allCodes: allCodes,
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      // If no counting codes, update directly
-                                      _updateItem(allCodes);
-                                    }
-                                  }
-                                },
+                                onPressed: () => _onProceed(),
                                 child: const Text('Proceed'),
                               ),
                             ),
@@ -371,6 +312,90 @@ class _ReviseItemState extends State<ReviseItem> {
         ],
       ),
     );
+  }
+
+  void _onProceed() {
+    if (_formKey.currentState!.validate()) {
+      bool allCodesValid = true;
+
+      for (var container in codeContainers) {
+        String? category = selectedCategories[container.codeNumber];
+        if (category == null ||
+            (category != 'Counting' && category != 'Non-Counting')) {
+          allCodesValid = false;
+          break;
+        }
+      }
+
+      if (!allCodesValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Please select "Counting" or "Non-Counting" for each code.'),
+          ),
+        );
+        return;
+      }
+
+      final uniqueCategories =
+          selectedCategories.values.toSet();
+      if (uniqueCategories.length > 1) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Inconsistent Categories'),
+            content: const Text(
+                'All codes must have the same category. Please ensure all categories are consistent before proceeding.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      // Gather the codes data
+      final allCodes = codeContainers.map((container) {
+        return {
+          'category': container.selectedCategory,
+          'content': container.labelController.text,
+          'hasSubLot': container.hasSubLot,
+          'serialCount': container.serialCount,
+        };
+      }).toList();
+
+      // Get only counting codes
+      final countingCodes = allCodes
+          .where((code) => code['category'] == 'Counting')
+          .map((code) => {
+                'category': code['category'].toString(),
+                'content': code['content'].toString(),
+              })
+          .toList();
+
+      if (countingCodes.isNotEmpty) {
+        // Navigate to ReviseSublot if there are counting codes
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReviseSublot(
+              itemId: widget.item['id'],
+              itemName: _itemNameController.text,
+              revision: _selectedRevision!,
+              countingCodes:
+                  countingCodes as List<Map<String, String>>,
+              allCodes: allCodes,
+            ),
+          ),
+        );
+      } else {
+        // If no counting codes, update directly
+        _updateItem(allCodes);
+      }
+    }
   }
 
   void _updateItem(List<Map<String, dynamic>> codes) async {
