@@ -117,12 +117,14 @@ class _ScanItemState extends State<ScanItem> {
 
   Future<void> _updateTotalInspectionQty() async {
     try {
-      // Get total historical scans for this item
-      final historicalTotal =
-          await DatabaseHelper().getTotalScansForItem(itemName);
+      // Get total completed groups for this item
+      final completedGroups = await DatabaseHelper().getTotalScansForItem(itemName);
+      
+      print('Updating Inspection QTY:');
+      print('Completed groups: $completedGroups');
 
       setState(() {
-        inspectionQtyController.text = historicalTotal.toString();
+        inspectionQtyController.text = completedGroups.toString();
       });
     } catch (e) {
       print('Error updating total inspection quantity: $e');

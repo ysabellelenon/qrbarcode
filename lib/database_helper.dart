@@ -683,12 +683,28 @@ class DatabaseHelper {
   Future<int> getTotalScansForItem(String itemName) async {
     final db = await database;
     final result = await db.rawQuery('''
-      SELECT COUNT(*) as count 
-      FROM individual_scans s
-      JOIN scanning_sessions ss ON s.sessionId = ss.id
-      WHERE ss.itemName = ?
-    ''', [itemName]);
-    return Sqflite.firstIntValue(result) ?? 0;
+      WITH GroupedScans AS (
+        SELECT 
+          s.groupNumber,
+          COUNT(*) as scans_in_group
+        FROM individual_scans s
+        JOIN scanning_sessions ss ON s.sessionId = ss.id
+        WHERE ss.itemName = ?
+        GROUP BY s.groupNumber
+      )
+      SELECT COUNT(*) as completed_groups
+      FROM GroupedScans
+      WHERE scans_in_group = (
+        SELECT CAST(codeCount AS INTEGER)
+        FROM items 
+        WHERE itemCode = ?
+      )
+    ''', [itemName, itemName]);
+
+    // Print debug information
+    print('Total completed groups for $itemName: ${result.first['completed_groups']}');
+    
+    return result.first['completed_groups'] as int? ?? 0;
   }
 
   Future<int> getHistoricalScansCount(String itemName) async {
