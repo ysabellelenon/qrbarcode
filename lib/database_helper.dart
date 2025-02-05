@@ -47,7 +47,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -129,6 +129,7 @@ class DatabaseHelper {
               sessionId INTEGER,
               content TEXT,
               result TEXT,
+              groupNumber INTEGER,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
             )
@@ -147,8 +148,8 @@ class DatabaseHelper {
           ''');
 
           await db.execute('''
-            INSERT INTO individual_scans (id, sessionId, content, result, created_at)
-            SELECT id, operator_scan_id, content, result, created_at 
+            INSERT INTO individual_scans (id, sessionId, content, result, groupNumber)
+            SELECT id, operator_scan_id, content, result, groupNumber 
             FROM scan_contents
           ''');
 
@@ -169,6 +170,19 @@ class DatabaseHelper {
                 isActive = 1
             WHERE lastUpdated IS NULL
           ''');
+        }
+        if (oldVersion < 9) {
+          // Add groupNumber column to individual_scans table
+          try {
+            await db.execute('''
+              ALTER TABLE individual_scans 
+              ADD COLUMN groupNumber INTEGER
+            ''');
+            print('Added groupNumber column to individual_scans table');
+          } catch (e) {
+            print('Error adding groupNumber column: $e');
+            // If column already exists, this will fail silently
+          }
         }
       },
       onOpen: (db) async {
@@ -244,6 +258,7 @@ class DatabaseHelper {
         sessionId INTEGER,
         content TEXT,
         result TEXT,
+        groupNumber INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sessionId) REFERENCES scanning_sessions (id) ON DELETE CASCADE
       )
@@ -602,14 +617,49 @@ class DatabaseHelper {
       {int page = 1, int pageSize = 10}) async {
     final db = await database;
     final offset = (page - 1) * pageSize;
-    return await db.rawQuery('''
-      SELECT s.*, ss.itemName, ss.poNo
-      FROM individual_scans s
-      JOIN scanning_sessions ss ON s.sessionId = ss.id
-      WHERE ss.itemName = ?
-      ORDER BY s.created_at DESC
-      LIMIT ? OFFSET ?
-    ''', [itemName, pageSize, offset]);
+    
+    // First get the item details to know if it's counting or non-counting
+    final items = await db.query('items', where: 'itemCode = ?', whereArgs: [itemName]);
+    if (items.isEmpty) return [];
+    
+    final item = items.first;
+    final codes = await db.query('item_codes', where: 'itemId = ?', whereArgs: [item['id']]);
+    final isCountingItem = codes.any((code) => code['category'] == 'Counting');
+
+    if (isCountingItem) {
+      // For counting items, just return scans in reverse chronological order
+      return await db.rawQuery('''
+        SELECT s.*, ss.itemName, ss.poNo, NULL as groupNumber
+        FROM individual_scans s
+        JOIN scanning_sessions ss ON s.sessionId = ss.id
+        WHERE ss.itemName = ?
+        ORDER BY s.created_at DESC
+        LIMIT ? OFFSET ?
+      ''', [itemName, pageSize, offset]);
+    } else {
+      // For non-counting items, include the group number and order by it
+      return await db.rawQuery('''
+        WITH RankedScans AS (
+          SELECT 
+            s.*,
+            ss.itemName,
+            ss.poNo,
+            ROW_NUMBER() OVER (PARTITION BY s.groupNumber ORDER BY s.created_at) as row_in_group
+          FROM individual_scans s
+          JOIN scanning_sessions ss ON s.sessionId = ss.id
+          WHERE ss.itemName = ?
+        )
+        SELECT 
+          *,
+          CASE 
+            WHEN row_in_group = 1 THEN groupNumber 
+            ELSE NULL 
+          END as display_group_number
+        FROM RankedScans
+        ORDER BY groupNumber ASC, created_at ASC
+        LIMIT ? OFFSET ?
+      ''', [itemName, pageSize, offset]);
+    }
   }
 
   Future<int> getTotalScansForItem(String itemName) async {
@@ -635,12 +685,13 @@ class DatabaseHelper {
   }
 
   Future<int> insertScanContent(
-      int sessionId, String content, String result) async {
+      int sessionId, String content, String result, {int? groupNumber}) async {
     final db = await database;
     return await db.insert('individual_scans', {
       'sessionId': sessionId,
       'content': content,
       'result': result,
+      'groupNumber': groupNumber,
       'created_at': DateTime.now().toIso8601String(),
     });
   }

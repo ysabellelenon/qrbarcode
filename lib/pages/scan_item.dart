@@ -736,11 +736,33 @@ class _ScanItemState extends State<ScanItem> {
 
     // Save to database and update UI
     try {
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        result,
-      );
+      if (_itemCategory == 'Non-Counting') {
+        // Calculate current group number
+        int previousScans = _tableData
+            .where((row) => 
+                row['result']?.isNotEmpty == true && 
+                _tableData.indexOf(row) < index)
+            .length;
+        
+        // Get noOfCodes from matchingItem
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+
+        // Save to database with group number
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+          groupNumber: currentGroup,
+        );
+      } else {
+        // For counting items, no group number needed
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+        );
+      }
 
       setState(() {
         _tableData[index]['result'] = result;
