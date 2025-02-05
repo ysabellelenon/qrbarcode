@@ -244,14 +244,14 @@ class _ScanItemState extends State<ScanItem> {
         orElse: () => {},
       );
       int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-      
+
       // Count complete groups and their results
       int goodGroups = 0;
       int noGoodGroups = 0;
-      
+
       // Initialize groups map with empty lists
       Map<int, List<Map<String, dynamic>>> groups = {};
-      
+
       // Group scans by their position in sequence
       for (int i = 0; i < _tableData.length; i++) {
         if (_tableData[i]['result']?.isNotEmpty == true) {
@@ -262,7 +262,7 @@ class _ScanItemState extends State<ScanItem> {
           groups[currentGroup]!.add(_tableData[i]);
         }
       }
-      
+
       // Evaluate each complete group
       groups.forEach((groupIndex, scans) {
         if (scans.length == noOfCodes) {
@@ -275,29 +275,31 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       });
-      
+
       setState(() {
         // Update the good/no good counts based on complete groups
         goodCountController.text = goodGroups.toString();
         noGoodCountController.text = noGoodGroups.toString();
-        
+
         // Update inspection quantity based on complete groups
         int totalCompleteGroups = goodGroups + noGoodGroups;
         inspectionQtyController.text = totalCompleteGroups.toString();
-        
+
         // Update QTY per box based on complete groups
         qtyPerBoxController.text = totalCompleteGroups.toString();
-        
+
         // Check if total quantity is reached
         int totalQty = int.tryParse(totalQtyController.text) ?? 0;
         _isTotalQtyReached = totalCompleteGroups >= totalQty;
-        
+
         // Check if QTY per box is reached
         int targetQtyPerBox = int.tryParse(qtyPerBox) ?? 0;
-        _isQtyPerBoxReached = totalCompleteGroups > 0 && totalCompleteGroups == targetQtyPerBox;
+        _isQtyPerBoxReached =
+            totalCompleteGroups > 0 && totalCompleteGroups == targetQtyPerBox;
 
         // Remove the empty row if QTY is reached
-        if ((_isQtyPerBoxReached || _isTotalQtyReached) && _tableData.isNotEmpty) {
+        if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
+            _tableData.isNotEmpty) {
           // Remove the last row if it's empty
           if (_tableData.last['content']?.isEmpty == true) {
             _tableData.removeLast();
@@ -308,13 +310,15 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       });
-      
+
       // Show QTY per box dialog if reached and total QTY not reached
-      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+      if (_isQtyPerBoxReached &&
+          !_isTotalQtyReached &&
+          !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
         _showQtyReachedDialog();
       }
-      
+
       // Show total QTY dialog if reached
       if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
@@ -335,18 +339,22 @@ class _ScanItemState extends State<ScanItem> {
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
 
         // Check if total QTY has been reached
-        int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+        int currentInspectionQty =
+            int.tryParse(inspectionQtyController.text) ?? 0;
         int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
 
         _isTotalQtyReached = currentInspectionQty >= totalTargetQty;
 
         // Check if QTY per box is reached
-        if (targetQty > 0 && populatedRowCount >= targetQty && !_isTotalQtyReached) {
+        if (targetQty > 0 &&
+            populatedRowCount >= targetQty &&
+            !_isTotalQtyReached) {
           _isQtyPerBoxReached = true;
         }
 
         // Remove the empty row if QTY is reached
-        if ((_isQtyPerBoxReached || _isTotalQtyReached) && _tableData.isNotEmpty) {
+        if ((_isQtyPerBoxReached || _isTotalQtyReached) &&
+            _tableData.isNotEmpty) {
           // Remove the last row if it's empty
           if (_tableData.last['content']?.isEmpty == true) {
             _tableData.removeLast();
@@ -357,7 +365,7 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       });
-      
+
       // Show total QTY dialog if reached
       if (_isTotalQtyReached && !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
@@ -373,7 +381,8 @@ class _ScanItemState extends State<ScanItem> {
     showDialog(
       context: context,
       barrierDismissible: false, // Prevent dismissing by clicking outside
-      builder: (context) => WillPopScope( // Also prevent dismissing with back button
+      builder: (context) => WillPopScope(
+        // Also prevent dismissing with back button
         onWillPop: () async => false,
         child: AlertDialog(
           title: const Text('Information'),
@@ -472,7 +481,7 @@ class _ScanItemState extends State<ScanItem> {
       return _tableData.asMap().entries.map((entry) {
         int index = entry.key;
         Map<String, dynamic> data = entry.value;
-        
+
         return DataRow(
           cells: [
             DataCell(
@@ -489,10 +498,9 @@ class _ScanItemState extends State<ScanItem> {
                 },
               ),
             ),
-            DataCell(
-              Text(data['showRowNumber'] == true ? 
-                  data['rowNumber'].toString() : '')
-            ),
+            DataCell(Text(data['showRowNumber'] == true
+                ? data['rowNumber'].toString()
+                : '')),
             DataCell(
               TextField(
                 focusNode: _ensureFocusNode(index),
@@ -504,9 +512,18 @@ class _ScanItemState extends State<ScanItem> {
                     data['content'] = value;
                   });
                 },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-Z0-9\-_.*]')),
+                ],
+                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
-                  if (value.isNotEmpty && !_isTotalQtyReached && !(data['isLocked'] == true)) {
-                    _validateContent(value, index);
+                  if (value.isNotEmpty &&
+                      !_isTotalQtyReached &&
+                      !(data['isLocked'] == true)) {
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      _validateContent(value, index);
+                    });
                   }
                 },
                 decoration: InputDecoration(
@@ -526,7 +543,8 @@ class _ScanItemState extends State<ScanItem> {
                     vertical: 8,
                   ),
                   filled: data['isLocked'] == true,
-                  fillColor: data['isLocked'] == true ? Colors.grey.shade100 : null,
+                  fillColor:
+                      data['isLocked'] == true ? Colors.grey.shade100 : null,
                 ),
               ),
             ),
@@ -540,7 +558,9 @@ class _ScanItemState extends State<ScanItem> {
                           ? Colors.red
                           : Colors.black,
                   fontWeight: FontWeight.bold,
-                  fontSize: data['result'] == 'No Good' ? 20 : 16, // Increased font size for "No Good"
+                  fontSize: data['result'] == 'No Good'
+                      ? 20
+                      : 16, // Increased font size for "No Good"
                 ),
               ),
             ),
@@ -583,11 +603,18 @@ class _ScanItemState extends State<ScanItem> {
                     data['content'] = value;
                   });
                 },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-Z0-9\-_.*]')),
+                ],
+                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
                       !(data['isLocked'] == true)) {
-                    _validateContent(value, index);
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      _validateContent(value, index);
+                    });
                   }
                 },
                 decoration: InputDecoration(
@@ -623,7 +650,9 @@ class _ScanItemState extends State<ScanItem> {
                           ? Colors.red
                           : Colors.black,
                   fontWeight: FontWeight.bold,
-                  fontSize: data['result'] == 'No Good' ? 20 : 16, // Increased font size for "No Good"
+                  fontSize: data['result'] == 'No Good'
+                      ? 20
+                      : 16, // Increased font size for "No Good"
                 ),
               ),
             ),
@@ -660,27 +689,30 @@ class _ScanItemState extends State<ScanItem> {
     );
 
     String result = 'No Good'; // Default to No Good
-    
+
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
       final countingCode = codes.firstWhere(
         (code) => code['category'] == 'Counting',
         orElse: () => <String, dynamic>{},
       );
-      
+
       bool isCountingItem = countingCode.isNotEmpty;
-      
+
       if (isCountingItem) {
         // Get the serial count for validation
-        int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
-        
+        int serialCount =
+            int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+
         // Get the base content (everything before the serial number)
-        String baseDisplayContent = _displayContent.substring(0, _displayContent.length - serialCount);
-        String scannedBaseContent = value.substring(0, value.length - serialCount);
-        
+        String baseDisplayContent =
+            _displayContent.substring(0, _displayContent.length - serialCount);
+        String scannedBaseContent =
+            value.substring(0, value.length - serialCount);
+
         print('Base Display Content: "$baseDisplayContent"');
         print('Scanned Base Content: "$scannedBaseContent"');
-        
+
         // Exact comparison of base content
         if (baseDisplayContent != scannedBaseContent) {
           print('Base content mismatch');
@@ -691,10 +723,11 @@ class _ScanItemState extends State<ScanItem> {
           if (serialPart.length == serialCount) {
             // Check for duplicates
             bool isDuplicate = _tableData.any((row) {
-              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+              if (_tableData.indexOf(row) == index ||
+                  row['content']?.isEmpty == true) return false;
               return row['content'] == value;
             });
-            
+
             result = isDuplicate ? 'No Good' : 'Good';
           } else {
             print('Serial part length mismatch');
@@ -704,7 +737,7 @@ class _ScanItemState extends State<ScanItem> {
       } else {
         // For non-counting items
         int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-        
+
         if (value != _displayContent) {
           result = 'No Good';
         } else {
@@ -713,21 +746,22 @@ class _ScanItemState extends State<ScanItem> {
 
         // Calculate group information immediately
         int previousScans = _tableData
-            .where((row) => 
-                row['result']?.isNotEmpty == true && 
+            .where((row) =>
+                row['result']?.isNotEmpty == true &&
                 _tableData.indexOf(row) < index)
             .length;
-        
+
         // Calculate current group number (1-based)
         int currentGroup = (previousScans ~/ noOfCodes) + 1;
-        
+
         setState(() {
           // Show row number if:
           // 1. This is the first scan in a group, OR
           // 2. Previous group is complete and this is a new scan
           bool isFirstInGroup = previousScans % noOfCodes == 0;
-          bool previousGroupComplete = previousScans > 0 && previousScans % noOfCodes == 0;
-          
+          bool previousGroupComplete =
+              previousScans > 0 && previousScans % noOfCodes == 0;
+
           _tableData[index]['showRowNumber'] = isFirstInGroup;
           _tableData[index]['rowNumber'] = currentGroup;
         });
@@ -785,7 +819,8 @@ class _ScanItemState extends State<ScanItem> {
           },
           child: AlertDialog(
             title: const Text('Alert'),
-            content: const Text('A "No Good" result has been recorded. Please review the issue.'),
+            content: const Text(
+                'A "No Good" result has been recorded. Please review the issue.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -825,45 +860,49 @@ class _ScanItemState extends State<ScanItem> {
             (code) => code['category'] == 'Counting',
             orElse: () => <String, dynamic>{},
           );
-          
+
           final nonCountingCode = codes.firstWhere(
             (code) => code['category'] == 'Non-Counting',
             orElse: () => <String, dynamic>{},
           );
-          
+
           if (countingCode.isNotEmpty) {
             _labelContent = countingCode['content'];
             _itemCategory = 'Counting';
-            
+
             // Check if sub-lot rules are enabled for this item
-            bool hasSubLotRules = countingCode['hasSubLot'] == 1 || countingCode['hasSubLot'] == true;
-            
+            bool hasSubLotRules = countingCode['hasSubLot'] == 1 ||
+                countingCode['hasSubLot'] == true;
+
             // Get serial count for Counting items
-            int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+            int serialCount =
+                int.tryParse(countingCode['serialCount']?.toString() ?? '0') ??
+                    0;
             print('Serial Count from masterlist: $serialCount');
-            
+
             // Format lot number with sub-lot rules if enabled
             String formattedLotNumber = '';
             if (lotNumber.contains('-')) {
               final parts = lotNumber.split('-');
               final mainPart = parts[0];
               final subLotPart = parts[1];
-              
+
               if (hasSubLotRules) {
                 // Convert sub-lot number according to rules if between 10-20
                 int subLotNum = int.tryParse(subLotPart) ?? 0;
                 String convertedSubLot;
-                
+
                 if (subLotNum == 10) {
                   convertedSubLot = '0';
                 } else if (subLotNum >= 11 && subLotNum <= 20) {
                   // Convert to letters A-J (11=A, 12=B, etc.)
-                  convertedSubLot = String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+                  convertedSubLot =
+                      String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
                 } else {
                   // For numbers outside 10-20, just use the number
                   convertedSubLot = subLotNum.toString();
                 }
-                
+
                 formattedLotNumber = '$mainPart$convertedSubLot';
                 print('Sub-lot conversion: $subLotPart -> $convertedSubLot');
               } else {
@@ -874,11 +913,11 @@ class _ScanItemState extends State<ScanItem> {
             } else {
               formattedLotNumber = lotNumber;
             }
-            
+
             // Add asterisks for Counting items
             String asterisks = '*' * serialCount;
             _displayContent = '${_labelContent}$formattedLotNumber$asterisks';
-            
+
             print('Base Content: ${_labelContent}');
             print('Formatted Lot Number: $formattedLotNumber');
             print('Asterisks: $asterisks');
@@ -887,7 +926,7 @@ class _ScanItemState extends State<ScanItem> {
             _labelContent = nonCountingCode['content'];
             _itemCategory = 'Non-Counting';
             _displayContent = '${_labelContent}$lotNumber';
-            
+
             print('Base Content: ${_labelContent}');
             print('Original Lot Number: $lotNumber');
             print('Final Display Content: $_displayContent');
@@ -953,7 +992,7 @@ class _ScanItemState extends State<ScanItem> {
                   onPressed: () {
                     // Only respond to direct button clicks
                     if (FocusScope.of(context).hasFocus) return;
-                    
+
                     showDialog(
                       context: context,
                       barrierDismissible: false,
@@ -961,7 +1000,8 @@ class _ScanItemState extends State<ScanItem> {
                         onWillPop: () async => false,
                         child: AlertDialog(
                           title: const Text('Emergency Stop'),
-                          content: const Text('Are you sure you want to stop the operation?'),
+                          content: const Text(
+                              'Are you sure you want to stop the operation?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
@@ -984,8 +1024,10 @@ class _ScanItemState extends State<ScanItem> {
                                     poNo: poNo,
                                     quantity: qtyPerBoxController.text,
                                     tableData: _tableData
-                                        .where((item) => item['content']?.isNotEmpty == true)
-                                        .map((item) => Map<String, dynamic>.from(item))
+                                        .where((item) =>
+                                            item['content']?.isNotEmpty == true)
+                                        .map((item) =>
+                                            Map<String, dynamic>.from(item))
                                         .toList(),
                                     username: 'operator',
                                   ),
@@ -1285,7 +1327,8 @@ class _ScanItemState extends State<ScanItem> {
                                   onPressed: _handleReviewSummary,
                                   child: const Text('Review Summary'),
                                 )
-                              else if (!_isQtyPerBoxReached && !_isTotalQtyReached)
+                              else if (!_isQtyPerBoxReached &&
+                                  !_isTotalQtyReached)
                                 // Only show Add Row button if neither QTY limit is reached
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
