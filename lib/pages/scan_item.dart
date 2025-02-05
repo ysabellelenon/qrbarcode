@@ -380,15 +380,13 @@ class _ScanItemState extends State<ScanItem> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by clicking outside
+      barrierDismissible: false,
       builder: (context) => WillPopScope(
-        // Also prevent dismissing with back button
         onWillPop: () async => false,
         child: AlertDialog(
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
-            // Only show Scan New Article Label button
             TextButton(
               onPressed: () {
                 Navigator.of(context).pushReplacement(
@@ -399,6 +397,7 @@ class _ScanItemState extends State<ScanItem> {
                       operatorScanId: operatorScanId,
                       totalQty: totalQty,
                       resumeData: widget.resumeData,
+                      hideBackButton: true,
                     ),
                   ),
                 );
@@ -770,11 +769,33 @@ class _ScanItemState extends State<ScanItem> {
 
     // Save to database and update UI
     try {
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        result,
-      );
+      if (_itemCategory == 'Non-Counting') {
+        // Calculate current group number
+        int previousScans = _tableData
+            .where((row) => 
+                row['result']?.isNotEmpty == true && 
+                _tableData.indexOf(row) < index)
+            .length;
+        
+        // Get noOfCodes from matchingItem
+        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+        int currentGroup = (previousScans ~/ noOfCodes) + 1;
+
+        // Save to database with group number
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+          groupNumber: currentGroup,
+        );
+      } else {
+        // For counting items, no group number needed
+        await DatabaseHelper().insertScanContent(
+          operatorScanId,
+          value,
+          result,
+        );
+      }
 
       setState(() {
         _tableData[index]['result'] = result;
@@ -984,65 +1005,47 @@ class _ScanItemState extends State<ScanItem> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    // Only respond to direct button clicks
-                    if (FocusScope.of(context).hasFocus) return;
-
+                GestureDetector(
+                  onTap: () {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => WillPopScope(
-                        onWillPop: () async => false,
-                        child: AlertDialog(
-                          title: const Text('Emergency Stop'),
-                          content: const Text(
-                              'Are you sure you want to stop the operation?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => EmergencyStop(
-                                    itemName: itemName,
-                                    lotNumber: lotNumber,
-                                    content: _labelContent ?? content,
-                                    poNo: poNo,
-                                    quantity: qtyPerBoxController.text,
-                                    tableData: _tableData
-                                        .where((item) =>
-                                            item['content']?.isNotEmpty == true)
-                                        .map((item) =>
-                                            Map<String, dynamic>.from(item))
-                                        .toList(),
-                                    username: 'operator',
-                                  ),
-                                );
-                              },
-                              child: const Text('Confirm Stop'),
-                            ),
-                          ],
-                        ),
+                      builder: (context) => EmergencyStop(
+                        itemName: itemName,
+                        lotNumber: lotNumber,
+                        content: _labelContent ?? content,
+                        poNo: poNo,
+                        quantity: qtyPerBoxController.text,
+                        tableData: _tableData
+                            .where((item) => item['content']?.isNotEmpty == true)
+                            .map((item) => Map<String, dynamic>.from(item))
+                            .toList(),
+                        username: 'operator',
                       ),
                     );
                   },
-                  // Prevent keyboard focus
-                  focusNode: AlwaysDisabledFocusNode(),
-                  child: const Text('Emergency'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: const Text(
+                      'Emergency',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1411,6 +1414,7 @@ class _ScanItemState extends State<ScanItem> {
                                           operatorScanId: operatorScanId,
                                           totalQty: totalQty,
                                           resumeData: widget.resumeData,
+                                          hideBackButton: true,
                                         ),
                                       ),
                                     );
