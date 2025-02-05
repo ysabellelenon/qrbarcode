@@ -7,6 +7,7 @@ import 'article_label.dart'; // Add this import
 import 'emergency_stop.dart'; // Add this import
 import 'finished_item.dart'; // Add this import
 import '../widgets/previous_scans_table.dart';
+import 'dart:async'; // Add this import for Timer
 
 class ScanItem extends StatefulWidget {
   final Map<String, dynamic>? resumeData;
@@ -29,6 +30,8 @@ class _ScanItemState extends State<ScanItem> {
   final TextEditingController goodCountController = TextEditingController();
   final TextEditingController noGoodCountController = TextEditingController();
   final List<Map<String, dynamic>> _tableData = [];
+  final List<TextEditingController> _contentControllers = [];
+  Timer? _debounceTimer;
   String? _labelContent;
   String? _itemCategory;
   String _displayContent = '';
@@ -45,6 +48,8 @@ class _ScanItemState extends State<ScanItem> {
   // Add variables for historical data
   int _historicalGoodCount = 0; // New variable for historical good count
   int _historicalNoGoodCount = 0; // New variable for historical no good count
+
+  String _scanBuffer = ''; // Add this line to store scanner input
 
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
@@ -134,6 +139,7 @@ class _ScanItemState extends State<ScanItem> {
         'isLocked': false,
       });
       _focusNodes.add(FocusNode());
+      _contentControllers.add(TextEditingController());
 
       // Focus the new row immediately
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -482,6 +488,7 @@ class _ScanItemState extends State<ScanItem> {
       return _tableData.asMap().entries.map((entry) {
         int index = entry.key;
         Map<String, dynamic> data = entry.value;
+        final controller = _getOrCreateController(index);
 
         return DataRow(
           cells: [
@@ -505,24 +512,30 @@ class _ScanItemState extends State<ScanItem> {
             DataCell(
               TextField(
                 focusNode: _ensureFocusNode(index),
-                controller: TextEditingController(text: data['content']),
+                controller: controller,
                 autofocus: index == 0,
                 enabled: !_isTotalQtyReached && !(data['isLocked'] == true),
                 onChanged: (value) {
-                  setState(() {
-                    data['content'] = value;
-                  });
+                  print("onChanged > value: $value");
+                  // Don't update the controller text here
+                  // Just store the latest value
+                  _scanBuffer = value;
                 },
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[a-zA-Z0-9\-_.*]')),
-                ],
-                keyboardType: TextInputType.visiblePassword,
                 onSubmitted: (value) {
+                  print("onSubmitted > value: $value");
                   if (value.isNotEmpty &&
                       !_isTotalQtyReached &&
                       !(data['isLocked'] == true)) {
-                    _validateContent(value, index);
+                    // Update both controller and data with the complete scan
+                    final completeValue = _scanBuffer;
+                    controller.text = completeValue;
+                    setState(() {
+                      data['content'] = completeValue;
+                    });
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      _validateContent(completeValue, index);
+                    });
+                    _scanBuffer = ''; // Clear the buffer after using it
                   }
                 },
                 decoration: InputDecoration(
@@ -857,9 +870,13 @@ class _ScanItemState extends State<ScanItem> {
 
   @override
   void dispose() {
-    // Clean up focus nodes
+    _debounceTimer?.cancel();
+    // Clean up focus nodes and controllers
     for (var node in _focusNodes) {
       node.dispose();
+    }
+    for (var controller in _contentControllers) {
+      controller.dispose();
     }
     goodCountController.dispose();
     noGoodCountController.dispose();
@@ -1012,7 +1029,8 @@ class _ScanItemState extends State<ScanItem> {
                   ),
                   onPressed: () {
                     // Only handle mouse clicks
-                    if (RendererBinding.instance.mouseTracker.mouseIsConnected) {
+                    if (RendererBinding
+                        .instance.mouseTracker.mouseIsConnected) {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
@@ -1023,7 +1041,8 @@ class _ScanItemState extends State<ScanItem> {
                           poNo: poNo,
                           quantity: qtyPerBoxController.text,
                           tableData: _tableData
-                              .where((item) => item['content']?.isNotEmpty == true)
+                              .where(
+                                  (item) => item['content']?.isNotEmpty == true)
                               .map((item) => Map<String, dynamic>.from(item))
                               .toList(),
                           username: 'operator',
@@ -1047,6 +1066,21 @@ class _ScanItemState extends State<ScanItem> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // OutlinedButton for 'Back' has been removed
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Back'),
+                ),
+                const SelectableText(
+                  'Scan Item',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C3E50),
+                  ),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1428,6 +1462,15 @@ class _ScanItemState extends State<ScanItem> {
         ],
       ),
     );
+  }
+
+  // Add this helper method
+  TextEditingController _getOrCreateController(int index) {
+    while (_contentControllers.length <= index) {
+      _contentControllers.add(TextEditingController());
+    }
+    _contentControllers[index].text = _tableData[index]['content'] ?? '';
+    return _contentControllers[index];
   }
 }
 
