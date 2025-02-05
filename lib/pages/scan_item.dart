@@ -967,12 +967,8 @@ class _ScanItemState extends State<ScanItem> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
+                GestureDetector(
+                  onTap: () {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
@@ -990,7 +986,28 @@ class _ScanItemState extends State<ScanItem> {
                       ),
                     );
                   },
-                  child: const Text('Emergency'),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: const Text(
+                      'Emergency',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
