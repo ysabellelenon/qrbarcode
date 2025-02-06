@@ -46,21 +46,22 @@ if not errorlevel 1 (
     :: Clean any existing build files
     if exist "build\windows" rd /s /q "build\windows"
     
-    :: Create ARM64 build directory
-    mkdir "build\windows\arm64\runner\Release" 2>nul
-    
     :: Build with ARM64 configuration
     call flutter build windows --release ^
         --dart-define=FLUTTER_ARM=true ^
         --dart-define=FLUTTER_FORCE_SOFTWARE_RENDERING=true ^
         --dart-define=FLUTTER_WINDOW_FORCE_DCOMP=true
-    
-    :: Set the build directory for ARM64
-    set "BUILD_DIR=build\windows\arm64\runner\Release"
 ) else (
     call flutter build windows --release
+)
+
+:: Set build directory based on what actually exists
+if exist "build\windows\arm64\runner\Release\qrbarcode.exe" (
+    set "BUILD_DIR=build\windows\arm64\runner\Release"
+) else (
     set "BUILD_DIR=build\windows\x64\runner\Release"
 )
+
 if errorlevel 1 (
     echo Error during build. Press any key to exit.
     pause
@@ -78,29 +79,57 @@ echo.
 echo Updating application files...
 echo Copying core application files...
 
-:: First, verify source files exist
+:: First, verify source files exist and set correct build directory
 if not exist "%BUILD_DIR%\qrbarcode.exe" (
-    echo Error: Build files not found in %BUILD_DIR%
-    echo Please ensure the build completed successfully.
-    pause
-    exit /b 1
+    echo Warning: Build files not found in %BUILD_DIR%
+    echo Trying alternate build directory...
+    
+    :: Try switching to x64 if we were looking in arm64, or vice versa
+    if "%BUILD_DIR%"=="build\windows\arm64\runner\Release" (
+        set "BUILD_DIR=build\windows\x64\runner\Release"
+    ) else (
+        set "BUILD_DIR=build\windows\arm64\runner\Release"
+    )
+    
+    :: Check if the alternate directory works
+    if not exist "%BUILD_DIR%\qrbarcode.exe" (
+        echo Error: Build files not found in either build directory.
+        echo Please ensure the build completed successfully.
+        pause
+        exit /b 1
+    ) else (
+        echo Found build files in alternate directory: %BUILD_DIR%
+    )
 )
 
 :: Core executable and DLLs
-copy /Y "%BUILD_DIR%\qrbarcode.exe" "QRBarcode_Release\" >nul
-copy /Y "%BUILD_DIR%\flutter_windows.dll" "QRBarcode_Release\" >nul
-copy /Y "%BUILD_DIR%\window_size_plugin.dll" "QRBarcode_Release\" >nul
-copy /Y "%BUILD_DIR%\printing_plugin.dll" "QRBarcode_Release\" >nul
-copy /Y "%BUILD_DIR%\pdfium.dll" "QRBarcode_Release\" >nul
-
-:: Copy SQLite DLL from Flutter cache or download if needed
-set "SQLITE_SOURCE=%LOCALAPPDATA%\flutter\cache\artifacts\engine\windows-x64\sqlite3.dll"
-if exist "%SQLITE_SOURCE%" (
-    copy /Y "%SQLITE_SOURCE%" "QRBarcode_Release\" >nul
-    echo [√] Copied sqlite3.dll from Flutter cache
+echo Copying/updating core files...
+if not exist "QRBarcode_Release\qrbarcode.exe" (
+    copy /Y "%BUILD_DIR%\qrbarcode.exe" "QRBarcode_Release\" >nul
 ) else (
-    echo Downloading sqlite3.dll...
-    powershell -Command "& { $webClient = New-Object System.Net.WebClient; $url = 'https://www.sqlite.org/2023/sqlite-dll-win64-x64-3430200.zip'; $zipPath = '%TEMP%\sqlite.zip'; $webClient.DownloadFile($url, $zipPath); Expand-Archive -Path $zipPath -DestinationPath '%TEMP%\sqlite' -Force; Copy-Item '%TEMP%\sqlite\sqlite3.dll' 'QRBarcode_Release\' -Force; Remove-Item -Path '%TEMP%\sqlite' -Recurse -Force; Remove-Item $zipPath }"
+    xcopy /Y /D "%BUILD_DIR%\qrbarcode.exe" "QRBarcode_Release\" >nul
+)
+
+:: Only copy DLLs if they don't exist or are newer
+for %%F in (flutter_windows.dll window_size_plugin.dll printing_plugin.dll pdfium.dll) do (
+    if not exist "QRBarcode_Release\%%F" (
+        copy /Y "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
+        echo [+] Copied missing file: %%F
+    ) else (
+        xcopy /Y /D "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
+    )
+)
+
+:: Copy SQLite DLL only if missing
+if not exist "QRBarcode_Release\sqlite3.dll" (
+    set "SQLITE_SOURCE=%LOCALAPPDATA%\flutter\cache\artifacts\engine\windows-x64\sqlite3.dll"
+    if exist "%SQLITE_SOURCE%" (
+        copy /Y "%SQLITE_SOURCE%" "QRBarcode_Release\" >nul
+        echo [+] Copied missing sqlite3.dll from Flutter cache
+    ) else (
+        echo Downloading sqlite3.dll...
+        powershell -Command "& { $webClient = New-Object System.Net.WebClient; $url = 'https://www.sqlite.org/2023/sqlite-dll-win64-x64-3430200.zip'; $zipPath = '%TEMP%\sqlite.zip'; $webClient.DownloadFile($url, $zipPath); Expand-Archive -Path $zipPath -DestinationPath '%TEMP%\sqlite' -Force; Copy-Item '%TEMP%\sqlite\sqlite3.dll' 'QRBarcode_Release\' -Force; Remove-Item -Path '%TEMP%\sqlite' -Recurse -Force; Remove-Item $zipPath }"
+    )
 )
 
 :: Update data directory
@@ -114,20 +143,26 @@ xcopy /E /I /Y "%BUILD_DIR%\data" "QRBarcode_Release\data\"
 echo Checking Visual C++ Runtime DLLs...
 wmic computersystem get manufacturer | findstr /i "Parallels" >nul
 if not errorlevel 1 (
-    :: ARM64 DLLs
+    :: ARM64 DLLs - only copy if missing
     if exist "C:\Windows\System32\arm64\MSVCP140.dll" (
-        copy /Y "C:\Windows\System32\arm64\MSVCP140.dll" "QRBarcode_Release\" >nul
-        copy /Y "C:\Windows\System32\arm64\VCRUNTIME140.dll" "QRBarcode_Release\" >nul
-        copy /Y "C:\Windows\System32\arm64\VCRUNTIME140_1.dll" "QRBarcode_Release\" >nul
+        for %%F in (MSVCP140.dll VCRUNTIME140.dll VCRUNTIME140_1.dll) do (
+            if not exist "QRBarcode_Release\%%F" (
+                copy /Y "C:\Windows\System32\arm64\%%F" "QRBarcode_Release\" >nul
+                echo [+] Copied missing ARM64 DLL: %%F
+            )
+        )
     ) else (
         echo WARNING: ARM64 Visual C++ Runtime DLLs not found
         echo Please install the ARM64 Visual C++ Redistributable
     )
 ) else (
-    :: x64 DLLs
-    copy /Y "C:\Windows\System32\MSVCP140.dll" "QRBarcode_Release\" >nul
-    copy /Y "C:\Windows\System32\VCRUNTIME140.dll" "QRBarcode_Release\" >nul
-    copy /Y "C:\Windows\System32\VCRUNTIME140_1.dll" "QRBarcode_Release\" >nul
+    :: x64 DLLs - only copy if missing
+    for %%F in (MSVCP140.dll VCRUNTIME140.dll VCRUNTIME140_1.dll) do (
+        if not exist "QRBarcode_Release\%%F" (
+            copy /Y "C:\Windows\System32\%%F" "QRBarcode_Release\" >nul
+            echo [+] Copied missing x64 DLL: %%F
+        )
+    )
 )
 
 :: Ensure launch scripts are present and updated
@@ -208,8 +243,26 @@ if %MISSING_FILES%==1 (
 )
 
 echo.
+echo Creating release archive...
+:: Get current date and time in format YYYYMMDD_HHMM
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
+set ARCHIVE_NAME=QRBarcode_Release_%datetime:~0,8%_%datetime:~8,2%%datetime:~10,2%
+
+:: Move back to root directory before creating zip
+cd ..
+
+:: Create zip file using PowerShell
+powershell -Command "& { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('QRBarcode_Release', '%ARCHIVE_NAME%.zip') }"
+
+if exist "%ARCHIVE_NAME%.zip" (
+    echo Successfully created archive: %ARCHIVE_NAME%.zip
+) else (
+    echo Failed to create archive
+)
+
+echo.
 echo Release build process completed!
 echo Your release files have been updated in the "QRBarcode_Release" directory
+echo A backup archive has been created as "%ARCHIVE_NAME%.zip"
 echo.
-cd ..
 pause 
