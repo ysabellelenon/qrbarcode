@@ -420,20 +420,20 @@ class _ScanItemState extends State<ScanItem> {
 
         return DataRow(
           cells: [
-            DataCell(
-              Checkbox(
-                value: selectedRows.contains(index),
-                onChanged: (bool? value) {
-                  setState(() {
-                    if (value == true) {
-                      selectedRows.add(index);
-                    } else {
-                      selectedRows.remove(index);
-                    }
-                  });
-                },
-              ),
-            ),
+            // Remove the checkbox column
+            // DataCell(
+            //   Checkbox(
+            //     value: selectedRows.contains(index),
+            //     onChanged: (bool? value) {
+            //       setState(() {
+            //         if (value == true) {
+            //           selectedRows.add(index);
+            //         } else {
+            //           selectedRows.remove(index);
+            //         }
+            //       });
+            //     },
+            //   ),
             DataCell(Text(data['showRowNumber'] == true
                 ? data['rowNumber'].toString()
                 : '')),
@@ -516,20 +516,20 @@ class _ScanItemState extends State<ScanItem> {
 
         return DataRow(
           cells: [
-            DataCell(
-              Checkbox(
-                value: selectedRows.contains(index),
-                onChanged: (bool? value) {
-                  setState(() {
-                    if (value == true) {
-                      selectedRows.add(index);
-                    } else {
-                      selectedRows.remove(index);
-                    }
-                  });
-                },
-              ),
-            ),
+            // Remove the checkbox column
+            // DataCell(
+            //   Checkbox(
+            //     value: selectedRows.contains(index),
+            //     onChanged: (bool? value) {
+            //       setState(() {
+            //         if (value == true) {
+            //           selectedRows.add(index);
+            //         } else {
+            //           selectedRows.remove(index);
+            //         }
+            //       });
+            //     },
+            //   ),
             DataCell(Text((index + 1).toString())),
             DataCell(
               TextField(
@@ -1268,7 +1268,8 @@ class _ScanItemState extends State<ScanItem> {
                                 headingRowColor: MaterialStateProperty.all(
                                     Colors.grey.shade100),
                                 columns: const [
-                                  DataColumn(label: Text('')),
+                                  // Remove the checkbox column
+                                  // DataColumn(label: Text('')),
                                   DataColumn(label: Text('No.')),
                                   DataColumn(label: Text('Content')),
                                   DataColumn(label: Text('Result')),
@@ -1305,64 +1306,64 @@ class _ScanItemState extends State<ScanItem> {
                               else if (!_isQtyPerBoxReached &&
                                   !_isTotalQtyReached)
                                 // Only show Add Row button if neither QTY limit is reached
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepPurple,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: kBorderRadiusSmallAll,
-                                    ),
-                                  ),
-                                  onPressed: _addRow,
-                                  child: const Text('Add Row'),
-                                ),
+                                // ElevatedButton(
+                                //   style: ElevatedButton.styleFrom(
+                                //     backgroundColor: Colors.deepPurple,
+                                //     foregroundColor: Colors.white,
+                                //     padding: const EdgeInsets.symmetric(
+                                //       horizontal: 24,
+                                //       vertical: 12,
+                                //     ),
+                                //     shape: RoundedRectangleBorder(r
+                                //       borderRadius: kBorderRadiusSmallAll,
+                                //     ),
+                                //   ),
+                                //   onPressed: _addRow,
+                                //   child: const Text('Add Row'),
+                                // ),
                               const SizedBox(width: 16),
                               // Delete Selected button
-                              if (selectedRows.isNotEmpty)
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: kBorderRadiusSmallAll,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      final sortedIndices = selectedRows
-                                          .toList()
-                                        ..sort((a, b) => b.compareTo(a));
-                                      for (final index in sortedIndices) {
-                                        if (index < _focusNodes.length) {
-                                          _focusNodes[index].dispose();
-                                          _focusNodes.removeAt(index);
-                                        }
-                                        _tableData.removeAt(index);
-                                      }
-                                      selectedRows.clear();
+                              // if (selectedRows.isNotEmpty)
+                              //   ElevatedButton(
+                              //     style: ElevatedButton.styleFrom(
+                              //       backgroundColor: Colors.red,
+                              //       foregroundColor: Colors.white,
+                              //       padding: const EdgeInsets.symmetric(
+                              //         horizontal: 24,
+                              //         vertical: 12,
+                              //       ),
+                              //       shape: RoundedRectangleBorder(
+                              //         borderRadius: kBorderRadiusSmallAll,
+                              //       ),
+                              //     ),
+                              //     onPressed: () {
+                              //       setState(() {
+                              //         final sortedIndices = selectedRows
+                              //             .toList()
+                              //           ..sort((a, b) => b.compareTo(a));
+                              //         for (final index in sortedIndices) {
+                              //           if (index < _focusNodes.length) {
+                              //             _focusNodes[index].dispose();
+                              //             _focusNodes.removeAt(index);
+                              //           }
+                              //           _tableData.removeAt(index);
+                              //         }
+                              //         selectedRows.clear();
 
-                                      if (_tableData.isEmpty) {
-                                        _tableData.add({
-                                          'content': '',
-                                          'result': '',
-                                          'isLocked': false,
-                                        });
-                                        _focusNodes.add(FocusNode());
-                                      }
+                              //         if (_tableData.isEmpty) {
+                              //           _tableData.add({
+                              //             'content': '',
+                              //             'result': '',
+                              //             'isLocked': false,
+                              //           });
+                              //           _focusNodes.add(FocusNode());
+                              //         }
 
-                                      _checkAndUpdateQtyStatus();
-                                    });
-                                  },
-                                  child: const Text('Delete Selected'),
-                                ),
+                              //         _checkAndUpdateQtyStatus();
+                              //       });
+                              //     },
+                              //     child: const Text('Delete Selected'),
+                              //   ),
                               if (_isQtyPerBoxReached) ...[
                                 const SizedBox(width: 16),
                                 ElevatedButton(
