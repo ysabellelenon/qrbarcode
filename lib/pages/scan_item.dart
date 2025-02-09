@@ -764,12 +764,14 @@ class _ScanItemState extends State<ScanItem> {
             ? (index ~/ int.parse(matchingItem['codeCount'] ?? '1')) + 1
             : null;
 
-        // Update QTY per box count
+        // Update QTY per box count - only count "Good" results
+        int goodScans = _tableData.where((item) => 
+          item['result'] == 'Good').length;
+        qtyPerBoxController.text = goodScans.toString();
+        
+        // Update inspection QTY with all scans
         int completedScans = _tableData.where((item) => 
           item['result']?.isNotEmpty == true).length;
-        qtyPerBoxController.text = completedScans.toString();
-        
-        // Update inspection QTY
         inspectionQtyController.text = completedScans.toString();
       });
 
@@ -1435,16 +1437,16 @@ class _ScanItemState extends State<ScanItem> {
   // Add this helper method to get the current group count
   int _getCurrentGroupCount() {
     if (_itemCategory == 'Non-Counting') {
-      // For non-counting items, use the No. column to count groups
+      // For non-counting items, use the No. column to count groups with "Good" results
       return _tableData
-        .where((item) => item['result']?.isNotEmpty == true)
+        .where((item) => item['result'] == 'Good')
         .map((item) => item['rowNumber'] ?? 0)
         .toSet()
         .length;
     } else {
-      // For counting items, count rows with the same No. as one group
+      // For counting items, count rows with "Good" results
       return _tableData
-        .where((item) => item['result']?.isNotEmpty == true)
+        .where((item) => item['result'] == 'Good')
         .map((item) => item['No.'] ?? item['rowNumber'])
         .toSet()
         .length;
