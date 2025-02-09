@@ -902,12 +902,15 @@ class DatabaseHelper {
   }
 
   Future<Map<String, dynamic>?> getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getInt('userId');
+    final db = await database;
+    
+    // Get the current user ID from the current_user table
+    final currentUserResult = await db.query('current_user', limit: 1);
+    final userId = currentUserResult.isNotEmpty ? currentUserResult.first['user_id'] as int : null;
     
     if (userId == null) return null;
 
-    final db = await database;
+    // Get the user details from the users table
     final List<Map<String, dynamic>> users = await db.query(
       'users',
       where: 'id = ?',
@@ -930,6 +933,8 @@ class DatabaseHelper {
         {'user_id': userId},
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+
+      print('DEBUG: Set current user ID to: $userId');
     } catch (e) {
       print('Error setting current user ID: $e');
       // If there's an error, try to create the table and retry
@@ -951,7 +956,9 @@ class DatabaseHelper {
   Future<int?> getCurrentUserId() async {
     final db = await database;
     final result = await db.query('current_user', limit: 1);
-    return result.isNotEmpty ? result.first['user_id'] as int : null;
+    final userId = result.isNotEmpty ? result.first['user_id'] as int : null;
+    print('DEBUG: Current user ID from DB: $userId');
+    return userId;
   }
 
   Future<int> getCompletedGroupsCount(int operatorScanId, int codesPerGroup) async {

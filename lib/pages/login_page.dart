@@ -44,14 +44,21 @@ class _LoginPageState extends State<LoginPage> {
           throw Exception('Username and password cannot be empty');
         }
 
+        print('DEBUG: Attempting login with username: $username');
         final user = await DatabaseHelper().getUserByUsernameAndPassword(
           username,
           password,
         );
+        print('DEBUG: Login result user: $user');
 
         if (user != null) {
           // Store the current user ID
+          print('DEBUG: Setting current user ID: ${user['id']}');
           await DatabaseHelper().setCurrentUserId(user['id'] as int);
+          
+          // Verify the current user was set
+          final currentUser = await DatabaseHelper().getCurrentUser();
+          print('DEBUG: Verified current user after setting: $currentUser');
           
           if (mounted) {
             setState(() {
