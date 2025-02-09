@@ -337,8 +337,7 @@ class _ReviseItemState extends State<ReviseItem> {
         return;
       }
 
-      final uniqueCategories =
-          selectedCategories.values.toSet();
+      final uniqueCategories = selectedCategories.values.toSet();
       if (uniqueCategories.length > 1) {
         showDialog(
           context: context,
@@ -357,42 +356,53 @@ class _ReviseItemState extends State<ReviseItem> {
         return;
       }
 
+      // Get the category that will be used for all codes
+      final category = selectedCategories.values.first;
+      print('DEBUG: Selected category for all codes: $category');
+
       // Gather the codes data
       final allCodes = codeContainers.map((container) {
         return {
-          'category': container.selectedCategory,
+          'category': category, // Use the consistent category for all codes
           'content': container.labelController.text,
           'hasSubLot': container.hasSubLot,
           'serialCount': container.serialCount,
         };
       }).toList();
 
-      // Get only counting codes
-      final countingCodes = allCodes
-          .where((code) => code['category'] == 'Counting')
-          .map((code) => {
-                'category': code['category'].toString(),
-                'content': code['content'].toString(),
-              })
-          .toList();
+      print('DEBUG: All codes with updated category: $allCodes');
 
-      if (countingCodes.isNotEmpty) {
-        // Navigate to ReviseSublot if there are counting codes
-        Navigator.push(
+      if (category == 'Counting') {
+        // Navigate to ReviseSublot if the category is Counting
+        print('DEBUG: Navigating to ReviseSublot with counting codes');
+        
+        // Convert the codes to the correct format
+        final List<Map<String, dynamic>> formattedCodes = codeContainers.map((container) {
+          return {
+            'category': category,
+            'content': container.labelController.text,
+            'hasSubLot': container.hasSubLot ? 1 : 0,
+            'serialCount': container.serialCount,
+          };
+        }).toList();
+        
+        print('DEBUG: Formatted codes for ReviseSublot: $formattedCodes');
+        
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => ReviseSublot(
               itemId: widget.item['id'],
               itemName: _itemNameController.text,
               revision: _selectedRevision!,
-              countingCodes:
-                  countingCodes as List<Map<String, String>>,
-              allCodes: allCodes,
+              countingCodes: formattedCodes,
+              allCodes: formattedCodes,
             ),
           ),
         );
       } else {
-        // If no counting codes, update directly
+        // If category is Non-Counting, update directly
+        print('DEBUG: Updating item directly with codes: $allCodes');
         _updateItem(allCodes);
       }
     }
@@ -400,25 +410,34 @@ class _ReviseItemState extends State<ReviseItem> {
 
   void _updateItem(List<Map<String, dynamic>> codes) async {
     try {
+      print('\n=== DEBUG: ReviseItem._updateItem ===');
       final now = DateTime.now().toIso8601String();
+      
+      // Get the category from the first code since we ensure all codes have the same category
+      final category = codes.first['category'];
+      print('Original item ID: ${widget.item['id']}');
+      print('Original item data: ${widget.item}');
+      print('New codes to be saved: $codes');
+      print('Selected category: $category');
+      
       // Prepare the complete updated item data
       final updatedItem = {
         'itemCode': _itemNameController.text,
         'revision': _selectedRevision,
-        'codeCount': _selectedCodeCount,
-        'codes': codes
-            .map((code) => {
-                  'category': code['category'],
-                  'content': code['content'],
-                  'hasSubLot': code['hasSubLot'] ? 1 : 0,
-                  'serialCount': code['serialCount'] ?? '0',
-                  'isActive': 1,
-                  'lastUpdated': now,
-                })
-            .toList(),
+        'codeCount': codes.length.toString(),
+        'category': category, // Ensure category is set from the codes
+        'codes': codes.map((code) => {
+          'category': category, // Use the same category for all codes
+          'content': code['content'],
+          'hasSubLot': code['hasSubLot'] ? 1 : 0,
+          'serialCount': code['serialCount'] ?? '0',
+          'isActive': 1,
+          'lastUpdated': now,
+        }).toList(),
         'isActive': 1,
         'lastUpdated': now,
       };
+      print('Prepared update data: $updatedItem');
 
       // Update the item in the database
       await DatabaseHelper().updateItem(widget.item['id'], updatedItem);

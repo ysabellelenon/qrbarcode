@@ -8,7 +8,7 @@ class ReviseSublot extends StatefulWidget {
   final int itemId;
   final String itemName;
   final String revision;
-  final List<Map<String, String>> countingCodes;
+  final List<Map<String, dynamic>> countingCodes;
   final List<Map<String, dynamic>> allCodes;
 
   const ReviseSublot({
@@ -32,16 +32,45 @@ class _ReviseSublotState extends State<ReviseSublot> {
   @override
   void initState() {
     super.initState();
+    print('DEBUG: ReviseSublot initState - countingCodes: ${widget.countingCodes}');
+    print('DEBUG: ReviseSublot initState - allCodes: ${widget.allCodes}');
+    
     // Initialize maps for each counting code
     for (var code in widget.countingCodes) {
-      // Find the corresponding code in allCodes to get existing values
-      final existingCode = widget.allCodes.firstWhere(
-        (c) => c['content'] == code['content'],
-        orElse: () => {'hasSubLot': false, 'serialCount': '1'},
-      );
+      final content = code['content']?.toString() ?? '';
+      print('DEBUG: Processing code content: $content');
       
-      enableRules[code['content']!] = existingCode['hasSubLot'] ?? false;
-      selectedSerialCounts[code['content']!] = existingCode['serialCount']?.toString() ?? '1';
+      Map<String, dynamic> defaultCode = {
+        'hasSubLot': 0,
+        'serialCount': '1',
+        'content': content,
+        'category': 'Counting'
+      };
+
+      // Find the corresponding code in allCodes to get existing values
+      Map<String, dynamic> existingCode;
+      try {
+        existingCode = widget.allCodes.firstWhere(
+          (c) => c['content']?.toString() == content,
+          orElse: () => defaultCode,
+        );
+      } catch (e) {
+        print('DEBUG: Error finding existing code: $e');
+        existingCode = defaultCode;
+      }
+      
+      print('DEBUG: Existing code found: $existingCode');
+      
+      bool hasSubLot = false;
+      if (existingCode['hasSubLot'] != null) {
+        hasSubLot = existingCode['hasSubLot'] == 1 || existingCode['hasSubLot'] == true;
+      }
+      
+      enableRules[content] = hasSubLot;
+      selectedSerialCounts[content] = existingCode['serialCount']?.toString() ?? '1';
+      
+      print('DEBUG: Set enableRules[$content] = $hasSubLot');
+      print('DEBUG: Set selectedSerialCounts[$content] = ${selectedSerialCounts[content]}');
     }
   }
 
@@ -57,7 +86,7 @@ class _ReviseSublotState extends State<ReviseSublot> {
         child: Row(
           children: [
             Checkbox(
-              value: enableRules[labelContent],
+              value: enableRules[labelContent] ?? false,
               onChanged: (value) {
                 setState(() {
                   enableRules[labelContent] = value ?? false;
@@ -73,7 +102,7 @@ class _ReviseSublotState extends State<ReviseSublot> {
             SizedBox(
               width: 120,
               child: DropdownButtonFormField<String>(
-                value: selectedSerialCounts[labelContent],
+                value: selectedSerialCounts[labelContent] ?? '1',
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: kBorderRadiusSmallAll,
@@ -112,7 +141,9 @@ class _ReviseSublotState extends State<ReviseSublot> {
 
   Future<void> _updateItem() async {
     try {
+      print('\n=== DEBUG: ReviseSublot._updateItem ===');
       final now = DateTime.now().toIso8601String();
+      
       // Update the allCodes with new sublot configurations
       final updatedCodes = widget.allCodes.map((code) {
         if (code['category'] == 'Counting') {
@@ -131,15 +162,20 @@ class _ReviseSublotState extends State<ReviseSublot> {
         };
       }).toList();
 
+      print('Updated codes: $updatedCodes');
+
       // Prepare the complete updated item data
       final updatedItem = {
         'itemCode': widget.itemName,
         'revision': widget.revision,
         'codeCount': widget.allCodes.length.toString(),
+        'category': 'Counting', // Set category to Counting since this is the ReviseSublot page
         'codes': updatedCodes,
         'isActive': 1,
         'lastUpdated': now,
       };
+
+      print('Updating item with data: $updatedItem');
 
       // Update the item in the database
       await DatabaseHelper().updateItem(widget.itemId, updatedItem);

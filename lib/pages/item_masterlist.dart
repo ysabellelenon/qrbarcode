@@ -43,7 +43,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     setState(() {
       filteredItems = items.where((item) {
         final itemCode = item['itemCode']?.toLowerCase() ?? '';
-        return itemCode.contains(query);
+        final category = item['category']?.toLowerCase() ?? '';
+        return itemCode.contains(query) || category.contains(query);
       }).toList();
     });
   }

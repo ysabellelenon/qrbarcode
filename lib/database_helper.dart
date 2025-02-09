@@ -48,7 +48,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -194,6 +194,35 @@ class DatabaseHelper {
             )
           ''');
         }
+        if (oldVersion < 11) {
+          // Add category column to items table
+          try {
+            await db.execute('ALTER TABLE items ADD COLUMN category TEXT');
+            print('Added category column to items table');
+            
+            // Update existing items with their category from item_codes
+            final items = await db.query('items');
+            for (var item in items) {
+              final codes = await db.query(
+                'item_codes',
+                where: 'itemId = ?',
+                whereArgs: [item['id']],
+              );
+              if (codes.isNotEmpty) {
+                final category = codes.first['category'];
+                await db.update(
+                  'items',
+                  {'category': category},
+                  where: 'id = ?',
+                  whereArgs: [item['id']],
+                );
+              }
+            }
+          } catch (e) {
+            print('Error adding category column: $e');
+            // If column already exists, this will fail silently
+          }
+        }
       },
       onOpen: (db) async {
         print('Database opened successfully');
@@ -221,6 +250,7 @@ class DatabaseHelper {
         itemCode TEXT,
         revision TEXT,
         codeCount TEXT,
+        category TEXT,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         lastUpdated DATETIME,
         isActive INTEGER DEFAULT 1
@@ -441,25 +471,42 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getItems() async {
     try {
+      print('\n=== DEBUG: getItems ===');
       final db = await database;
       final List<Map<String, dynamic>> items =
           await db.query('items', orderBy: 'id DESC');
       print('Retrieved ${items.length} items from database');
+      print('Raw items data: $items');
 
       final List<Map<String, dynamic>> result = [];
 
       for (var item in items) {
+        print('\nProcessing item: ${item['itemCode']}');
+        print('Item category from items table: ${item['category']}');
+        
         final codes = await db.query(
           'item_codes',
           where: 'itemId = ?',
           whereArgs: [item['id']],
         );
-        print('Retrieved codes for item ${item['id']}: $codes');
+        print('Retrieved codes: $codes');
 
-        result.add({
+        // Get the category from codes if not present in item
+        String category = (item['category'] ?? '').toString();
+        print('Initial category from items table: $category');
+        
+        if (category.isEmpty && codes.isNotEmpty) {
+          category = (codes.first['category'] ?? '').toString();
+          print('Category from first code: $category');
+        }
+        
+        final resultItem = {
           ...Map<String, dynamic>.from(item),
+          'category': category,
           'codes': codes,
-        });
+        };
+        print('Final item data: $resultItem');
+        result.add(resultItem);
       }
 
       return result;
@@ -506,21 +553,31 @@ class DatabaseHelper {
     final db = await database;
     
     try {
+      print('\n=== DEBUG: updateItem ===');
+      print('Updating item with ID: $id');
+      print('Item data before update: $item');
+      print('Category being set: ${item['category']}');
+      
       await db.transaction((txn) async {
         // Update the main item
+        final itemUpdate = {
+          'itemCode': item['itemCode'],
+          'revision': item['revision'],
+          'codeCount': item['codeCount'],
+          'category': item['category'],
+          'lastUpdated': DateTime.now().toIso8601String(),
+        };
+        print('Updating items table with: $itemUpdate');
+        
         await txn.update(
           'items',
-          {
-            'itemCode': item['itemCode'],
-            'revision': item['revision'],
-            'codeCount': item['codeCount'],
-            'lastUpdated': DateTime.now().toIso8601String(),
-          },
+          itemUpdate,
           where: 'id = ?',
           whereArgs: [id],
         );
 
         // Delete existing codes
+        print('Deleting existing codes for itemId: $id');
         await txn.delete(
           'item_codes',
           where: 'itemId = ?',
@@ -528,16 +585,35 @@ class DatabaseHelper {
         );
 
         // Insert new codes
+        print('Inserting new codes:');
         for (var code in (item['codes'] as List)) {
-          await txn.insert('item_codes', {
+          final codeInsert = {
             'itemId': id,
             'category': code['category'],
             'content': code['content'],
             'hasSubLot': code['hasSubLot'] is bool ? (code['hasSubLot'] ? 1 : 0) : code['hasSubLot'],
             'serialCount': code['serialCount']?.toString() ?? '0',
-          });
+          };
+          print('Inserting code: $codeInsert');
+          await txn.insert('item_codes', codeInsert);
         }
       });
+      
+      // Verify the update
+      final updatedItem = await db.query(
+        'items',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      print('Item after update: ${updatedItem.first}');
+      
+      final updatedCodes = await db.query(
+        'item_codes',
+        where: 'itemId = ?',
+        whereArgs: [id],
+      );
+      print('Codes after update: $updatedCodes');
+      
     } catch (e) {
       print('Error in updateItem: $e');
       throw e;
