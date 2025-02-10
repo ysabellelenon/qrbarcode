@@ -260,12 +260,12 @@ The following requirements specify how the grouping functionality should work:
 
 ```
 1. Group Activation:
-   - Grouping functionality should ONLY be activated when No. of Code > 1
+   - Grouping functionality is always active for all items
+   - Default group size is 1 scan per group
    - Applies to both counting and non-counting items
-   - No grouping should occur when No. of Code = 1
 
 2. Group Counting:
-   - When No. of Code > 1, every N scans form one group
+   - Every N scans form one group, where N is the No. of Code value
    - Example: If No. of Code = 2, every 2 scans = 1 group
    - All quantity tracking should count completed groups as single units:
      * QTY per box
