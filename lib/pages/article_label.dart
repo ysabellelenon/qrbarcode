@@ -360,8 +360,16 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                       'createdAt': DateTime.now().toIso8601String(),
                                     });
 
-                                    // Navigate to ScanItem page
-                                    Navigator.of(context).push(
+                                    print('\n=== Starting New Scanning Session ===');
+                                    print('Item Name: $itemName');
+                                    print('PO No: $poNo');
+                                    print('Lot Number: ${lotNumberController.text}');
+                                    print('Content: $labelContent');
+                                    print('QTY per box: ${qtyController.text}');
+                                    print('Total QTY: $totalQty');
+
+                                    // Navigate to ScanItem page with historical data preserved
+                                    Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
                                         builder: (context) => ScanItem(
                                           scanData: {
@@ -372,6 +380,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                             'qtyPerBox': qtyController.text,
                                             'operatorScanId': operatorScanId,
                                             'totalQty': totalQty,
+                                            'preserveHistory': true,  // Add this flag
                                           },
                                         ),
                                       ),

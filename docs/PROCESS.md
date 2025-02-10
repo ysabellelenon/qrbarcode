@@ -275,14 +275,21 @@ The following requirements specify how the grouping functionality should work:
      * Good count
      * No Good count
 
-3. Session Independence:
-   - Each session maintains completely independent group numbering
-   - Groups from different sessions must never merge or combine
-   - Group numbers restart from 1 in each new session
-   - Example: If first session has group 1 with 2 scans:
-     * Second session's first group should be group 1, not group 2
-     * Second session's scans should form their own groups
-     * Previous session's incomplete groups stay as-is
+3. Session and Box Management:
+   - Each box represents a new scanning session
+   - When QTY per box is reached:
+     * Prompt user to scan new article label
+     * Start new session with new box
+     * Maintain all historical data from previous sessions:
+       - Previous scans table data
+       - Total inspection quantity
+       - Cumulative Good/No Good counts
+   - Continuous Counting Across Sessions:
+     * Total inspection quantity accumulates across all sessions
+     * Good/No Good counts continue incrementing across sessions
+     * Previous scans table shows all historical scans
+     * Group numbers restart from 1 in each new session
+     * Box-specific quantities track only current box
 
 4. Display Requirements:
    - Previous scans table must show clear session boundaries
@@ -290,6 +297,10 @@ The following requirements specify how the grouping functionality should work:
    - Group numbers should restart for each session
    - Incomplete groups from previous sessions must remain incomplete
    - Complete groups maintain their original session grouping
+   - Display running totals across all sessions for:
+     * Total inspection quantity
+     * Cumulative Good count
+     * Cumulative No Good count
 
 5. Database Storage:
    - Each scan record must include:
@@ -297,10 +308,12 @@ The following requirements specify how the grouping functionality should work:
      * Group number relative to its session
      * Position within its group
      * Number of codes required for its group
-   - Queries must respect session boundaries when:
-     * Calculating group numbers
-     * Counting completed groups
-     * Displaying group information
+     * Box ID for box-level tracking
+   - Queries must:
+     * Calculate group numbers within each session
+     * Track cumulative counts across all sessions
+     * Maintain box-specific quantities
+     * Preserve session boundaries for display
 ```
 
 #### Current Implementation

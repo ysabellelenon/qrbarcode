@@ -44,6 +44,7 @@ class _ScanItemState extends State<ScanItem> {
   bool _hasShownQtyReachedDialog = false;
   bool _isTotalQtyReached = false; // Add this flag
   bool _hasSubLotRules = false; // Add this variable
+  bool _preserveHistory = false;  // Add this flag
 
   // Add variables for historical data
   int _historicalGoodCount = 0; // New variable for historical good count
@@ -103,28 +104,31 @@ class _ScanItemState extends State<ScanItem> {
   // Add new method to fetch total counts
   Future<void> _updateTotalGoodNoGoodCounts() async {
     try {
-      // Get historical counts
+      print('\n=== Updating Total Good/No Good Counts ===');
+      // Get historical counts (excluding current session)
       final historicalCounts = await DatabaseHelper().getTotalGoodNoGoodCounts(
         itemName,
         excludeSessionId: _sessionId,
       );
+      print('Historical counts: $historicalCounts');
       
       // Get current session counts
       final currentCounts = await DatabaseHelper().getCurrentSessionCounts(
         itemName,
         _sessionId,
       );
+      print('Current session counts: $currentCounts');
+      
+      // Calculate total counts
+      final totalGoodCount = (historicalCounts['goodCount'] ?? 0) + (currentCounts['goodCount'] ?? 0);
+      final totalNoGoodCount = (historicalCounts['noGoodCount'] ?? 0) + (currentCounts['noGoodCount'] ?? 0);
+      
+      print('Total Good Count: $totalGoodCount');
+      print('Total No Good Count: $totalNoGoodCount');
       
       setState(() {
-        goodCountController.text = 
-          ((historicalCounts['goodCount'] ?? 0) + (currentCounts['goodCount'] ?? 0)).toString();
-        noGoodCountController.text = 
-          ((historicalCounts['noGoodCount'] ?? 0) + (currentCounts['noGoodCount'] ?? 0)).toString();
-        
-        // Update inspection QTY with group count
-        inspectionQtyController.text = 
-          ((historicalCounts['goodCount'] ?? 0) + (historicalCounts['noGoodCount'] ?? 0) + 
-           (currentCounts['groupCount'] ?? 0)).toString();
+        goodCountController.text = totalGoodCount.toString();
+        noGoodCountController.text = totalNoGoodCount.toString();
       });
     } catch (e) {
       print('Error updating total Good/No Good counts: $e');
@@ -133,25 +137,17 @@ class _ScanItemState extends State<ScanItem> {
 
   Future<void> _updateTotalInspectionQty() async {
     try {
-      // Get historical completed groups for this item
-      final historicalGroups = await DatabaseHelper().getTotalScansForItem(itemName);
+      print('\n=== Updating Total Inspection QTY ===');
+      // Get total completed scans across all sessions
+      final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
+      print('Total completed scans across all sessions: $totalScans');
       
-      // Count current groups (not individual scans)
-      Set<dynamic> uniqueGroups = _tableData
-        .where((item) => item['result']?.isNotEmpty == true)
-        .map((item) => item['groupNumber'] ?? item)
-        .toSet();
-      final currentGroups = uniqueGroups.length;
-      
-      print('Updating Inspection QTY:');
-      print('Historical groups: $historicalGroups');
-      print('Current groups: $currentGroups');
-
       setState(() {
-        // Total inspection QTY is historical + current groups
-        inspectionQtyController.text = 
-          ((historicalGroups ?? 0) + currentGroups).toString();
+        inspectionQtyController.text = totalScans.toString();
       });
+      
+      // Check and update QTY status after updating inspection QTY
+      _checkAndUpdateQtyStatus();
     } catch (e) {
       print('Error updating total inspection quantity: $e');
     }
@@ -191,6 +187,9 @@ class _ScanItemState extends State<ScanItem> {
   @override
   void initState() {
     super.initState();
+    print('\n=== Initializing ScanItem ===');
+    _preserveHistory = widget.scanData?['preserveHistory'] == true;
+    print('Preserve History: $_preserveHistory');
 
     _fetchLabelContent(itemName);
     _checkSubLotRules();
@@ -203,6 +202,7 @@ class _ScanItemState extends State<ScanItem> {
 
     // If resuming from unfinished item, restore the table data
     if (widget.resumeData != null) {
+      print('Restoring from resume data');
       // Restore table data from resumeData
       final List<dynamic> savedTableData = widget.resumeData!['tableData'];
       _tableData.clear();
@@ -277,58 +277,31 @@ class _ScanItemState extends State<ScanItem> {
 
   void _checkAndUpdateQtyStatus() async {
     try {
-      // Count only Good results for QTY per box
-      int currentGoodGroups = 0;
-      
-      if (_itemCategory == 'Non-Counting') {
-        // Group scans by session
-        Map<String, List<Map<String, dynamic>>> sessionGroups = {};
-        
-        for (var data in _tableData.where((item) => 
-          item['result']?.isNotEmpty == true)) {
-          String sessionId = data['sessionId'] ?? _sessionId;
-          if (!sessionGroups.containsKey(sessionId)) {
-            sessionGroups[sessionId] = [];
-          }
-          sessionGroups[sessionId]!.add(data);
-        }
-        
-        // Count completed groups with all Good results
-        sessionGroups.forEach((sessionId, sessionData) {
-          int codesInGroup = sessionData.first['codesInGroup'] ?? 1;
-          
-          // Process each group
-          for (int i = 0; i < sessionData.length; i += codesInGroup) {
-            // Get all scans in this group
-            var groupScans = sessionData.skip(i).take(codesInGroup).toList();
-            
-            // Only count if group is complete and all scans are Good
-            if (groupScans.length == codesInGroup && 
-                groupScans.every((scan) => scan['result'] == 'Good')) {
-              currentGoodGroups++;
-            }
-          }
-        });
-      } else {
-        // For counting items, count individual Good scans
-        currentGoodGroups = _tableData
-          .where((item) => item['result'] == 'Good')
+      print('\n=== Checking and Updating QTY Status ===');
+      // Count good results in current session
+      int currentGoodCount = _tableData
+          .where((item) => 
+            item['result'] == 'Good' && 
+            item['sessionId'] == _sessionId)
           .length;
-      }
+      print('Current session good count: $currentGoodCount');
       
       setState(() {
-        // Update QTY per box with only Good groups
-        qtyPerBoxController.text = currentGoodGroups.toString();
+        // Update QTY per box with current session Good count
+        qtyPerBoxController.text = currentGoodCount.toString();
+        print('Updated QTY per box: $currentGoodCount');
 
         // Check if QTY per box is reached
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-        _isQtyPerBoxReached = targetQty > 0 && currentGoodGroups >= targetQty;
+        _isQtyPerBoxReached = targetQty > 0 && currentGoodCount >= targetQty;
+        print('QTY per box reached: $_isQtyPerBoxReached (Target: $targetQty)');
 
         // Check if total QTY has been reached
         int totalInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
         int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
         _isTotalQtyReached = totalInspectionQty >= totalTargetQty;
+        print('Total QTY reached: $_isTotalQtyReached (Total: $totalInspectionQty, Target: $totalTargetQty)');
       });
 
       // Show dialogs if needed
@@ -580,6 +553,7 @@ class _ScanItemState extends State<ScanItem> {
     );
 
     String result = 'No Good'; // Default to No Good
+    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1'); // Default to 1 if not specified
 
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
@@ -592,14 +566,11 @@ class _ScanItemState extends State<ScanItem> {
 
       if (isCountingItem) {
         // Get the serial count for validation
-        int serialCount =
-            int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+        int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
 
         // Get the base content (everything before the serial number)
-        String baseDisplayContent =
-            _displayContent.substring(0, _displayContent.length - serialCount);
-        String scannedBaseContent =
-            value.substring(0, value.length - serialCount);
+        String baseDisplayContent = _displayContent.substring(0, _displayContent.length - serialCount);
+        String scannedBaseContent = value.substring(0, value.length - serialCount);
 
         print('Base Display Content: "$baseDisplayContent"');
         print('Scanned Base Content: "$scannedBaseContent"');
@@ -614,8 +585,7 @@ class _ScanItemState extends State<ScanItem> {
           if (serialPart.length == serialCount) {
             // Check for duplicates
             bool isDuplicate = _tableData.any((row) {
-              if (_tableData.indexOf(row) == index ||
-                  row['content']?.isEmpty == true) return false;
+              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
               return row['content'] == value;
             });
 
@@ -626,107 +596,54 @@ class _ScanItemState extends State<ScanItem> {
           }
         }
       } else {
-        // For non-counting items
-        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-
+        // For non-counting items, exact content matching
         if (value != _displayContent) {
           result = 'No Good';
         } else {
           result = 'Good';
         }
-
-        // Calculate group information for current session only
-        int previousScans = _tableData
-            .where((row) =>
-                row['result']?.isNotEmpty == true &&
-                row['sessionId'] == _sessionId &&
-                _tableData.indexOf(row) < index)
-            .length;
-
-        // Calculate current group number (1-based)
-        int currentGroup = (previousScans ~/ noOfCodes) + 1;
-
-        setState(() {
-          // Show row number if:
-          // 1. This is the first scan in a group, OR
-          // 2. Previous group is complete and this is a new scan
-          bool isFirstInGroup = previousScans % noOfCodes == 0;
-          bool previousGroupComplete =
-              previousScans > 0 && previousScans % noOfCodes == 0;
-
-          _tableData[index]['showRowNumber'] = isFirstInGroup;
-          _tableData[index]['rowNumber'] = currentGroup;
-          _tableData[index]['sessionId'] = _sessionId;
-        });
       }
     }
 
+    // Calculate group information for current session
+    final currentSessionScans = _tableData
+        .where((row) => 
+          row['result']?.isNotEmpty == true && 
+          row['sessionId'] == _sessionId)
+        .toList();
+    
+    // Calculate current group based only on scans from this session
+    int previousCompletedGroups = currentSessionScans.length ~/ noOfCodes;
+    int currentGroup = previousCompletedGroups + 1;
+
+    // Get position within current group (0-based)
+    int positionInGroup = currentSessionScans.length % noOfCodes;
+
     // Save to database and update UI
     try {
-      if (_itemCategory == 'Non-Counting') {
-        final items = await DatabaseHelper().getItems();
-        final matchingItem = items.firstWhere(
-          (item) => item['itemCode'] == itemName,
-          orElse: () => {},
-        );
-        int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
-        
-        // Calculate groups only within the current session
-        final currentSessionScans = _tableData
-            .where((row) => 
-              row['result']?.isNotEmpty == true && 
-              row['sessionId'] == _sessionId)
-            .toList();
-        
-        // Calculate current group based only on scans from this session
-        int previousCompletedGroups = currentSessionScans.length ~/ noOfCodes;
-        int currentGroup = previousCompletedGroups + 1;
+      // Save to database with session and group information
+      await DatabaseHelper().insertScanContent(
+        operatorScanId,
+        value,
+        result,
+        groupNumber: currentGroup,
+        groupPosition: positionInGroup + 1,
+        codesInGroup: noOfCodes,
+        sessionId: _sessionId,
+      );
 
-        // Get position within current group (0-based)
-        int positionInGroup = currentSessionScans.length % noOfCodes;
-
-        // Save to database with session and code count information
-        await DatabaseHelper().insertScanContent(
-          operatorScanId,
-          value,
-          result,
-          groupNumber: currentGroup,
-          groupPosition: positionInGroup + 1,
-          codesInGroup: noOfCodes,
-          sessionId: _sessionId,
-        );
-
-        setState(() {
-          _tableData[index] = {
-            'content': value,
-            'result': result,
-            'isLocked': true,
-            'sessionId': _sessionId,
-            'codesInGroup': noOfCodes,
-            'groupNumber': currentGroup,
-            'groupPosition': positionInGroup + 1,
-            'timestamp': DateTime.now().toString(),
-          };
-        });
-      } else {
-        // For counting items, no group information needed
-        await DatabaseHelper().insertScanContent(
-          operatorScanId,
-          value,
-          result,
-          sessionId: _sessionId,
-        );
-
-        setState(() {
-          _tableData[index] = {
-            'content': value,
-            'result': result,
-            'isLocked': true,
-            'sessionId': _sessionId,
-            'timestamp': DateTime.now().toString(),
-          };
-        });
-      }
+      setState(() {
+        _tableData[index] = {
+          'content': value,
+          'result': result,
+          'isLocked': true,
+          'sessionId': _sessionId,
+          'codesInGroup': noOfCodes,
+          'groupNumber': currentGroup,
+          'groupPosition': positionInGroup + 1,
+          'timestamp': DateTime.now().toString(),
+        };
+      });
 
       // Update totals after the state is updated
       await _updateTotalInspectionQty();
@@ -997,7 +914,7 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const SelectableText(
+                    const Text(
                       'Scan Item',
                       style: TextStyle(
                         fontSize: 28,
@@ -1007,7 +924,7 @@ class _ScanItemState extends State<ScanItem> {
                     ),
                     Row(
                       children: [
-                        const SelectableText(
+                        const Text(
                           'Good: ',
                           style: TextStyle(
                             fontSize: 28,
@@ -1022,7 +939,7 @@ class _ScanItemState extends State<ScanItem> {
                             border: Border.all(color: Colors.green),
                             borderRadius: kBorderRadiusSmallAll,
                           ),
-                          child: SelectableText(
+                          child: Text(
                             goodCountController.text,
                             style: const TextStyle(
                               fontSize: 28,
@@ -1032,7 +949,7 @@ class _ScanItemState extends State<ScanItem> {
                           ),
                         ),
                         const SizedBox(width: 40),
-                        const SelectableText(
+                        const Text(
                           'No Good: ',
                           style: TextStyle(
                             fontSize: 28,
@@ -1047,7 +964,7 @@ class _ScanItemState extends State<ScanItem> {
                             border: Border.all(color: Colors.red),
                             borderRadius: kBorderRadiusSmallAll,
                           ),
-                          child: SelectableText(
+                          child: Text(
                             noGoodCountController.text,
                             style: const TextStyle(
                               fontSize: 28,

@@ -776,13 +776,13 @@ class DatabaseHelper {
   Future<int> getTotalScansForItem(String itemName) async {
     final db = await database;
     final result = await db.rawQuery('''
-      SELECT COUNT(DISTINCT groupNumber) as group_count
+      SELECT COUNT(*) as total_count
       FROM individual_scans s
       JOIN scanning_sessions ss ON s.sessionId = ss.id
       WHERE ss.itemName = ?
     ''', [itemName]);
 
-    return result.first['group_count'] as int? ?? 0;
+    return result.first['total_count'] as int? ?? 0;
   }
 
   Future<int> getHistoricalScansCount(String itemName) async {
@@ -861,29 +861,21 @@ class DatabaseHelper {
     final db = await database;
     
     String query = '''
-      WITH GroupedScans AS (
-        SELECT 
-          s.sessionId,
-          s.groupNumber,
-          CASE 
-            WHEN COUNT(CASE WHEN result = 'No Good' THEN 1 END) > 0 THEN 'No Good'
-            ELSE 'Good'
-          END as group_result
-        FROM individual_scans s
-        JOIN scanning_sessions ss ON s.sessionId = ss.id
-        WHERE ss.itemName = ?
-        GROUP BY s.sessionId, s.groupNumber
-      )
       SELECT 
-        SUM(CASE WHEN group_result = 'Good' THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN group_result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
-      FROM GroupedScans
+        SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
     ''';
 
     List<dynamic> args = [itemName];
 
     if (excludeSessionId != null) {
-      query += ' WHERE sessionId != ?';
+      query = query.replaceAll(
+        'WHERE ss.itemName = ?',
+        'WHERE ss.itemName = ? AND s.sessionId != ?'
+      );
       args.add(excludeSessionId);
     }
 
@@ -1007,7 +999,6 @@ class DatabaseHelper {
     return result.first['completed_groups'] as int? ?? 0;
   }
 
-  // Add this helper method to get current session group counts
   Future<Map<String, int>> getCurrentSessionCounts(
     String itemName,
     String sessionId,
@@ -1015,26 +1006,17 @@ class DatabaseHelper {
     final db = await database;
     
     final result = await db.rawQuery('''
-      WITH GroupedScans AS (
-        SELECT 
-          groupNumber,
-          CASE 
-            WHEN COUNT(CASE WHEN result = 'No Good' THEN 1 END) > 0 THEN 'No Good'
-            ELSE 'Good'
-          END as group_result
-        FROM individual_scans
-        WHERE sessionId = ?
-        GROUP BY groupNumber
-      )
       SELECT 
-        COUNT(DISTINCT groupNumber) as group_count,
-        SUM(CASE WHEN group_result = 'Good' THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN group_result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
-      FROM GroupedScans
-    ''', [sessionId]);
+        COUNT(*) as total_count,
+        SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ? AND s.sessionId = ?
+    ''', [itemName, sessionId]);
     
     return {
-      'groupCount': result.first['group_count'] as int? ?? 0,
+      'groupCount': result.first['total_count'] as int? ?? 0,
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };
