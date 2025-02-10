@@ -260,41 +260,47 @@ The following requirements specify how the grouping functionality should work:
 
 ```
 1. Group Activation:
-   - Grouping functionality should ONLY be activated when No. of Code > 1
+   - Grouping functionality is always active for all items
+   - Default group size is 1 scan per group
    - Applies to both counting and non-counting items
-   - No grouping should occur when No. of Code = 1
 
 2. Group Counting:
-   - When No. of Code > 1, every N scans form one group
+   - Every N scans form one group, where N is the No. of Code value
    - Example: If No. of Code = 2, every 2 scans = 1 group
+   - Groups are session-specific and never merge across sessions
+   - Each session starts its own group numbering from 1
    - All quantity tracking should count completed groups as single units:
      * QTY per box
      * Inspection QTY
      * Good count
      * No Good count
 
-3. Configuration Changes:
-   - If engineer revises the item and changes No. of Code:
-     * Previous scan groupings must remain unchanged
-     * System must maintain knowledge of old grouping rules
-     * New scans follow new No. of Code
-     * Example: If old No. of Code was 2 (grouped by 2s) and new is 1:
-       - Old scans remain grouped by 2s
-       - New scans are not grouped
-   
-4. Session Independence:
-   - Previous scans from different sessions must never merge
-   - Each session's scans maintain their own grouping
-   - Example: If scanning No. "1" in second session:
-     * Should not merge with No. "1" from first session
-     * Each session maintains independent groups
-     * Previous scans table should show clear session boundaries
+3. Session Independence:
+   - Each session maintains completely independent group numbering
+   - Groups from different sessions must never merge or combine
+   - Group numbers restart from 1 in each new session
+   - Example: If first session has group 1 with 2 scans:
+     * Second session's first group should be group 1, not group 2
+     * Second session's scans should form their own groups
+     * Previous session's incomplete groups stay as-is
 
-5. Display Requirements:
-   - Finished item summary must reflect original groupings
-   - Clear visual separation between sessions
-   - Groups should be easily identifiable
-   - Maintain historical grouping context
+4. Display Requirements:
+   - Previous scans table must show clear session boundaries
+   - Each session's groups should be visually distinct
+   - Group numbers should restart for each session
+   - Incomplete groups from previous sessions must remain incomplete
+   - Complete groups maintain their original session grouping
+
+5. Database Storage:
+   - Each scan record must include:
+     * Session ID to track which session it belongs to
+     * Group number relative to its session
+     * Position within its group
+     * Number of codes required for its group
+   - Queries must respect session boundaries when:
+     * Calculating group numbers
+     * Counting completed groups
+     * Displaying group information
 ```
 
 #### Current Implementation

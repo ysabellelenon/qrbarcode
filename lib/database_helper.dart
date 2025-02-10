@@ -753,7 +753,9 @@ class DatabaseHelper {
             s.*,
             ss.itemName,
             ss.poNo,
-            ROW_NUMBER() OVER (PARTITION BY s.groupNumber ORDER BY s.created_at) as row_in_group
+            ROW_NUMBER() OVER (PARTITION BY s.sessionId, s.groupNumber ORDER BY s.created_at) as row_in_group,
+            ROW_NUMBER() OVER (ORDER BY s.created_at) as overall_order,
+            DENSE_RANK() OVER (ORDER BY s.sessionId, s.groupNumber) as global_group_number
           FROM individual_scans s
           JOIN scanning_sessions ss ON s.sessionId = ss.id
           WHERE ss.itemName = ?
@@ -761,11 +763,11 @@ class DatabaseHelper {
         SELECT 
           *,
           CASE 
-            WHEN row_in_group = 1 THEN groupNumber 
+            WHEN row_in_group = 1 THEN global_group_number 
             ELSE NULL 
           END as display_group_number
         FROM RankedScans
-        ORDER BY groupNumber ASC, created_at ASC
+        ORDER BY overall_order DESC
         LIMIT ? OFFSET ?
       ''', [itemName, pageSize, offset]);
     }
@@ -801,9 +803,35 @@ class DatabaseHelper {
     int? groupNumber,
     int? groupPosition,
     int? codesInGroup,
-    String? sessionId,
+    required String sessionId,
   }) async {
     final db = await database;
+
+    // Get the item details from scanning_sessions instead of operator_scans
+    final itemDetails = await db.query(
+      'scanning_sessions',
+      where: 'id = ?',
+      whereArgs: [operatorScanId],
+    );
+
+    if (itemDetails.isEmpty) return;
+
+    String itemName = itemDetails.first['itemName'] as String;
+
+    // Calculate group information for this session only
+    if (groupNumber == null || groupPosition == null) {
+      final previousScans = await db.query(
+        'individual_scans',
+        where: 'sessionId = ?',
+        whereArgs: [operatorScanId],
+        orderBy: 'created_at',
+      );
+
+      final codesPerGroup = codesInGroup ?? 1;
+      groupNumber = (previousScans.length ~/ codesPerGroup) + 1;
+      groupPosition = (previousScans.length % codesPerGroup) + 1;
+    }
+
     await db.insert(
       'individual_scans',
       {
@@ -1010,5 +1038,43 @@ class DatabaseHelper {
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };
+  }
+
+  Future<List<Map<String, dynamic>>> getPreviousScans(String itemName) async {
+    final db = await database;
+    
+    // First get all unique session IDs ordered by timestamp
+    final sessions = await db.rawQuery('''
+      SELECT DISTINCT session_id 
+      FROM individual_scans 
+      WHERE item_name = ? 
+      ORDER BY timestamp
+    ''', [itemName]);
+    
+    List<Map<String, dynamic>> allScans = [];
+    
+    // Process each session separately
+    for (var session in sessions) {
+      String sessionId = session['session_id']?.toString() ?? '';
+      if (sessionId.isEmpty) continue;  // Skip if session_id is null or empty
+      
+      // Get scans for this session
+      final scans = await db.rawQuery('''
+        SELECT 
+          s.*,
+          CASE 
+            WHEN s.group_position = 1 THEN s.group_number 
+            ELSE NULL 
+          END as display_group_number
+        FROM individual_scans s
+        WHERE s.item_name = ? 
+        AND s.session_id = ?
+        ORDER BY s.timestamp
+      ''', [itemName, sessionId]);
+      
+      allScans.addAll(scans);
+    }
+    
+    return allScans;
   }
 }
