@@ -683,25 +683,17 @@ class _ScanItemState extends State<ScanItem> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return RawKeyboardListener(
-          focusNode: FocusNode(),
-          onKey: (event) {
-            if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
-              Navigator.of(context).pop(); // Close dialog on Enter
-            }
-          },
-          child: AlertDialog(
-            title: const Text('Alert'),
-            content: const Text(
-                'A "No Good" result has been recorded. Please review the issue.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                autofocus: true, // Auto focus the OK button
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+        return AlertDialog(
+          title: const Text('Alert'),
+          content: const Text(
+              'A "No Good" result has been recorded. Please review the issue.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              autofocus: true, // Auto focus the OK button
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );
