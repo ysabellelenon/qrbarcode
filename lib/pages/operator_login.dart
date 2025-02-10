@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart'; // Import constants for styling
 import '../database_helper.dart'; // Import database helper
 import '../pages/article_label.dart'; // Import the new ArticleLabel page
+import 'dart:async';
 
 class OperatorLogin extends StatefulWidget {
   const OperatorLogin({super.key});
@@ -23,6 +24,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
   final _poNoFocus = FocusNode();
   final _qtyFocus = FocusNode();
 
+  Timer? _poNoTimer;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +44,8 @@ class _OperatorLoginState extends State<OperatorLogin> {
     _itemNameFocus.dispose();
     _poNoFocus.dispose();
     _qtyFocus.dispose();
+    // Cancel timer if exists
+    _poNoTimer?.cancel();
     super.dispose();
   }
 
@@ -59,13 +64,39 @@ class _OperatorLoginState extends State<OperatorLogin> {
               .map((code) => code['content'].toString())
               .toList();
           _isItemFound = true;
-          // Automatically move focus to PO No. field when valid item is found
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            FocusScope.of(context).requestFocus(_poNoFocus);
+          // Add a small delay before moving focus to ensure UI is updated
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted && _isItemFound) {
+              FocusScope.of(context).unfocus(); // First unfocus current field
+              Future.delayed(const Duration(milliseconds: 50), () {
+                if (mounted) {
+                  FocusScope.of(context).requestFocus(_poNoFocus);
+                }
+              });
+            }
           });
         } else {
           _labelContents = ['Item not found'];
           _isItemFound = false;
+        }
+      });
+    }
+  }
+
+  void _handlePoNoInput(String value) {
+    // Wait for a short delay to ensure complete scan
+    if (value.isNotEmpty) {
+      // Cancel any previous timer
+      _poNoTimer?.cancel();
+      // Start a new timer
+      _poNoTimer = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          FocusScope.of(context).unfocus(); // First unfocus current field
+          Future.delayed(const Duration(milliseconds: 50), () {
+            if (mounted) {
+              FocusScope.of(context).requestFocus(_qtyFocus);
+            }
+          });
         }
       });
     }
@@ -98,14 +129,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
         );
       }
     }
-  }
-
-  void _handlePoNoInput(String value) {
-    // Don't auto-focus to QTY field on change
-    // Only move focus when explicitly submitted
-    setState(() {
-      // Handle PO number input if needed
-    });
   }
 
   @override
@@ -196,13 +219,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     onChanged: (value) {
                                       _fetchLabelContent(value);
                                     },
-                                    onFieldSubmitted: (_) {
-                                      if (_isItemFound) {
-                                        // Only move to PO No. field when Enter is pressed or field is submitted
-                                        FocusScope.of(context)
-                                            .requestFocus(_poNoFocus);
-                                      }
-                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   TextFormField(
@@ -215,10 +231,6 @@ class _OperatorLoginState extends State<OperatorLogin> {
                                     validator: (value) =>
                                         value!.isEmpty ? 'Required' : null,
                                     onChanged: _handlePoNoInput,
-                                    onFieldSubmitted: (_) {
-                                      // Only move focus when Enter is pressed
-                                      FocusScope.of(context).requestFocus(_qtyFocus);
-                                    },
                                   ),
                                   const SizedBox(height: 16),
                                   TextFormField(
