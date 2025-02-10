@@ -277,16 +277,53 @@ class _ScanItemState extends State<ScanItem> {
 
   void _checkAndUpdateQtyStatus() async {
     try {
-      int currentGroupCount = _getCurrentGroupCount();
+      // Count only Good results for QTY per box
+      int currentGoodGroups = 0;
+      
+      if (_itemCategory == 'Non-Counting') {
+        // Group scans by session
+        Map<String, List<Map<String, dynamic>>> sessionGroups = {};
+        
+        for (var data in _tableData.where((item) => 
+          item['result']?.isNotEmpty == true)) {
+          String sessionId = data['sessionId'] ?? _sessionId;
+          if (!sessionGroups.containsKey(sessionId)) {
+            sessionGroups[sessionId] = [];
+          }
+          sessionGroups[sessionId]!.add(data);
+        }
+        
+        // Count completed groups with all Good results
+        sessionGroups.forEach((sessionId, sessionData) {
+          int codesInGroup = sessionData.first['codesInGroup'] ?? 1;
+          
+          // Process each group
+          for (int i = 0; i < sessionData.length; i += codesInGroup) {
+            // Get all scans in this group
+            var groupScans = sessionData.skip(i).take(codesInGroup).toList();
+            
+            // Only count if group is complete and all scans are Good
+            if (groupScans.length == codesInGroup && 
+                groupScans.every((scan) => scan['result'] == 'Good')) {
+              currentGoodGroups++;
+            }
+          }
+        });
+      } else {
+        // For counting items, count individual Good scans
+        currentGoodGroups = _tableData
+          .where((item) => item['result'] == 'Good')
+          .length;
+      }
       
       setState(() {
-        // Update QTY per box with current group count
-        qtyPerBoxController.text = currentGroupCount.toString();
+        // Update QTY per box with only Good groups
+        qtyPerBoxController.text = currentGoodGroups.toString();
 
         // Check if QTY per box is reached
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-        _isQtyPerBoxReached = targetQty > 0 && currentGroupCount >= targetQty;
+        _isQtyPerBoxReached = targetQty > 0 && currentGoodGroups >= targetQty;
 
         // Check if total QTY has been reached
         int totalInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
@@ -412,203 +449,112 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   List<DataRow> _buildTableRows() {
-    if (_itemCategory == 'Non-Counting') {
-      return _tableData.asMap().entries.map((entry) {
-        int index = entry.key;
-        Map<String, dynamic> data = entry.value;
-        final controller = _getOrCreateController(index);
-
-        return DataRow(
-          cells: [
-            // Remove the checkbox column
-            // DataCell(
-            //   Checkbox(
-            //     value: selectedRows.contains(index),
-            //     onChanged: (bool? value) {
-            //       setState(() {
-            //         if (value == true) {
-            //           selectedRows.add(index);
-            //         } else {
-            //           selectedRows.remove(index);
-            //         }
-            //       });
-            //     },
-            //   ),
-            DataCell(Text(data['showRowNumber'] == true
-                ? data['rowNumber'].toString()
-                : '')),
-            DataCell(
-              TextField(
-                focusNode: _ensureFocusNode(index),
-                controller: controller,
-                autofocus: index == 0,
-                enabled: !_isTotalQtyReached && !(data['isLocked'] == true),
-                onChanged: (value) {
-                  print("Content field onChanged - value: $value");
-                  _scanBuffer = value;
-                },
-                onSubmitted: (value) {
-                  print("Content field onSubmitted - value: $value, buffer: $_scanBuffer");
-                  if (value.isNotEmpty &&
-                      !_isTotalQtyReached &&
-                      !(data['isLocked'] == true)) {
-                    // Process the scan after a tiny delay to ensure we don't trigger other events
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      if (mounted) {
-                        final completeValue = _scanBuffer;
-                        print("Processing scan - complete value: $completeValue");
-                        controller.text = completeValue;
-                        setState(() {
-                          data['content'] = completeValue;
-                        });
-                        _validateContent(completeValue, index);
-                        _scanBuffer = ''; // Clear the buffer
-                      }
-                    });
-                  }
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                    borderSide: const BorderSide(color: Colors.blue),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  filled: data['isLocked'] == true,
-                  fillColor: data['isLocked'] == true ? Colors.grey.shade100 : null,
-                ),
-              ),
-            ),
-            DataCell(
-              Text(
-                data['result'] ?? '',
-                style: TextStyle(
-                  color: data['result'] == 'Good'
-                      ? Colors.green
-                      : data['result'] == 'No Good'
-                          ? Colors.red
-                          : Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: data['result'] == 'No Good'
-                      ? 20
-                      : 16, // Increased font size for "No Good"
-                ),
-              ),
-            ),
-          ],
-        );
-      }).toList();
-    } else {
-      // Original implementation for Counting items
-      return _tableData.asMap().entries.map((entry) {
-        int index = entry.key;
-        Map<String, dynamic> data = entry.value;
-        final contentController = TextEditingController(text: data['content']);
-
-        return DataRow(
-          cells: [
-            // Remove the checkbox column
-            // DataCell(
-            //   Checkbox(
-            //     value: selectedRows.contains(index),
-            //     onChanged: (bool? value) {
-            //       setState(() {
-            //         if (value == true) {
-            //           selectedRows.add(index);
-            //         } else {
-            //           selectedRows.remove(index);
-            //         }
-            //       });
-            //     },
-            //   ),
-            DataCell(Text((index + 1).toString())),
-            DataCell(
-              TextField(
-                focusNode: _ensureFocusNode(index),
-                controller: contentController,
-                autofocus: index == 0,
-                enabled: !_isTotalQtyReached &&
-                    !(data['isLocked'] == true), // Disable if locked
-                onChanged: (value) {
-                  print("Content field onChanged - value: $value");
-                  _scanBuffer = value;
-                },
-                onSubmitted: (value) {
-                  print("Content field onSubmitted - value: $value, buffer: $_scanBuffer");
-                  if (value.isNotEmpty &&
-                      !_isTotalQtyReached &&
-                      !(data['isLocked'] == true)) {
-                    // Process the scan after a tiny delay to ensure we don't trigger other events
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      if (mounted) {
-                        final completeValue = _scanBuffer;
-                        print("Processing scan - complete value: $completeValue");
-                        contentController.text = completeValue;
-                        setState(() {
-                          data['content'] = completeValue;
-                        });
-                        _validateContent(completeValue, index);
-                        _scanBuffer = ''; // Clear the buffer
-                      }
-                    });
-                  }
-                },
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: kBorderRadiusNoneAll,
-                    borderSide: const BorderSide(color: Colors.blue),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  filled: data['isLocked'] ==
-                      true, // Add background color for locked fields
-                  fillColor:
-                      data['isLocked'] == true ? Colors.grey.shade100 : null,
-                ),
-              ),
-            ),
-            DataCell(
-              Text(
-                data['result'] ?? '',
-                style: TextStyle(
-                  color: data['result'] == 'Good'
-                      ? Colors.green
-                      : data['result'] == 'No Good'
-                          ? Colors.red
-                          : Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: data['result'] == 'No Good'
-                      ? 20
-                      : 16, // Increased font size for "No Good"
-                ),
-              ),
-            ),
-          ],
-        );
-      }).toList();
+    // Group data by session first
+    Map<String, List<Map<String, dynamic>>> sessionGroups = {};
+    
+    for (var data in _tableData.where((item) => 
+      item['content']?.isNotEmpty == true)) {  // Only include rows with content
+      String sessionId = data['sessionId'] ?? _sessionId;
+      if (!sessionGroups.containsKey(sessionId)) {
+        sessionGroups[sessionId] = [];
+      }
+      sessionGroups[sessionId]!.add(data);
     }
+
+    List<DataRow> allRows = [];
+    int lastGroupNumber = 0;
+    
+    // Process each session's data separately
+    sessionGroups.forEach((sessionId, sessionData) {
+      // Sort by timestamp if available
+      sessionData.sort((a, b) => 
+        (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
+      
+      // Process rows for this session
+      for (int i = 0; i < sessionData.length; i++) {
+        var data = sessionData[i];
+        int codesInGroup = data['codesInGroup'] ?? 1;
+        
+        // Show group number only for first scan in each group within this session
+        bool isFirstInGroup = i % codesInGroup == 0;
+        int groupNumber = (i ~/ codesInGroup) + 1;
+        
+        if (isFirstInGroup) {
+          lastGroupNumber = groupNumber;
+        }
+        
+        allRows.add(DataRow(
+          cells: [
+            DataCell(Text(isFirstInGroup ? groupNumber.toString() : '')),
+            DataCell(
+              Text(data['content'] ?? ''),  // Show completed scans as text
+            ),
+            DataCell(
+              Text(
+                data['result'] ?? '',
+                style: TextStyle(
+                  color: data['result'] == 'Good' ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ));
+      }
+    });
+
+    // Add single empty row for next scan
+    allRows.add(DataRow(
+      cells: [
+        DataCell(Text((lastGroupNumber + 1).toString())),
+        DataCell(
+          TextField(
+            controller: TextEditingController(),
+            focusNode: _ensureFocusNode(allRows.length),
+            enabled: !_isTotalQtyReached,
+            autofocus: true,  // Automatically focus the input field
+            onChanged: (value) {
+              _scanBuffer = value;
+            },
+            onSubmitted: (value) {
+              if (value.isNotEmpty && !_isTotalQtyReached) {
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  if (mounted) {
+                    final completeValue = _scanBuffer;
+                    _validateContent(completeValue, allRows.length - 1);
+                    _scanBuffer = '';
+                  }
+                });
+              }
+            },
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+                borderSide: const BorderSide(color: Colors.blue),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+          ),
+        ),
+        const DataCell(Text('')),
+      ],
+    ));
+
+    return allRows;
   }
 
   /// Validates the scanned content and updates the result.
-  void _validateContent(String value, int index) async {
+  Future<void> _validateContent(String value, int index) async {
     print('\n====== Starting Content Validation ======');
     print('Row Index: $index');
     print('Label Content from Database: $_labelContent');
@@ -689,10 +635,11 @@ class _ScanItemState extends State<ScanItem> {
           result = 'Good';
         }
 
-        // Calculate group information immediately
+        // Calculate group information for current session only
         int previousScans = _tableData
             .where((row) =>
                 row['result']?.isNotEmpty == true &&
+                row['sessionId'] == _sessionId &&
                 _tableData.indexOf(row) < index)
             .length;
 
@@ -709,6 +656,7 @@ class _ScanItemState extends State<ScanItem> {
 
           _tableData[index]['showRowNumber'] = isFirstInGroup;
           _tableData[index]['rowNumber'] = currentGroup;
+          _tableData[index]['sessionId'] = _sessionId;
         });
       }
     }
@@ -716,7 +664,6 @@ class _ScanItemState extends State<ScanItem> {
     // Save to database and update UI
     try {
       if (_itemCategory == 'Non-Counting') {
-        // Calculate current group number
         final items = await DatabaseHelper().getItems();
         final matchingItem = items.firstWhere(
           (item) => item['itemCode'] == itemName,
@@ -724,20 +671,21 @@ class _ScanItemState extends State<ScanItem> {
         );
         int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
         
-        // Calculate the group number based on completed scans
-        int previousCompletedGroups = (_tableData
-                .where((row) => row['result']?.isNotEmpty == true)
-                .length ~/
-            noOfCodes);
+        // Calculate groups only within the current session
+        final currentSessionScans = _tableData
+            .where((row) => 
+              row['result']?.isNotEmpty == true && 
+              row['sessionId'] == _sessionId)
+            .toList();
+        
+        // Calculate current group based only on scans from this session
+        int previousCompletedGroups = currentSessionScans.length ~/ noOfCodes;
         int currentGroup = previousCompletedGroups + 1;
 
         // Get position within current group (0-based)
-        int positionInGroup = _tableData
-                .where((row) => row['result']?.isNotEmpty == true)
-                .length %
-            noOfCodes;
+        int positionInGroup = currentSessionScans.length % noOfCodes;
 
-        // Save to database with group information
+        // Save to database with session and code count information
         await DatabaseHelper().insertScanContent(
           operatorScanId,
           value,
@@ -747,6 +695,19 @@ class _ScanItemState extends State<ScanItem> {
           codesInGroup: noOfCodes,
           sessionId: _sessionId,
         );
+
+        setState(() {
+          _tableData[index] = {
+            'content': value,
+            'result': result,
+            'isLocked': true,
+            'sessionId': _sessionId,
+            'codesInGroup': noOfCodes,
+            'groupNumber': currentGroup,
+            'groupPosition': positionInGroup + 1,
+            'timestamp': DateTime.now().toString(),
+          };
+        });
       } else {
         // For counting items, no group information needed
         await DatabaseHelper().insertScanContent(
@@ -755,25 +716,17 @@ class _ScanItemState extends State<ScanItem> {
           result,
           sessionId: _sessionId,
         );
+
+        setState(() {
+          _tableData[index] = {
+            'content': value,
+            'result': result,
+            'isLocked': true,
+            'sessionId': _sessionId,
+            'timestamp': DateTime.now().toString(),
+          };
+        });
       }
-
-      setState(() {
-        _tableData[index]['result'] = result;
-        _tableData[index]['isLocked'] = true;
-        _tableData[index]['groupNumber'] = _itemCategory == 'Non-Counting'
-            ? (index ~/ int.parse(matchingItem['codeCount'] ?? '1')) + 1
-            : null;
-
-        // Update QTY per box count - only count "Good" results
-        int goodScans = _tableData.where((item) => 
-          item['result'] == 'Good').length;
-        qtyPerBoxController.text = goodScans.toString();
-        
-        // Update inspection QTY with all scans
-        int completedScans = _tableData.where((item) => 
-          item['result']?.isNotEmpty == true).length;
-        inspectionQtyController.text = completedScans.toString();
-      });
 
       // Update totals after the state is updated
       await _updateTotalInspectionQty();
@@ -1270,8 +1223,6 @@ class _ScanItemState extends State<ScanItem> {
                                 headingRowColor: MaterialStateProperty.all(
                                     Colors.grey.shade100),
                                 columns: const [
-                                  // Remove the checkbox column
-                                  // DataColumn(label: Text('')),
                                   DataColumn(label: Text('No.')),
                                   DataColumn(label: Text('Content')),
                                   DataColumn(label: Text('Result')),
@@ -1308,64 +1259,7 @@ class _ScanItemState extends State<ScanItem> {
                               else if (!_isQtyPerBoxReached &&
                                   !_isTotalQtyReached)
                                 // Only show Add Row button if neither QTY limit is reached
-                                // ElevatedButton(
-                                //   style: ElevatedButton.styleFrom(
-                                //     backgroundColor: Colors.deepPurple,
-                                //     foregroundColor: Colors.white,
-                                //     padding: const EdgeInsets.symmetric(
-                                //       horizontal: 24,
-                                //       vertical: 12,
-                                //     ),
-                                //     shape: RoundedRectangleBorder(r
-                                //       borderRadius: kBorderRadiusSmallAll,
-                                //     ),
-                                //   ),
-                                //   onPressed: _addRow,
-                                //   child: const Text('Add Row'),
-                                // ),
-                              const SizedBox(width: 16),
-                              // Delete Selected button
-                              // if (selectedRows.isNotEmpty)
-                              //   ElevatedButton(
-                              //     style: ElevatedButton.styleFrom(
-                              //       backgroundColor: Colors.red,
-                              //       foregroundColor: Colors.white,
-                              //       padding: const EdgeInsets.symmetric(
-                              //         horizontal: 24,
-                              //         vertical: 12,
-                              //       ),
-                              //       shape: RoundedRectangleBorder(
-                              //         borderRadius: kBorderRadiusSmallAll,
-                              //       ),
-                              //     ),
-                              //     onPressed: () {
-                              //       setState(() {
-                              //         final sortedIndices = selectedRows
-                              //             .toList()
-                              //           ..sort((a, b) => b.compareTo(a));
-                              //         for (final index in sortedIndices) {
-                              //           if (index < _focusNodes.length) {
-                              //             _focusNodes[index].dispose();
-                              //             _focusNodes.removeAt(index);
-                              //           }
-                              //           _tableData.removeAt(index);
-                              //         }
-                              //         selectedRows.clear();
-
-                              //         if (_tableData.isEmpty) {
-                              //           _tableData.add({
-                              //             'content': '',
-                              //             'result': '',
-                              //             'isLocked': false,
-                              //           });
-                              //           _focusNodes.add(FocusNode());
-                              //         }
-
-                              //         _checkAndUpdateQtyStatus();
-                              //       });
-                              //     },
-                              //     child: const Text('Delete Selected'),
-                              //   ),
+                                const SizedBox(width: 16),
                               if (_isQtyPerBoxReached) ...[
                                 const SizedBox(width: 16),
                                 ElevatedButton(
@@ -1437,18 +1331,39 @@ class _ScanItemState extends State<ScanItem> {
   // Add this helper method to get the current group count
   int _getCurrentGroupCount() {
     if (_itemCategory == 'Non-Counting') {
-      // For non-counting items, use the No. column to count groups with "Good" results
-      return _tableData
-        .where((item) => item['result'] == 'Good')
-        .map((item) => item['rowNumber'] ?? 0)
-        .toSet()
-        .length;
+      // Group scans by session first
+      Map<String, List<Map<String, dynamic>>> sessionGroups = {};
+      
+      for (var data in _tableData.where((item) => 
+        item['result']?.isNotEmpty == true)) {
+        String sessionId = data['sessionId'] ?? _sessionId;
+        if (!sessionGroups.containsKey(sessionId)) {
+          sessionGroups[sessionId] = [];
+        }
+        sessionGroups[sessionId]!.add(data);
+      }
+
+      int totalGroups = 0;
+      
+      // Count completed groups for each session separately
+      sessionGroups.forEach((sessionId, sessionData) {
+        // Sort data by timestamp
+        sessionData.sort((a, b) => 
+          (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
+        
+        // Get the codes in group for this session
+        int codesInGroup = sessionData.first['codesInGroup'] ?? 1;
+        
+        // Count complete groups in this session
+        int completeGroups = sessionData.length ~/ codesInGroup;
+        totalGroups += completeGroups;
+      });
+
+      return totalGroups;
     } else {
-      // For counting items, count rows with "Good" results
+      // For counting items, count individual good scans
       return _tableData
         .where((item) => item['result'] == 'Good')
-        .map((item) => item['No.'] ?? item['rowNumber'])
-        .toSet()
         .length;
     }
   }
