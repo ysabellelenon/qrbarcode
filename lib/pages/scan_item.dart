@@ -416,7 +416,7 @@ class _ScanItemState extends State<ScanItem> {
           lotNumber: lotNumber,
           content: _labelContent ?? content,
           poNo: poNo,
-          quantity: qtyPerBoxController.text,
+          quantity: totalQtyController.text,
           tableData: _tableData
               .where((item) => item['content']?.isNotEmpty == true)
               .map((item) => Map<String, dynamic>.from(item))
@@ -887,14 +887,14 @@ class _ScanItemState extends State<ScanItem> {
                               lotNumber: lotNumber,
                               content: _labelContent ?? content,
                               poNo: poNo,
-                              quantity: qtyPerBoxController.text,
+                              quantity: totalQtyController.text,
                               tableData: _tableData
                                   .where((item) => item['content']?.isNotEmpty == true)
                                   .map((item) => Map<String, dynamic>.from(item))
                                   .toList(),
                               username: 'operator',
-                              isIncomplete: isIncomplete, // Add this flag
-                              targetQty: targetQty,       // Add target quantity info
+                              isIncomplete: isIncomplete,
+                              targetQty: targetQty,
                             ),
                           );
                         }

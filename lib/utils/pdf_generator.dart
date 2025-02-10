@@ -112,6 +112,7 @@ Future<void> generateAndSavePdf({
                   children: [
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
+                    pw.Text('Total QTY: $quantity', style: baseTextStyle),
                     pw.Text('Total Inspection QTY: $totalScans', style: baseTextStyle),
                     pw.Text('Total Good Count: ${totalCounts['goodCount']}', style: baseTextStyle),
                     pw.Text('Total No Good Count: ${totalCounts['noGoodCount']}', style: baseTextStyle),
