@@ -35,6 +35,11 @@ class _FinishedItemState extends State<FinishedItem> {
   final TextEditingController _remarksController = TextEditingController();
   List<Map<String, dynamic>> _scannedData = [];
   bool _isLoading = true;
+  Map<String, int> _counts = {
+    'inspectionQty': 0,
+    'goodCount': 0,
+    'noGoodCount': 0,
+  };
 
   // Add pagination variables
   int _currentPage = 1;
@@ -49,6 +54,7 @@ class _FinishedItemState extends State<FinishedItem> {
   void initState() {
     super.initState();
     _loadScannedData();
+    _loadCounts();
   }
 
   Future<void> _loadScannedData() async {
@@ -66,6 +72,24 @@ class _FinishedItemState extends State<FinishedItem> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadCounts() async {
+    try {
+      // Get total counts for the item
+      final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(widget.itemName);
+      final totalScans = await DatabaseHelper().getTotalScansForItem(widget.itemName);
+      
+      setState(() {
+        _counts = {
+          'goodCount': counts['goodCount'] ?? 0,
+          'noGoodCount': counts['noGoodCount'] ?? 0,
+          'inspectionQty': totalScans,
+        };
+      });
+    } catch (e) {
+      print('Error loading counts: $e');
     }
   }
 
@@ -357,7 +381,7 @@ class _FinishedItemState extends State<FinishedItem> {
     );
   }
 
-  void _printSummary() async {
+  Future<void> _printSummary() async {
     try {
       await generateAndSavePdf(
         itemName: widget.itemName,
@@ -494,6 +518,35 @@ class _FinishedItemState extends State<FinishedItem> {
                 'Content', '${widget.content}_${widget.lotNumber}'),
             _buildInfoSection('P.O Number', widget.poNo),
             _buildInfoSection('Quantity', widget.quantity),
+            
+            // Add counts section
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Counts Summary',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCountRow('Total QTY', int.tryParse(widget.quantity) ?? 0),
+                  _buildCountRow('Inspection QTY', _counts['inspectionQty'] ?? 0),
+                  _buildCountRow('Good Count', _counts['goodCount'] ?? 0, color: Colors.green),
+                  _buildCountRow('No Good Count', _counts['noGoodCount'] ?? 0, color: Colors.red),
+                ],
+              ),
+            ),
+            
             const SizedBox(height: 20),
             Container(
               width: double.infinity,
@@ -516,7 +569,7 @@ class _FinishedItemState extends State<FinishedItem> {
                   const SizedBox(height: 16),
                   PreviousScansTable(
                     itemName: widget.itemName,
-                    title: '', // Empty title since we already have one above
+                    title: '',
                   ),
                 ],
               ),
@@ -620,12 +673,44 @@ class _FinishedItemState extends State<FinishedItem> {
   }
 
   void _saveAndNavigate() {
-    _printSummary();
-    if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/operator-login',
-        (route) => false,
-      );
-    }
+    _printSummary().then((_) async {
+      // Clear data after printing
+      try {
+        await DatabaseHelper().clearAllDataForItem(widget.itemName);
+        print('Successfully cleared all data for item: ${widget.itemName}');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('All data has been cleared. Starting fresh on next scan.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.of(context).pushNamedAndRemoveUntil('/operator-login', (route) => false);
+        }
+      } catch (e) {
+        print('Error clearing data: $e');
+      }
+    });
+  }
+
+  Widget _buildCountRow(String label, int value, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
