@@ -255,54 +255,202 @@ b. System Validations:
 
 ### 3. Individual Item Scanning
 
-#### Group-Based Scanning Process
-For items with multiple codes (defined by `codeCount`), the system implements a group-based scanning approach:
+#### Required Group-Based Scanning Functionality
+The following requirements specify how the grouping functionality should work:
 
 ```
-1. Group Structure:
-   a. Configuration:
-      - codeCount: Number of codes required per item (from item configuration)
-      - groupNumber: Automatically assigned to each complete set of scans
-      - groupPosition: Position of scan within its group (1 to codeCount)
+1. Group Activation:
+   - Grouping functionality should ONLY be activated when No. of Code > 1
+   - Applies to both counting and non-counting items
+   - No grouping should occur when No. of Code = 1
 
-   b. Group Tracking:
-      - Groups are numbered sequentially (1, 2, 3, etc.)
-      - Each scan within a group has a specific position
-      - Group completion is monitored automatically
+2. Group Counting:
+   - When No. of Code > 1, every N scans form one group
+   - Example: If No. of Code = 2, every 2 scans = 1 group
+   - All quantity tracking should count completed groups as single units:
+     * QTY per box
+     * Inspection QTY
+     * Good count
+     * No Good count
 
-2. Counting Logic:
-   a. Group Assignment:
-      - previousCompletedGroups = total completed scans ÷ codeCount
-      - currentGroup = previousCompletedGroups + 1
-      - positionInGroup = total completed scans % codeCount
+3. Configuration Changes:
+   - If engineer revises the item and changes No. of Code:
+     * Previous scan groupings must remain unchanged
+     * System must maintain knowledge of old grouping rules
+     * New scans follow new No. of Code
+     * Example: If old No. of Code was 2 (grouped by 2s) and new is 1:
+       - Old scans remain grouped by 2s
+       - New scans are not grouped
+   
+4. Session Independence:
+   - Previous scans from different sessions must never merge
+   - Each session's scans maintain their own grouping
+   - Example: If scanning No. "1" in second session:
+     * Should not merge with No. "1" from first session
+     * Each session maintains independent groups
+     * Previous scans table should show clear session boundaries
 
-   b. Progress Tracking:
-      - Tracks completed groups
-      - Monitors position within current group
-      - Updates group status automatically
-
-3. Display Management:
-   a. Row Numbering:
-      - Shows group number for first scan in each group
-      - Maintains visual group separation
-      - Indicates group completion status
-
-   b. Progress Indicators:
-      - Current group progress
-      - Total groups completed
-      - Remaining groups required
-
-4. Validation Rules:
-   a. Group Completion:
-      - All positions within group must be filled
-      - Scans must pass individual validation
-      - Group order must be maintained
-
-   b. Quantity Control:
-      - Tracks groups instead of individual scans
-      - Updates box completion based on group counts
-      - Enforces total quantity in group units
+5. Display Requirements:
+   - Finished item summary must reflect original groupings
+   - Clear visual separation between sessions
+   - Groups should be easily identifiable
+   - Maintain historical grouping context
 ```
+
+#### Current Implementation
+
+The following code snippets from `scan_item.dart` demonstrate the key components of the group-based scanning implementation:
+
+1. Session Management and Group Tracking:
+```dart
+// Unique session ID for each scanning session
+final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+
+// Track table data with group information
+final List<Map<String, dynamic>> _tableData = [];
+```
+
+2. Group Calculation Logic:
+```dart
+// Calculate group information for non-counting items
+Future<void> _validateContent(String value, int index) async {
+  // ... other validation code ...
+
+  if (_itemCategory == 'Non-Counting') {
+    final items = await DatabaseHelper().getItems();
+    final matchingItem = items.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => {},
+    );
+    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+    
+    // Calculate current group based on completed scans
+    int previousCompletedGroups = (_tableData
+            .where((row) => row['result']?.isNotEmpty == true)
+            .length ~/
+        noOfCodes);
+    int currentGroup = previousCompletedGroups + 1;
+
+    // Get position within current group (0-based)
+    int positionInGroup = _tableData
+            .where((row) => row['result']?.isNotEmpty == true)
+            .length %
+        noOfCodes;
+
+    // Save to database with group information
+    await DatabaseHelper().insertScanContent(
+      operatorScanId,
+      value,
+      result,
+      groupNumber: currentGroup,
+      groupPosition: positionInGroup + 1,
+      codesInGroup: noOfCodes,
+      sessionId: _sessionId,
+    );
+  }
+}
+```
+
+3. Quantity Tracking for Groups:
+```dart
+// Get the current group count for quantity calculations
+int _getCurrentGroupCount() {
+  if (_itemCategory == 'Non-Counting') {
+    // For non-counting items, use the No. column to count groups with "Good" results
+    return _tableData
+      .where((item) => item['result'] == 'Good')
+      .map((item) => item['rowNumber'] ?? 0)
+      .toSet()
+      .length;
+  } else {
+    // For counting items, count rows with "Good" results
+    return _tableData
+      .where((item) => item['result'] == 'Good')
+      .map((item) => item['No.'] ?? item['rowNumber'])
+      .toSet()
+      .length;
+  }
+}
+```
+
+4. Historical Data Management:
+```dart
+// Update total inspection quantity considering groups
+Future<void> _updateTotalInspectionQty() async {
+  try {
+    // Get historical completed groups for this item
+    final historicalGroups = await DatabaseHelper().getTotalScansForItem(itemName);
+    
+    // Count current groups (not individual scans)
+    Set<dynamic> uniqueGroups = _tableData
+      .where((item) => item['result']?.isNotEmpty == true)
+      .map((item) => item['groupNumber'] ?? item)
+      .toSet();
+    final currentGroups = uniqueGroups.length;
+    
+    setState(() {
+      // Total inspection QTY is historical + current groups
+      inspectionQtyController.text = 
+        ((historicalGroups ?? 0) + currentGroups).toString();
+    });
+  } catch (e) {
+    print('Error updating total inspection quantity: $e');
+  }
+}
+```
+
+5. Display Management for Groups:
+```dart
+// Build table rows with group information
+List<DataRow> _buildTableRows() {
+  return _tableData.asMap().entries.map((entry) {
+    int index = entry.key;
+    Map<String, dynamic> data = entry.value;
+    
+    // Calculate group information
+    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+    int previousScans = _tableData
+        .where((row) =>
+            row['result']?.isNotEmpty == true &&
+            _tableData.indexOf(row) < index)
+        .length;
+    
+    // Show row number only for first scan in group
+    bool isFirstInGroup = previousScans % noOfCodes == 0;
+    
+    return DataRow(
+      cells: [
+        DataCell(Text(isFirstInGroup ? 
+          ((previousScans ~/ noOfCodes) + 1).toString() : '')),
+        // ... other cells ...
+      ],
+    );
+  }).toList();
+}
+```
+
+6. Database Structure:
+```sql
+CREATE TABLE individual_scans (
+  scan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  operator_scan_id INTEGER,
+  content TEXT,
+  result TEXT,
+  group_number INTEGER,
+  group_position INTEGER,
+  codes_in_group INTEGER,
+  session_id TEXT,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (operator_scan_id) REFERENCES operator_scans(id)
+);
+```
+
+This implementation ensures that:
+- Each scanning session maintains independent group numbering
+- Groups are properly tracked and displayed
+- Quantity calculations are based on completed groups
+- Historical data preserves original grouping configurations
+- Session boundaries are maintained for data integrity
 
 #### Display Information
 The scanning interface provides real-time feedback and progress information to operators.
