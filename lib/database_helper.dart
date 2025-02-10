@@ -1077,4 +1077,44 @@ class DatabaseHelper {
     
     return allScans;
   }
+
+  Future<void> clearAllDataForItem(String itemName) async {
+    final db = await database;
+    
+    // Get all session IDs for this item
+    final sessions = await db.query(
+      'scanning_sessions',
+      columns: ['id'],
+      where: 'itemName = ?',
+      whereArgs: [itemName],
+    );
+
+    if (sessions.isEmpty) return;
+
+    final sessionIds = sessions.map((s) => s['id']).toList();
+    
+    // Start a transaction to ensure all deletes happen together
+    await db.transaction((txn) async {
+      // Delete all individual scans for these sessions
+      await txn.delete(
+        'individual_scans',
+        where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
+        whereArgs: sessionIds,
+      );
+
+      // Delete all box labels for these sessions
+      await txn.delete(
+        'box_labels',
+        where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
+        whereArgs: sessionIds,
+      );
+
+      // Delete all scanning sessions for this item
+      await txn.delete(
+        'scanning_sessions',
+        where: 'itemName = ?',
+        whereArgs: [itemName],
+      );
+    });
+  }
 }
