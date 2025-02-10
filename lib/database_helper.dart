@@ -1173,4 +1173,22 @@ class DatabaseHelper {
     
     return null;
   }
+
+  Future<List<Map<String, dynamic>>> getBoxQuantities(String itemName) async {
+    final db = await database;
+    
+    return await db.rawQuery('''
+      SELECT 
+        bl.qtyPerBox,
+        bl.createdAt,
+        COUNT(DISTINCT CASE WHEN s.result = 'Good' THEN s.groupNumber END) as goodGroups,
+        COUNT(DISTINCT CASE WHEN s.result = 'No Good' THEN s.groupNumber END) as noGoodGroups
+      FROM box_labels bl
+      JOIN scanning_sessions ss ON bl.sessionId = ss.id
+      LEFT JOIN individual_scans s ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
+      GROUP BY bl.id
+      ORDER BY bl.createdAt ASC
+    ''', [itemName]);
+  }
 }

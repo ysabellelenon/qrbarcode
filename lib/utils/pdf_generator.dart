@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart' show mounted;
+import '../database_helper.dart';
 
 Future<void> generateAndSavePdf({
   required String itemName,
@@ -18,6 +19,9 @@ Future<void> generateAndSavePdf({
 }) async {
   try {
     final pdf = pw.Document();
+
+    // Get box quantities
+    final boxQuantities = await DatabaseHelper().getBoxQuantities(itemName);
 
     // Reduce rows per page to avoid TooManyPagesException
     final int rowsPerPage = 25;
@@ -52,6 +56,10 @@ Future<void> generateAndSavePdf({
       fontWeight: pw.FontWeight.bold,
     );
 
+    // Get total counts
+    final totalCounts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
+    final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -84,14 +92,54 @@ Future<void> generateAndSavePdf({
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('P.O Number: $poNo', style: baseTextStyle),
-                        pw.SizedBox(height: 5),
-                        pw.Text('Quantity: $quantity', style: baseTextStyle),
+                        pw.Text('Total QTY: $quantity', style: baseTextStyle),
                         pw.SizedBox(height: 5),
                         pw.Text('Remarks: $remarks', style: baseTextStyle),
                       ],
                     ),
                   ),
                 ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  border: pw.Border.all(color: PdfColors.grey400),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Summary Counts:', style: headerTextStyle),
+                    pw.SizedBox(height: 5),
+                    pw.Text('Total Inspection QTY: $totalScans', style: baseTextStyle),
+                    pw.Text('Total Good Count: ${totalCounts['goodCount']}', style: baseTextStyle),
+                    pw.Text('Total No Good Count: ${totalCounts['noGoodCount']}', style: baseTextStyle),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.grey200,
+                  border: pw.Border.all(color: PdfColors.grey400),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Box Quantities:', style: headerTextStyle),
+                    pw.SizedBox(height: 5),
+                    ...boxQuantities.map((box) {
+                      final DateTime createdAt = DateTime.parse(box['createdAt']);
+                      final String formattedDate = '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+                      return pw.Text(
+                        'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}, Good: ${box['goodGroups']}, No Good: ${box['noGoodGroups']}',
+                        style: baseTextStyle,
+                      );
+                    }).toList(),
+                  ],
+                ),
               ),
               pw.SizedBox(height: 20),
               pw.Text('Results Table:', style: headerTextStyle),
