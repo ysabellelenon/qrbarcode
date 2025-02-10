@@ -225,6 +225,11 @@ class _ScanItemState extends State<ScanItem> {
         _focusNodes[0].requestFocus();
       }
     });
+
+    // Add state restoration
+    if (!_preserveHistory) {
+      _restorePreviousState();
+    }
   }
 
   // New method to initialize counts and check status
@@ -658,6 +663,9 @@ class _ScanItemState extends State<ScanItem> {
       if (result == 'No Good') {
         _showNoGoodAlert();
       }
+
+      // Save current state after successful scan
+      await _saveCurrentState();
     } catch (e) {
       print('Error saving scan content: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1284,6 +1292,73 @@ class _ScanItemState extends State<ScanItem> {
         .length;
     }
   }
+
+  // Add new method to save current state
+  Future<void> _saveCurrentState() async {
+    try {
+      print('\n=== Saving Current State ===');
+      final currentState = {
+        'itemName': itemName,
+        'poNo': poNo,
+        'lotNumber': lotNumber,
+        'content': content,
+        'operatorScanId': operatorScanId,
+        'totalQty': totalQty,
+        'qtyPerBox': qtyPerBoxController.text,
+        'inspectionQty': inspectionQtyController.text,
+        'goodCount': goodCountController.text,
+        'noGoodCount': noGoodCountController.text,
+        'tableData': _tableData,
+        'sessionId': _sessionId,
+        'isQtyPerBoxReached': _isQtyPerBoxReached,
+        'isTotalQtyReached': _isTotalQtyReached,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      await DatabaseHelper().saveCurrentState(currentState);
+      print('Current state saved successfully');
+    } catch (e) {
+      print('Error saving current state: $e');
+    }
+  }
+
+  // Add method to restore previous state
+  Future<void> _restorePreviousState() async {
+    try {
+      print('\n=== Restoring Previous State ===');
+      final previousState = await DatabaseHelper().getLastSavedState(itemName);
+      
+      if (previousState != null && previousState['timestamp'] != null) {
+        // Check if the state is from the last 24 hours
+        final savedTime = DateTime.parse(previousState['timestamp']);
+        final now = DateTime.now();
+        if (now.difference(savedTime).inHours <= 24) {
+          setState(() {
+            qtyPerBoxController.text = previousState['qtyPerBox'] ?? '';
+            inspectionQtyController.text = previousState['inspectionQty'] ?? '';
+            goodCountController.text = previousState['goodCount'] ?? '';
+            noGoodCountController.text = previousState['noGoodCount'] ?? '';
+            _isQtyPerBoxReached = previousState['isQtyPerBoxReached'] ?? false;
+            _isTotalQtyReached = previousState['isTotalQtyReached'] ?? false;
+            
+            // Restore table data
+            _tableData.clear();
+            final savedTableData = previousState['tableData'] as List;
+            _tableData.addAll(savedTableData.map((item) => Map<String, dynamic>.from(item)));
+            
+            print('Previous state restored successfully');
+          });
+        } else {
+          print('Saved state is older than 24 hours - starting fresh');
+        }
+      }
+    } catch (e) {
+      print('Error restoring previous state: $e');
+    }
+  }
+
+  // Add periodic state saving
+  Timer? _autoSaveTimer;
 }
 
 // Add this class at the top of the file or in a separate utilities file

@@ -326,6 +326,28 @@ class DatabaseHelper {
         FOREIGN KEY (operatorScanId) REFERENCES operator_scans (id) ON DELETE CASCADE
       )
     ''');
+
+    // Add table for storing current states
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS current_states (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        itemName TEXT,
+        poNo TEXT,
+        lotNumber TEXT,
+        content TEXT,
+        operatorScanId INTEGER,
+        totalQty INTEGER,
+        qtyPerBox TEXT,
+        inspectionQty TEXT,
+        goodCount TEXT,
+        noGoodCount TEXT,
+        tableData TEXT,
+        sessionId TEXT,
+        isQtyPerBoxReached INTEGER,
+        isTotalQtyReached INTEGER,
+        timestamp TEXT
+      )
+    ''');
   }
 
   Future<void> _addNewTablesIfNotExist(Database db) async {
@@ -1098,5 +1120,57 @@ class DatabaseHelper {
         whereArgs: [itemName],
       );
     });
+  }
+
+  Future<void> saveCurrentState(Map<String, dynamic> state) async {
+    final db = await database;
+    
+    // Convert complex objects to JSON strings
+    final serializedState = Map<String, dynamic>.from(state);
+    serializedState['tableData'] = jsonEncode(state['tableData']);
+    
+    // Convert boolean values to integers for SQLite
+    serializedState['isQtyPerBoxReached'] = state['isQtyPerBoxReached'] ? 1 : 0;
+    serializedState['isTotalQtyReached'] = state['isTotalQtyReached'] ? 1 : 0;
+    
+    // Delete previous state for this item
+    await db.delete(
+      'current_states',
+      where: 'itemName = ?',
+      whereArgs: [state['itemName']],
+    );
+    
+    // Insert new state
+    await db.insert(
+      'current_states',
+      serializedState,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getLastSavedState(String itemName) async {
+    final db = await database;
+    
+    final List<Map<String, dynamic>> results = await db.query(
+      'current_states',
+      where: 'itemName = ?',
+      whereArgs: [itemName],
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+
+    if (results.isNotEmpty) {
+      final state = Map<String, dynamic>.from(results.first);
+      // Deserialize complex objects
+      state['tableData'] = jsonDecode(state['tableData'].toString());
+      
+      // Convert integers back to booleans
+      state['isQtyPerBoxReached'] = state['isQtyPerBoxReached'] == 1;
+      state['isTotalQtyReached'] = state['isTotalQtyReached'] == 1;
+      
+      return state;
+    }
+    
+    return null;
   }
 }
