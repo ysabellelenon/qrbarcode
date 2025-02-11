@@ -651,32 +651,64 @@ class _ScanItemState extends State<ScanItem> {
         print('Base Display Content: "$baseDisplayContent"');
         print('Scanned Base Content: "$scannedBaseContent"');
 
-        // Exact comparison of base content
-        if (baseDisplayContent != scannedBaseContent) {
-          print('Base content mismatch');
-          result = 'No Good';
-        } else {
-          // Validate the serial part
-          String serialPart = value.substring(value.length - serialCount);
-          if (serialPart.length == serialCount) {
-            // Check for duplicates
-            bool isDuplicate = _tableData.any((row) {
-              if (_tableData.indexOf(row) == index ||
-                  row['content']?.isEmpty == true) return false;
-              return row['content'] == value;
-            });
+        // Check if sub-lot rules are enabled for this item
+        bool hasSubLotRules = countingCode['hasSubLot'] == 1 ||
+            countingCode['hasSubLot'] == true;
 
-            result = isDuplicate ? 'No Good' : 'Good';
-          } else {
-            print('Serial part length mismatch');
-            result = 'No Good';
+        // For validation, we need to compare against the original lot number format
+        String expectedBaseContent;
+        if (hasSubLotRules && lotNumber.contains('-')) {
+          // Use the original lot number format for validation
+          String baseContent = _labelContent ?? '';
+          expectedBaseContent = '$baseContent$lotNumber';
+          
+          // Remove the dash if present in the expected content
+          expectedBaseContent = expectedBaseContent.replaceAll('-', '');
+          
+          print('Expected Base Content: "$expectedBaseContent"');
+          print('Scanned Base Content: "$scannedBaseContent"');
+          
+          // Compare the scanned content against the original format
+          if (scannedBaseContent.startsWith(baseContent)) {
+            // Extract and compare the lot number portion
+            String scannedLotPortion = scannedBaseContent.substring(baseContent.length);
+            String expectedLotPortion = expectedBaseContent.substring(baseContent.length);
+            
+            if (scannedLotPortion == expectedLotPortion) {
+              // Validate the serial part
+              String serialPart = value.substring(value.length - serialCount);
+              if (serialPart.length == serialCount) {
+                // Check for duplicates
+                bool isDuplicate = _tableData.any((row) {
+                  if (_tableData.indexOf(row) == index ||
+                      row['content']?.isEmpty == true) return false;
+                  return row['content'] == value;
+                });
+
+                result = isDuplicate ? 'No Good' : 'Good';
+              }
+            }
+          }
+        } else {
+          // Regular validation without sub-lot rules
+          if (baseDisplayContent == scannedBaseContent) {
+            // Validate the serial part
+            String serialPart = value.substring(value.length - serialCount);
+            if (serialPart.length == serialCount) {
+              // Check for duplicates
+              bool isDuplicate = _tableData.any((row) {
+                if (_tableData.indexOf(row) == index ||
+                    row['content']?.isEmpty == true) return false;
+                return row['content'] == value;
+              });
+
+              result = isDuplicate ? 'No Good' : 'Good';
+            }
           }
         }
       } else {
         // For non-counting items, exact content matching
-        if (value != _displayContent) {
-          result = 'No Good';
-        } else {
+        if (value == _displayContent) {
           result = 'Good';
         }
       }
