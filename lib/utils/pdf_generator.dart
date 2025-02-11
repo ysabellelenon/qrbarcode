@@ -225,8 +225,7 @@ Future<void> generateAndSavePdf({
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('P.O Number: $poNo', style: baseTextStyle),
-                        pw.Text('Total QTY: $totalCompletedGroups',
-                            style: baseTextStyle),
+                        pw.Text('Total QTY: $quantity', style: baseTextStyle),
                         pw.SizedBox(height: 5),
                         pw.Text('Remarks: $remarks', style: baseTextStyle),
                       ],
@@ -246,8 +245,7 @@ Future<void> generateAndSavePdf({
                   children: [
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
-                    pw.Text('Total QTY: $totalCompletedGroups',
-                        style: baseTextStyle),
+                    pw.Text('Total QTY: $quantity', style: baseTextStyle),
                     pw.Text('Total Inspection QTY: $totalCompletedGroups',
                         style: baseTextStyle),
                     pw.Text('Total Good Count: $totalGoodGroups',
