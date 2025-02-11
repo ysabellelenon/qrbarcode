@@ -940,37 +940,46 @@ class DatabaseHelper {
     );
   }
 
-  Future<Map<String, int>> getTotalGoodNoGoodCounts(
+  Future<Map<String, int>> getGroupedScanCounts(
     String itemName, {
     String? excludeSessionId,
   }) async {
     final db = await database;
 
-    // First get the item's codeCount
+    // First get the item's codeCount to know how many scans make a complete group
     final items =
         await db.query('items', where: 'itemCode = ?', whereArgs: [itemName]);
-    if (items.isEmpty) return {'goodCount': 0, 'noGoodCount': 0};
+    if (items.isEmpty)
+      return {'inspectionQty': 0, 'goodCount': 0, 'noGoodCount': 0};
 
     final item = items.first;
     final int codesPerGroup = int.parse(item['codeCount']?.toString() ?? '1');
 
+    print('\n=== DEBUG: getGroupedScanCounts ===');
+    print('Item: $itemName');
+    print('Codes per group: $codesPerGroup');
+
+    // Build the query to count groups
     String query = '''
       WITH GroupedScans AS (
         SELECT 
-          s.sessionId,
+          ss.itemName,
+          ss.poNo,
+          ss.id as sessionId,
           s.groupNumber,
-          COUNT(*) as scans_in_group,
-          COUNT(CASE WHEN s.result = 'Good' THEN 1 END) as good_scans_in_group
-        FROM individual_scans s
-        JOIN scanning_sessions ss ON s.sessionId = ss.id
+          COUNT(*) as scansInGroup,
+          SUM(CASE WHEN s.result = 'Good' THEN 1 ELSE 0 END) as goodScansInGroup
+        FROM scanning_sessions ss
+        JOIN individual_scans s ON s.sessionId = ss.id
         WHERE ss.itemName = ?
-          ${excludeSessionId != null ? 'AND s.sessionId != ?' : ''}
-        GROUP BY s.sessionId, s.groupNumber
+          ${excludeSessionId != null ? 'AND ss.id != ?' : ''}
+        GROUP BY ss.itemName, ss.poNo, ss.id, s.groupNumber
         HAVING COUNT(*) = ? -- Only consider complete groups
       )
       SELECT 
-        SUM(CASE WHEN scans_in_group = good_scans_in_group THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN scans_in_group > good_scans_in_group THEN 1 ELSE 0 END) as noGoodCount
+        COUNT(*) as inspectionQty,
+        SUM(CASE WHEN scansInGroup = goodScansInGroup THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN scansInGroup > goodScansInGroup THEN 1 ELSE 0 END) as noGoodCount
       FROM GroupedScans
     ''';
 
@@ -981,9 +990,10 @@ class DatabaseHelper {
     args.add(codesPerGroup);
 
     final result = await db.rawQuery(query, args);
-    print('Group counting query result: $result');
+    print('Query result: $result');
 
     return {
+      'inspectionQty': result.first['inspectionQty'] as int? ?? 0,
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };

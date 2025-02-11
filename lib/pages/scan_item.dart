@@ -105,10 +105,16 @@ class _ScanItemState extends State<ScanItem> {
   }
 
   // Add new method to fetch total counts
-  Future<void> _updateTotalGoodNoGoodCounts() async {
+  Future<void> _updateGroupCounts() async {
     try {
-      print('\n=== Updating Total Good/No Good Counts ===');
+      print('\n=== Updating Group Counts ===');
       final db = await DatabaseHelper();
+
+      // Get counts using the new function, excluding current session
+      final counts = await db.getGroupedScanCounts(
+        itemName,
+        excludeSessionId: operatorScanId.toString(),
+      );
 
       // Get codes per group from item configuration
       final items = await db.getItems();
@@ -119,63 +125,19 @@ class _ScanItemState extends State<ScanItem> {
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
       print('Codes per group: $codesPerGroup');
 
-      // Get all scans for this item
-      final allScans = await db.getAllHistoricalScans(itemName);
-
-      // Group scans by session and group number
-      Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
-      for (var scan in allScans) {
-        String sessionId = scan['sessionId']?.toString() ?? '';
-
-        // Skip current session scans when grouping historical data
-        if (sessionId == operatorScanId.toString()) {
-          print('Skipping current session scan in historical grouping');
-          continue;
-        }
-
-        int groupNum = scan['groupNumber'] ?? 1;
-        groupedScans[sessionId] = groupedScans[sessionId] ?? {};
-        groupedScans[sessionId]![groupNum] =
-            groupedScans[sessionId]![groupNum] ?? [];
-        groupedScans[sessionId]![groupNum]!.add(scan);
-      }
-
-      int totalGoodGroups = 0;
-      int totalNoGoodGroups = 0;
-
-      // Count completed groups from historical sessions
-      groupedScans.forEach((sessionId, groups) {
-        groups.forEach((groupNum, scans) {
-          if (scans.length == codesPerGroup) {
-            // Only count complete groups
-            bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-            if (isGroupGood) {
-              totalGoodGroups++;
-              print(
-                  'Historical Good Group - Session: $sessionId, Group: $groupNum');
-            } else {
-              totalNoGoodGroups++;
-              print(
-                  'Historical No Good Group - Session: $sessionId, Group: $groupNum');
-            }
-          }
-        });
-      });
-
-      print('Historical - Good Groups: $totalGoodGroups');
-      print('Historical - No Good Groups: $totalNoGoodGroups');
-
-      // Add current session counts
+      // Count current session groups
       final currentSessionScans = _tableData
           .where((item) => item['result']?.isNotEmpty == true)
           .toList();
       int currentSessionGoodGroups = 0;
       int currentSessionNoGoodGroups = 0;
+      int currentSessionCompletedGroups = 0;
 
       // Process current session scans in groups
       for (int i = 0; i < currentSessionScans.length; i += codesPerGroup) {
         // Only process complete groups
         if (i + codesPerGroup <= currentSessionScans.length) {
+          currentSessionCompletedGroups++;
           final groupScans = currentSessionScans.sublist(i, i + codesPerGroup);
           bool isGroupGood =
               groupScans.every((scan) => scan['result'] == 'Good');
@@ -192,50 +154,36 @@ class _ScanItemState extends State<ScanItem> {
         }
       }
 
+      print('Historical - Inspection QTY: ${counts['inspectionQty']}');
+      print('Historical - Good Groups: ${counts['goodCount']}');
+      print('Historical - No Good Groups: ${counts['noGoodCount']}');
+      print(
+          'Current session - Completed Groups: $currentSessionCompletedGroups');
       print('Current session - Good Groups: $currentSessionGoodGroups');
       print('Current session - No Good Groups: $currentSessionNoGoodGroups');
 
-      // Update the total counts
+      // Update all counts
       setState(() {
+        inspectionQtyController.text =
+            (counts['inspectionQty']! + currentSessionCompletedGroups)
+                .toString();
         goodCountController.text =
-            (totalGoodGroups + currentSessionGoodGroups).toString();
+            (counts['goodCount']! + currentSessionGoodGroups).toString();
         noGoodCountController.text =
-            (totalNoGoodGroups + currentSessionNoGoodGroups).toString();
+            (counts['noGoodCount']! + currentSessionNoGoodGroups).toString();
       });
 
       print(
-          'Total Good Groups (all sessions): ${totalGoodGroups + currentSessionGoodGroups}');
+          'Total Inspection QTY (all sessions): ${counts['inspectionQty']! + currentSessionCompletedGroups}');
       print(
-          'Total No Good Groups (all sessions): ${totalNoGoodGroups + currentSessionNoGoodGroups}');
-    } catch (e) {
-      print('Error updating total counts: $e');
-    }
-  }
+          'Total Good Groups (all sessions): ${counts['goodCount']! + currentSessionGoodGroups}');
+      print(
+          'Total No Good Groups (all sessions): ${counts['noGoodCount']! + currentSessionNoGoodGroups}');
 
-  Future<void> _updateTotalInspectionQty() async {
-    try {
-      print('\n=== Updating Total Inspection QTY ===');
-      // Get total completed scans across all sessions
-      final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
-      print('Total completed scans across all sessions: $totalScans');
-
-      // Get codes per group from item configuration
-      final items = await DatabaseHelper().getItems();
-      final matchingItem = items.firstWhere(
-        (item) => item['itemCode'] == itemName,
-        orElse: () => {},
-      );
-      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
-      print('Codes per group: $codesPerGroup');
-
-      setState(() {
-        inspectionQtyController.text = (totalScans ~/ codesPerGroup).toString();
-      });
-
-      // Check and update QTY status after updating inspection QTY
+      // Check and update QTY status after updating counts
       _checkAndUpdateQtyStatus();
     } catch (e) {
-      print('Error updating total inspection quantity: $e');
+      print('Error updating group counts: $e');
     }
   }
 
@@ -320,8 +268,7 @@ class _ScanItemState extends State<ScanItem> {
 
   // New method to initialize counts and check status
   Future<void> _initializeCountsAndStatus() async {
-    await _updateTotalInspectionQty();
-    await _updateTotalGoodNoGoodCounts();
+    await _updateGroupCounts();
 
     // Check if total QTY is already reached
     int currentInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
@@ -823,8 +770,7 @@ class _ScanItemState extends State<ScanItem> {
         _pendingScans.clear();
 
         // Update totals after the group is saved
-        await _updateTotalInspectionQty();
-        await _updateTotalGoodNoGoodCounts();
+        await _updateGroupCounts();
         _checkAndUpdateQtyStatus();
 
         if (!_isTotalQtyReached) {
@@ -1417,8 +1363,7 @@ class _ScanItemState extends State<ScanItem> {
                           showClearButton: true,
                           onDataCleared: () {
                             _resetInspectionQty();
-                            _updateTotalInspectionQty();
-                            _updateTotalGoodNoGoodCounts();
+                            _updateGroupCounts();
                             _checkAndUpdateQtyStatus();
                           },
                         ),

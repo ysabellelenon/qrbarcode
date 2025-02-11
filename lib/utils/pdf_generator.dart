@@ -189,8 +189,7 @@ Future<void> generateAndSavePdf({
     );
 
     // Get total counts
-    final totalCounts =
-        await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
+    final totalCounts = await DatabaseHelper().getGroupedScanCounts(itemName);
     final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
 
     pdf.addPage(
