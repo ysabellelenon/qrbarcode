@@ -197,8 +197,7 @@ Future<void> generateAndSavePdf({
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('P.O Number: $poNo', style: baseTextStyle),
-                        pw.Text('Total QTY: ${counts['inspectionQty']}',
-                            style: baseTextStyle),
+                        pw.Text('Total QTY: $quantity', style: baseTextStyle),
                         pw.SizedBox(height: 5),
                         pw.Text('Remarks: $remarks', style: baseTextStyle),
                       ],
@@ -218,8 +217,7 @@ Future<void> generateAndSavePdf({
                   children: [
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
-                    pw.Text('Total QTY: ${counts['inspectionQty']}',
-                        style: baseTextStyle),
+                    pw.Text('Total QTY: $quantity', style: baseTextStyle),
                     pw.Text('Total Inspection QTY: ${counts['inspectionQty']}',
                         style: baseTextStyle),
                     pw.Text('Total Good Count: ${counts['goodCount']}',
@@ -247,49 +245,8 @@ Future<void> generateAndSavePdf({
                       final String formattedDate =
                           '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
 
-                      // Get scans for this box by session ID
-                      final boxScans = tableData.where((scan) {
-                        return scan['boxId']?.toString() ==
-                            box['id']?.toString();
-                      }).toList();
-
-                      print('\nProcessing box ${box['id']}:');
-                      print('Found ${boxScans.length} scans for this box');
-
-                      // Group scans by group number
-                      Map<int, List<Map<String, dynamic>>> boxGroups = {};
-                      for (var scan in boxScans) {
-                        int groupNum = scan['groupNumber'] ?? 1;
-                        boxGroups[groupNum] = boxGroups[groupNum] ?? [];
-                        boxGroups[groupNum]!.add(scan);
-                      }
-
-                      print('Grouped into ${boxGroups.length} groups');
-
-                      // Count good and no good groups
-                      int boxGoodGroups = 0;
-                      int boxNoGoodGroups = 0;
-
-                      boxGroups.forEach((groupNum, scans) {
-                        print('Group $groupNum has ${scans.length} scans');
-                        if (scans.length == codesPerGroup) {
-                          bool isGroupGood =
-                              scans.every((scan) => scan['result'] == 'Good');
-                          print(
-                              'Group $groupNum complete - all good? $isGroupGood');
-                          if (isGroupGood) {
-                            boxGoodGroups++;
-                          } else {
-                            boxNoGoodGroups++;
-                          }
-                        }
-                      });
-
-                      print(
-                          'Box counts - Good: $boxGoodGroups, No Good: $boxNoGoodGroups');
-
                       return pw.Text(
-                        'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}, Good: $boxGoodGroups, No Good: $boxNoGoodGroups',
+                        'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}',
                         style: baseTextStyle,
                       );
                     }).toList(),

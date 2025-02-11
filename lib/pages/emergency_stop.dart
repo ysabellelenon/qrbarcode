@@ -478,9 +478,6 @@ class EmergencySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the actual quantity from completed groups count
-    final actualQuantity = counts['inspectionQty']?.toString() ?? '0';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Emergency Stop Summary'),
@@ -495,7 +492,7 @@ class EmergencySummary extends StatelessWidget {
             _buildInfoSection('Date', _formatDate(date)),
             _buildInfoSection('Content', content),
             _buildInfoSection('P.O Number', poNo),
-            _buildInfoSection('Quantity', actualQuantity),
+            _buildInfoSection('Total QTY', quantity),
             _buildInfoSection('Remarks', remarks),
 
             // Add counts section
@@ -518,8 +515,7 @@ class EmergencySummary extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildCountRow(
-                      'Inspection QTY', counts['inspectionQty'] ?? 0),
+                  _buildCountRow('Inspection QTY', counts['inspectionQty'] ?? 0),
                   _buildCountRow('Good Count', counts['goodCount'] ?? 0,
                       color: Colors.green),
                   _buildCountRow('No Good Count', counts['noGoodCount'] ?? 0,
