@@ -702,8 +702,8 @@ class _ScanItemState extends State<ScanItem> {
         print('Scanned Base Content: "$scannedBaseContent"');
 
         // Check if sub-lot rules are enabled for this item
-        bool hasSubLotRules = countingCode['hasSubLot'] == 1 ||
-            countingCode['hasSubLot'] == true;
+        bool hasSubLotRules =
+            countingCode['hasSubLot'] == 1 || countingCode['hasSubLot'] == true;
 
         // For validation, we need to compare against the original lot number format
         String expectedBaseContent;
@@ -711,19 +711,21 @@ class _ScanItemState extends State<ScanItem> {
           // Use the original lot number format for validation
           String baseContent = _labelContent ?? '';
           expectedBaseContent = '$baseContent$lotNumber';
-          
+
           // Remove the dash if present in the expected content
           expectedBaseContent = expectedBaseContent.replaceAll('-', '');
-          
+
           print('Expected Base Content: "$expectedBaseContent"');
           print('Scanned Base Content: "$scannedBaseContent"');
-          
+
           // Compare the scanned content against the original format
           if (scannedBaseContent.startsWith(baseContent)) {
             // Extract and compare the lot number portion
-            String scannedLotPortion = scannedBaseContent.substring(baseContent.length);
-            String expectedLotPortion = expectedBaseContent.substring(baseContent.length);
-            
+            String scannedLotPortion =
+                scannedBaseContent.substring(baseContent.length);
+            String expectedLotPortion =
+                expectedBaseContent.substring(baseContent.length);
+
             if (scannedLotPortion == expectedLotPortion) {
               // Validate the serial part
               String serialPart = value.substring(value.length - serialCount);
@@ -1101,7 +1103,7 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    /* Padding(
+                    Padding(
                       padding: const EdgeInsets.only(left: 20),
                       child: OutlinedButton(
                         onPressed: () {
@@ -1109,7 +1111,7 @@ class _ScanItemState extends State<ScanItem> {
                         },
                         child: const Text('Back'),
                       ),
-                    ), */
+                    ),
                     const Text(
                       'Scan Item',
                       style: TextStyle(
