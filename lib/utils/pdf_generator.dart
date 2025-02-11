@@ -27,16 +27,81 @@ Future<void> generateAndSavePdf({
     final int rowsPerPage = 25;
     final chunks = <List<Map<String, dynamic>>>[];
 
-    for (var i = 0; i < tableData.length; i += rowsPerPage) {
-      chunks.add(
-        tableData.sublist(
-          i,
-          i + rowsPerPage > tableData.length
-              ? tableData.length
-              : i + rowsPerPage,
-        ),
-      );
+    // Process the table data to add display_group_number
+    final processedData = <Map<String, dynamic>>[];
+    Map<String, int> sessionGroupCounts = {};
+    Map<String, int> sessionPositions = {};
+
+    print('\n=== Input Table Data ===');
+    print('Raw table data length: ${tableData.length}');
+    tableData.forEach((row) {
+      print('Input row: $row');
+    });
+
+    // First pass: Group rows by sessionId and groupNumber to determine positions
+    Map<String, List<Map<String, dynamic>>> groupedRows = {};
+    for (var row in tableData) {
+      final key = '${row['sessionId']}_${row['groupNumber']}';
+      groupedRows[key] = groupedRows[key] ?? [];
+      groupedRows[key]!.add(row);
     }
+
+    // Sort each group by created_at
+    groupedRows.forEach((key, rows) {
+      rows.sort((a, b) => DateTime.parse(a['created_at'])
+          .compareTo(DateTime.parse(b['created_at'])));
+    });
+
+    print('\n=== Processing Table Data ===');
+    // Second pass: Process rows with position information
+    for (var row in tableData) {
+      print('\nProcessing row with content: ${row['content']}');
+      print('Raw row data: $row');
+
+      // Create a new map with string values for display_group_number
+      Map<String, dynamic> processedRow = Map<String, dynamic>.from(row);
+      print('Initial processed row: $processedRow');
+
+      // Find position in group
+      final key = '${row['sessionId']}_${row['groupNumber']}';
+      final groupRows = groupedRows[key]!;
+      final position = groupRows.indexWhere((r) => r['id'] == row['id']) + 1;
+      print('Position in group: $position');
+
+      // Set display_group_number based on position
+      if (position == 1) {
+        processedRow['display_group_number'] = row['groupNumber'].toString();
+        print(
+            'First in group, setting display_group_number to: ${processedRow['display_group_number']}');
+      } else {
+        processedRow['display_group_number'] = '';
+        print('Not first in group, using empty string');
+      }
+
+      print('Final processed row: $processedRow');
+      processedData.add(processedRow);
+    }
+
+    print('\n=== Final Processed Data ===');
+    print('Processed data length: ${processedData.length}');
+    processedData.forEach((row) {
+      print(
+          'Final row: display_group_number=[${row['display_group_number']}], content=${row['content']}, result=${row['result']}');
+    });
+
+    // Split into chunks for pagination
+    print('\n=== Chunking Data ===');
+    for (var i = 0; i < processedData.length; i += rowsPerPage) {
+      final chunk = processedData.sublist(
+        i,
+        i + rowsPerPage > processedData.length
+            ? processedData.length
+            : i + rowsPerPage,
+      );
+      print('Created chunk with ${chunk.length} rows');
+      chunks.add(chunk);
+    }
+    print('Created ${chunks.length} chunks');
 
     // Create styles
     final baseTextStyle = pw.TextStyle(
@@ -57,7 +122,8 @@ Future<void> generateAndSavePdf({
     );
 
     // Get total counts
-    final totalCounts = await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
+    final totalCounts =
+        await DatabaseHelper().getTotalGoodNoGoodCounts(itemName);
     final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
 
     pdf.addPage(
@@ -113,9 +179,13 @@ Future<void> generateAndSavePdf({
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
                     pw.Text('Total QTY: $quantity', style: baseTextStyle),
-                    pw.Text('Total Inspection QTY: $totalScans', style: baseTextStyle),
-                    pw.Text('Total Good Count: ${totalCounts['goodCount']}', style: baseTextStyle),
-                    pw.Text('Total No Good Count: ${totalCounts['noGoodCount']}', style: baseTextStyle),
+                    pw.Text('Total Inspection QTY: $totalScans',
+                        style: baseTextStyle),
+                    pw.Text('Total Good Count: ${totalCounts['goodCount']}',
+                        style: baseTextStyle),
+                    pw.Text(
+                        'Total No Good Count: ${totalCounts['noGoodCount']}',
+                        style: baseTextStyle),
                   ],
                 ),
               ),
@@ -132,8 +202,10 @@ Future<void> generateAndSavePdf({
                     pw.Text('Box Quantities:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
                     ...boxQuantities.map((box) {
-                      final DateTime createdAt = DateTime.parse(box['createdAt']);
-                      final String formattedDate = '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+                      final DateTime createdAt =
+                          DateTime.parse(box['createdAt']);
+                      final String formattedDate =
+                          '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
                       return pw.Text(
                         'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}, Good: ${box['goodGroups']}, No Good: ${box['noGoodGroups']}',
                         style: baseTextStyle,
@@ -149,7 +221,9 @@ Future<void> generateAndSavePdf({
           );
         },
         build: (pw.Context context) {
+          print('\n=== Building PDF Table ===');
           return chunks.map((chunk) {
+            print('\nProcessing chunk with ${chunk.length} rows');
             return pw.Column(
               children: [
                 pw.Table(
@@ -182,22 +256,45 @@ Future<void> generateAndSavePdf({
                     ...chunk.asMap().entries.map((entry) {
                       final index =
                           chunks.indexOf(chunk) * rowsPerPage + entry.key;
+                      print('\n=== Generating PDF Table Row ===');
+                      print('Row index: $index');
+                      print('Raw row data: ${entry.value}');
+                      print(
+                          'Display group number (raw): ${entry.value['display_group_number']}');
+
+                      // Ensure we have a string value for display_group_number
+                      String displayNumber = '';
+                      if (entry.value['display_group_number'] != null) {
+                        displayNumber =
+                            entry.value['display_group_number'].toString();
+                        print('Using display number: "$displayNumber"');
+                      } else {
+                        print('No display number found, using empty string');
+                      }
+
+                      print(
+                          'Creating table row with display number: "$displayNumber"');
+
                       return pw.TableRow(
                         children: [
                           pw.Container(
                             padding: const pw.EdgeInsets.all(5),
-                            child: pw.Text((index + 1).toString(),
-                                style: baseTextStyle),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              displayNumber,
+                              style: baseTextStyle,
+                            ),
                           ),
                           pw.Container(
                             padding: const pw.EdgeInsets.all(5),
-                            child: pw.Text(entry.value['content'] ?? '',
+                            child: pw.Text(
+                                entry.value['content']?.toString() ?? '',
                                 style: baseTextStyle),
                           ),
                           pw.Container(
                             padding: const pw.EdgeInsets.all(5),
                             child: pw.Text(
-                              entry.value['result'] ?? '',
+                              entry.value['result']?.toString() ?? '',
                               style: baseTextStyle.copyWith(
                                 color: entry.value['result'] == 'Good'
                                     ? PdfColors.green
