@@ -19,8 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _passwordController.text =
-        'password123'; // Set initial password for development
+    // _passwordController.text = 'password123'; // Set initial password for development
   }
 
   @override
@@ -55,11 +54,11 @@ class _LoginPageState extends State<LoginPage> {
           // Store the current user ID
           print('DEBUG: Setting current user ID: ${user['id']}');
           await DatabaseHelper().setCurrentUserId(user['id'] as int);
-          
+
           // Verify the current user was set
           final currentUser = await DatabaseHelper().getCurrentUser();
           print('DEBUG: Verified current user after setting: $currentUser');
-          
+
           if (mounted) {
             setState(() {
               _isLoading = false;
@@ -75,7 +74,7 @@ class _LoginPageState extends State<LoginPage> {
         } else {
           if (mounted) {
             setState(() {
-              _isLoading = false;  // Set loading to false when login fails
+              _isLoading = false; // Set loading to false when login fails
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
