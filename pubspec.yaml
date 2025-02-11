@@ -38,7 +38,7 @@ dependencies:
       path: plugins/window_size
   # License system dependencies
   gsheets: ^0.5.0
-  crypto: ^3.0.3
+  crypto: ^3.0.6
   system_info2: ^4.0.0
   shared_preferences: ^2.2.2
   file_picker: ^6.1.1

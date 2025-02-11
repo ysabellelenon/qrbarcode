@@ -18,14 +18,13 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   String? _licenseKey;
-  String? _machineId;
   String _version = '';
   String _appName = '';
 
   @override
   void initState() {
     super.initState();
-    //_passwordController.text = 'password123'; // Set initial password for development
+    _checkLicense();
     _loadAppInfo();
   }
 
@@ -33,14 +32,30 @@ class _LoginPageState extends State<LoginPage> {
     final packageInfo = await PackageInfo.fromPlatform();
     final licenseService = await LicenseService.getInstance();
     final storedLicense = await licenseService.getStoredLicense();
-    final machineId = await licenseService.getMachineId();
 
     setState(() {
       _version = 'v${packageInfo.version} (${packageInfo.buildNumber})';
       _appName = "JAE QR Barcode System";
       _licenseKey = storedLicense ?? "Not activated";
-      _machineId = machineId;
     });
+  }
+
+  Future<void> _checkLicense() async {
+    try {
+      final licenseService = await LicenseService.getInstance();
+      final storedLicense = await licenseService.getStoredLicense();
+
+      if (storedLicense == null) {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/activate');
+        }
+      }
+    } catch (e) {
+      print('Error checking license: $e');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/activate');
+      }
+    }
   }
 
   @override
@@ -255,14 +270,6 @@ class _LoginPageState extends State<LoginPage> {
                   if (_licenseKey != null)
                     Text(
                       'License: $_licenseKey',
-                      style: TextStyle(
-                        color: const Color(0xFF666666),
-                        fontSize: 11,
-                      ),
-                    ),
-                  if (_machineId != null)
-                    Text(
-                      'Machine ID: $_machineId',
                       style: TextStyle(
                         color: const Color(0xFF666666),
                         fontSize: 11,

@@ -233,6 +233,14 @@ class DatabaseHelper {
 
   Future<void> _createTablesIfNotExist(Database db) async {
     await db.execute('''
+      CREATE TABLE IF NOT EXISTS license_info(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        license_key TEXT NOT NULL UNIQUE,
+        activated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         firstName TEXT,
