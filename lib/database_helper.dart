@@ -1258,4 +1258,20 @@ class DatabaseHelper {
       ORDER BY bl.createdAt ASC
     ''', [itemName]);
   }
+
+  Future<void> updateScanResult(
+    int operatorScanId,
+    String content,
+    String result, {
+    required String sessionId,
+    required int groupNumber,
+  }) async {
+    final db = await database;
+    await db.update(
+      'individual_scans',
+      {'result': result},
+      where: 'sessionId = ? AND groupNumber = ? AND content = ?',
+      whereArgs: [sessionId, groupNumber, content],
+    );
+  }
 }

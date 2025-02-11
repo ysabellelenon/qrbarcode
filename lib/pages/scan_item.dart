@@ -680,6 +680,7 @@ class _ScanItemState extends State<ScanItem> {
         sessionId: _sessionId,
       );
 
+      // Update the current scan result in table data
       setState(() {
         _tableData[index] = {
           'content': value,
@@ -691,6 +692,44 @@ class _ScanItemState extends State<ScanItem> {
           'groupPosition': positionInGroup + 1,
           'timestamp': DateTime.now().toString(),
         };
+
+        // Find all scans in the same group and update their results
+        if (result == 'No Good') {
+          // If current scan is No Good, mark all scans in the group as No Good
+          for (int i = 0; i < _tableData.length; i++) {
+            if (_tableData[i]['sessionId'] == _sessionId &&
+                _tableData[i]['groupNumber'] == currentGroup) {
+              _tableData[i]['result'] = 'No Good';
+              // Update in database
+              DatabaseHelper().updateScanResult(
+                operatorScanId,
+                _tableData[i]['content'],
+                'No Good',
+                sessionId: _sessionId,
+                groupNumber: currentGroup,
+              );
+            }
+          }
+        } else {
+          // If current scan is Good, check if any scan in the group is No Good
+          bool hasNoGood = _tableData.any((row) =>
+              row['sessionId'] == _sessionId &&
+              row['groupNumber'] == currentGroup &&
+              row['result'] == 'No Good');
+
+          if (hasNoGood) {
+            // If there's a No Good scan in the group, mark current scan as No Good
+            _tableData[index]['result'] = 'No Good';
+            // Update in database
+            DatabaseHelper().updateScanResult(
+              operatorScanId,
+              value,
+              'No Good',
+              sessionId: _sessionId,
+              groupNumber: currentGroup,
+            );
+          }
+        }
       });
 
       // Update totals after the state is updated
