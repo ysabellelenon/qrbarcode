@@ -48,7 +48,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: (db, version) async {
         await _createTablesIfNotExist(db);
         if ((await db.query('users')).isEmpty) {
@@ -56,6 +56,9 @@ class DatabaseHelper {
         }
       },
       onUpgrade: (db, oldVersion, newVersion) async {
+        // First ensure license_info table exists
+        await _createTablesIfNotExist(db);
+        
         if (oldVersion < 2) {
           await _migrateToVersion2(db);
         }
