@@ -1052,7 +1052,7 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Padding(
+                    /* Padding(
                       padding: const EdgeInsets.only(left: 20),
                       child: OutlinedButton(
                         onPressed: () {
@@ -1060,7 +1060,7 @@ class _ScanItemState extends State<ScanItem> {
                         },
                         child: const Text('Back'),
                       ),
-                    ),
+                    ), */
                     const Text(
                       'Scan Item',
                       style: TextStyle(
