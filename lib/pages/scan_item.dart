@@ -777,8 +777,8 @@ class _ScanItemState extends State<ScanItem> {
           _addRow();
         }
 
-        // If any scan in the group is "No Good", show an alert dialog
-        if (_tableData.any((scan) => scan['result'] == 'No Good')) {
+        // Only show No Good alert if the current group has a No Good scan
+        if (scanData['result'] == 'No Good') {
           _showNoGoodAlert();
         }
 
@@ -797,6 +797,11 @@ class _ScanItemState extends State<ScanItem> {
       print('\n=== Group Not Complete Yet ===');
       print('Pending scans: ${_pendingScans.length}');
       print('Required scans per group: $codeCount');
+
+      // Show No Good alert immediately if this scan is No Good
+      if (result == 'No Good') {
+        _showNoGoodAlert();
+      }
 
       if (!_isTotalQtyReached) {
         _addRow();
