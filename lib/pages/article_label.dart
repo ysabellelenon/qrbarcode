@@ -260,6 +260,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                             ),
                           ),
                           enabled: !isError, // Disable if there's an error
+                          readOnly: true,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -281,6 +282,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                           ),
                           keyboardType: TextInputType.number,
                           enabled: !isError, // Disable if there's an error
+                          readOnly: true,
                         ),
                         const SizedBox(height: 32),
                         // Centering the Proceed button
