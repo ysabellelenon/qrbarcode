@@ -73,21 +73,89 @@ class _EmergencyStopState extends State<EmergencyStop> {
 
   Future<void> _loadCounts() async {
     try {
-      // Get total counts for the item
-      final counts =
-          await DatabaseHelper().getTotalGoodNoGoodCounts(widget.itemName);
-      final totalScans =
-          await DatabaseHelper().getTotalScansForItem(widget.itemName);
+      print('\n=== Loading Emergency Stop Counts ===');
+      print('Item Name: ${widget.itemName}');
+
+      // Get codes per group from item configuration
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == widget.itemName,
+        orElse: () => {},
+      );
+      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+      print('Codes per group from configuration: $codesPerGroup');
+
+      // Group the scans by session and group number
+      Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
+      print('\nProcessing scans for grouping:');
+      print('Total scans to process: ${_scannedData.length}');
+
+      // Process all scans
+      for (var scan
+          in _scannedData.where((item) => item['result']?.isNotEmpty == true)) {
+        String sessionId = scan['sessionId']?.toString() ?? '';
+        int groupNum = scan['groupNumber'] ?? 1;
+
+        print('\nProcessing scan:');
+        print('Session ID: $sessionId');
+        print('Group Number: $groupNum');
+        print('Content: ${scan['content']}');
+        print('Result: ${scan['result']}');
+
+        groupedScans[sessionId] = groupedScans[sessionId] ?? {};
+        groupedScans[sessionId]![groupNum] =
+            groupedScans[sessionId]![groupNum] ?? [];
+        groupedScans[sessionId]![groupNum]!.add(scan);
+      }
+
+      int totalGoodGroups = 0;
+      int totalNoGoodGroups = 0;
+      int totalCompletedGroups = 0;
+
+      print('\nCounting completed groups:');
+      // Count completed groups
+      groupedScans.forEach((sessionId, groups) {
+        print('\nSession: $sessionId');
+        groups.forEach((groupNum, scans) {
+          print('Group $groupNum - Scans count: ${scans.length}');
+          if (scans.length == codesPerGroup) {
+            totalCompletedGroups++;
+            bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
+            print('Group $groupNum is complete:');
+            print('- All scans good? $isGroupGood');
+            print('- Scan results: ${scans.map((s) => s['result']).toList()}');
+
+            if (isGroupGood) {
+              totalGoodGroups++;
+              print('- Counted as Good Group');
+            } else {
+              totalNoGoodGroups++;
+              print(
+                  '- Counted as No Good Group (contains at least one No Good)');
+            }
+          } else {
+            print(
+                'Group $groupNum is incomplete (${scans.length}/$codesPerGroup scans)');
+          }
+        });
+      });
+
+      print('\nFinal Counts:');
+      print('Total Completed Groups: $totalCompletedGroups');
+      print('Total Good Groups: $totalGoodGroups');
+      print('Total No Good Groups: $totalNoGoodGroups');
 
       setState(() {
         _counts = {
-          'goodCount': counts['goodCount'] ?? 0,
-          'noGoodCount': counts['noGoodCount'] ?? 0,
-          'inspectionQty': totalScans,
+          'goodCount': totalGoodGroups,
+          'noGoodCount': totalNoGoodGroups,
+          'inspectionQty': totalCompletedGroups,
         };
       });
+      print('State updated with new counts');
     } catch (e) {
-      print('Error loading counts: $e');
+      print('Error in _loadCounts: $e');
+      print('Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -410,6 +478,9 @@ class EmergencySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the actual quantity from completed groups count
+    final actualQuantity = counts['inspectionQty']?.toString() ?? '0';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Emergency Stop Summary'),
@@ -424,7 +495,7 @@ class EmergencySummary extends StatelessWidget {
             _buildInfoSection('Date', _formatDate(date)),
             _buildInfoSection('Content', content),
             _buildInfoSection('P.O Number', poNo),
-            _buildInfoSection('Quantity', quantity),
+            _buildInfoSection('Quantity', actualQuantity),
             _buildInfoSection('Remarks', remarks),
 
             // Add counts section
