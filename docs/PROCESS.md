@@ -275,6 +275,11 @@ The following requirements specify how the grouping functionality should work:
      * Inspection QTY
      * Good count
      * No Good count
+   - Group Result Rules:
+     * A group is counted as "No Good" if ANY scan within the group is "No Good"
+     * A group is only counted as "Good" if ALL scans within the group are "Good"
+     * Each group counts as ONE unit in the Good/No Good counters, regardless of how many scans it contains
+     * Individual scans are never counted separately - only complete groups affect the counters
 
 3. Session and Box Management:
    - Each box represents a new scanning session
