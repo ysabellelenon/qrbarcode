@@ -25,8 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _passwordController.text =
-        'password123'; // Set initial password for development
+    //_passwordController.text = 'password123'; // Set initial password for development
     _loadAppInfo();
   }
 
