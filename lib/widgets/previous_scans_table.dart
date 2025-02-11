@@ -44,14 +44,25 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
     });
 
     try {
+      print('\n=== DEBUG: PreviousScansTable._loadHistoricalData ===');
+      print('Loading data for itemName: ${widget.itemName}');
+      print('Current page: $_currentPage, Page size: $_pageSize');
+
       final data = await DatabaseHelper().getHistoricalScans(
         widget.itemName,
         page: _currentPage,
         pageSize: _pageSize,
       );
 
+      print('Received historical data:');
+      for (var row in data) {
+        print(
+            'Row: groupNumber=${row['groupNumber']}, display_group_number=${row['display_group_number']}');
+      }
+
       final total =
           await DatabaseHelper().getHistoricalScansCount(widget.itemName);
+      print('Total items count: $total');
 
       setState(() {
         _historicalData = data;
@@ -107,22 +118,31 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
   }
 
   List<Map<String, dynamic>> _getFilteredData() {
-    if (_searchQuery.isEmpty) return _historicalData;
+    print('\n=== DEBUG: PreviousScansTable._getFilteredData ===');
+    final data = _searchQuery.isEmpty
+        ? _historicalData
+        : List<Map<String, dynamic>>.from(_historicalData).where((item) {
+            final searchLower = _searchQuery.toLowerCase();
+            final itemName = (item['itemName'] ?? '').toLowerCase();
+            final poNo = (item['poNo'] ?? '').toLowerCase();
+            final content = (item['content'] ?? '').toLowerCase();
+            final result = (item['result'] ?? '').toLowerCase();
+            final date =
+                DateTime.parse(item['created_at']).toString().toLowerCase();
 
-    return List<Map<String, dynamic>>.from(_historicalData).where((item) {
-      final searchLower = _searchQuery.toLowerCase();
-      final itemName = (item['itemName'] ?? '').toLowerCase();
-      final poNo = (item['poNo'] ?? '').toLowerCase();
-      final content = (item['content'] ?? '').toLowerCase();
-      final result = (item['result'] ?? '').toLowerCase();
-      final date = DateTime.parse(item['created_at']).toString().toLowerCase();
+            return itemName.contains(searchLower) ||
+                poNo.contains(searchLower) ||
+                content.contains(searchLower) ||
+                result.contains(searchLower) ||
+                date.contains(searchLower);
+          }).toList();
 
-      return itemName.contains(searchLower) ||
-          poNo.contains(searchLower) ||
-          content.contains(searchLower) ||
-          result.contains(searchLower) ||
-          date.contains(searchLower);
-    }).toList();
+    print('Filtered data:');
+    for (var row in data) {
+      print(
+          'Row: groupNumber=${row['groupNumber']}, display_group_number=${row['display_group_number']}');
+    }
+    return data;
   }
 
   Future<void> _clearScans() async {
@@ -133,9 +153,9 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
         _totalItems = 0;
         _currentPage = 1;
       });
-      
+
       widget.onDataCleared?.call();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -154,7 +174,7 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
         );
       }
     }
-    
+
     await _loadHistoricalData();
   }
 
@@ -241,21 +261,19 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                             DataColumn(label: Text('Date')),
                           ],
                           rows: _getFilteredData().map((scan) {
-                            // For the No. column, use display_group_number if available
-                            String displayNumber = '';
-                            if (scan['display_group_number'] != null) {
-                              displayNumber = scan['display_group_number'].toString();
-                            }
-
                             return DataRow(
                               cells: [
-                                DataCell(Text(displayNumber)),
+                                DataCell(Text(
+                                    scan['display_group_number']?.toString() ??
+                                        '')),
                                 DataCell(Text(scan['content'] ?? '')),
                                 DataCell(
                                   Text(
                                     scan['result'] ?? '',
                                     style: TextStyle(
-                                      color: scan['result'] == 'Good' ? Colors.green : Colors.red,
+                                      color: scan['result'] == 'Good'
+                                          ? Colors.green
+                                          : Colors.red,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

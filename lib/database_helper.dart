@@ -162,8 +162,9 @@ class DatabaseHelper {
         if (oldVersion < 8) {
           // Add new columns to items table
           await db.execute('ALTER TABLE items ADD COLUMN lastUpdated DATETIME');
-          await db.execute('ALTER TABLE items ADD COLUMN isActive INTEGER DEFAULT 1');
-          
+          await db.execute(
+              'ALTER TABLE items ADD COLUMN isActive INTEGER DEFAULT 1');
+
           // Update existing records with default values
           await db.execute('''
             UPDATE items 
@@ -199,7 +200,7 @@ class DatabaseHelper {
           try {
             await db.execute('ALTER TABLE items ADD COLUMN category TEXT');
             print('Added category column to items table');
-            
+
             // Update existing items with their category from item_codes
             final items = await db.query('items');
             for (var item in items) {
@@ -505,7 +506,7 @@ class DatabaseHelper {
       for (var item in items) {
         print('\nProcessing item: ${item['itemCode']}');
         print('Item category from items table: ${item['category']}');
-        
+
         final codes = await db.query(
           'item_codes',
           where: 'itemId = ?',
@@ -516,12 +517,12 @@ class DatabaseHelper {
         // Get the category from codes if not present in item
         String category = (item['category'] ?? '').toString();
         print('Initial category from items table: $category');
-        
+
         if (category.isEmpty && codes.isNotEmpty) {
           category = (codes.first['category'] ?? '').toString();
           print('Category from first code: $category');
         }
-        
+
         final resultItem = {
           ...Map<String, dynamic>.from(item),
           'category': category,
@@ -573,13 +574,13 @@ class DatabaseHelper {
 
   Future<void> updateItem(int id, Map<String, dynamic> item) async {
     final db = await database;
-    
+
     try {
       print('\n=== DEBUG: updateItem ===');
       print('Updating item with ID: $id');
       print('Item data before update: $item');
       print('Category being set: ${item['category']}');
-      
+
       await db.transaction((txn) async {
         // Update the main item
         final itemUpdate = {
@@ -590,7 +591,7 @@ class DatabaseHelper {
           'lastUpdated': DateTime.now().toIso8601String(),
         };
         print('Updating items table with: $itemUpdate');
-        
+
         await txn.update(
           'items',
           itemUpdate,
@@ -613,14 +614,16 @@ class DatabaseHelper {
             'itemId': id,
             'category': code['category'],
             'content': code['content'],
-            'hasSubLot': code['hasSubLot'] is bool ? (code['hasSubLot'] ? 1 : 0) : code['hasSubLot'],
+            'hasSubLot': code['hasSubLot'] is bool
+                ? (code['hasSubLot'] ? 1 : 0)
+                : code['hasSubLot'],
             'serialCount': code['serialCount']?.toString() ?? '0',
           };
           print('Inserting code: $codeInsert');
           await txn.insert('item_codes', codeInsert);
         }
       });
-      
+
       // Verify the update
       final updatedItem = await db.query(
         'items',
@@ -628,14 +631,13 @@ class DatabaseHelper {
         whereArgs: [id],
       );
       print('Item after update: ${updatedItem.first}');
-      
+
       final updatedCodes = await db.query(
         'item_codes',
         where: 'itemId = ?',
         whereArgs: [id],
       );
       print('Codes after update: $updatedCodes');
-      
     } catch (e) {
       print('Error in updateItem: $e');
       throw e;
@@ -748,36 +750,38 @@ class DatabaseHelper {
       {int page = 1, int pageSize = 10}) async {
     final db = await database;
     final offset = (page - 1) * pageSize;
-    
-    // First get the item details to know if it's counting or non-counting
-    final items = await db.query('items', where: 'itemCode = ?', whereArgs: [itemName]);
-    if (items.isEmpty) return [];
-    
-    final item = items.first;
-    final codes = await db.query('item_codes', where: 'itemId = ?', whereArgs: [item['id']]);
-    final isCountingItem = codes.any((code) => code['category'] == 'Counting');
 
+    print('\n=== DEBUG: getHistoricalScans ===');
+    print('Item Name: $itemName');
+    print('Page: $page, PageSize: $pageSize, Offset: $offset');
+
+    // First get the item details to know if it's counting or non-counting
+    final items =
+        await db.query('items', where: 'itemCode = ?', whereArgs: [itemName]);
+    if (items.isEmpty) {
+      print('No item found with itemCode: $itemName');
+      return [];
+    }
+
+    final item = items.first;
+    print('Found item: ${item['itemCode']}');
+
+    final codes = await db
+        .query('item_codes', where: 'itemId = ?', whereArgs: [item['id']]);
+    final isCountingItem = codes.any((code) => code['category'] == 'Counting');
+    print('Is counting item: $isCountingItem');
+
+    List<Map<String, dynamic>> results;
     if (isCountingItem) {
-      // For counting items, just return scans in reverse chronological order
-      return await db.rawQuery('''
-        SELECT s.*, ss.itemName, ss.poNo, NULL as groupNumber
-        FROM individual_scans s
-        JOIN scanning_sessions ss ON s.sessionId = ss.id
-        WHERE ss.itemName = ?
-        ORDER BY s.created_at DESC
-        LIMIT ? OFFSET ?
-      ''', [itemName, pageSize, offset]);
-    } else {
-      // For non-counting items, include the group number and order by it
-      return await db.rawQuery('''
+      print('Processing as counting item...');
+      results = await db.rawQuery('''
         WITH RankedScans AS (
           SELECT 
             s.*,
             ss.itemName,
             ss.poNo,
-            ROW_NUMBER() OVER (PARTITION BY s.sessionId, s.groupNumber ORDER BY s.created_at) as row_in_group,
-            ROW_NUMBER() OVER (ORDER BY s.created_at) as overall_order,
-            DENSE_RANK() OVER (ORDER BY s.sessionId, s.groupNumber) as global_group_number
+            s.groupNumber,
+            ROW_NUMBER() OVER (PARTITION BY s.sessionId, s.groupNumber ORDER BY s.created_at) as position_in_group
           FROM individual_scans s
           JOIN scanning_sessions ss ON s.sessionId = ss.id
           WHERE ss.itemName = ?
@@ -785,14 +789,46 @@ class DatabaseHelper {
         SELECT 
           *,
           CASE 
-            WHEN row_in_group = 1 THEN global_group_number 
+            WHEN position_in_group = 1 THEN CAST(groupNumber as TEXT)
             ELSE NULL 
           END as display_group_number
         FROM RankedScans
-        ORDER BY overall_order DESC
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      ''', [itemName, pageSize, offset]);
+    } else {
+      print('Processing as non-counting item...');
+      results = await db.rawQuery('''
+        WITH RankedScans AS (
+          SELECT 
+            s.*,
+            ss.itemName,
+            ss.poNo,
+            s.groupNumber,
+            ROW_NUMBER() OVER (PARTITION BY s.sessionId, s.groupNumber ORDER BY s.created_at) as position_in_group
+          FROM individual_scans s
+          JOIN scanning_sessions ss ON s.sessionId = ss.id
+          WHERE ss.itemName = ?
+        )
+        SELECT 
+          *,
+          CASE 
+            WHEN position_in_group = 1 THEN CAST(groupNumber as TEXT)
+            ELSE NULL 
+          END as display_group_number
+        FROM RankedScans
+        ORDER BY created_at DESC
         LIMIT ? OFFSET ?
       ''', [itemName, pageSize, offset]);
     }
+
+    print('Query results:');
+    for (var row in results) {
+      print(
+          'Row: groupNumber=${row['groupNumber']}, display_group_number=${row['display_group_number']}, position_in_group=${row['position_in_group']}');
+    }
+
+    return results;
   }
 
   Future<int> getTotalScansForItem(String itemName) async {
@@ -827,6 +863,15 @@ class DatabaseHelper {
     int? codesInGroup,
     required String sessionId,
   }) async {
+    print('\n=== DEBUG: insertScanContent ===');
+    print('OperatorScanId: $operatorScanId');
+    print('Content: $content');
+    print('Result: $result');
+    print('Initial GroupNumber: $groupNumber');
+    print('Initial GroupPosition: $groupPosition');
+    print('CodesInGroup: $codesInGroup');
+    print('SessionId: $sessionId');
+
     final db = await database;
 
     // Get the item details from scanning_sessions instead of operator_scans
@@ -836,9 +881,13 @@ class DatabaseHelper {
       whereArgs: [operatorScanId],
     );
 
-    if (itemDetails.isEmpty) return;
+    if (itemDetails.isEmpty) {
+      print('No scanning session found for id: $operatorScanId');
+      return;
+    }
 
     String itemName = itemDetails.first['itemName'] as String;
+    print('Found itemName: $itemName');
 
     // Calculate group information for this session only
     if (groupNumber == null || groupPosition == null) {
@@ -848,22 +897,37 @@ class DatabaseHelper {
         whereArgs: [operatorScanId],
         orderBy: 'created_at',
       );
+      print('Previous scans count: ${previousScans.length}');
 
       final codesPerGroup = codesInGroup ?? 1;
       groupNumber = (previousScans.length ~/ codesPerGroup) + 1;
       groupPosition = (previousScans.length % codesPerGroup) + 1;
+
+      print('Calculated groupNumber: $groupNumber');
+      print('Calculated groupPosition: $groupPosition');
     }
 
-    await db.insert(
+    final scanData = {
+      'sessionId': operatorScanId,
+      'content': content,
+      'result': result,
+      'groupNumber': groupNumber,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+    print('Inserting scan data: $scanData');
+
+    final id = await db.insert('individual_scans', scanData);
+    print('Inserted scan with id: $id');
+
+    // Verify the insertion
+    final inserted = await db.query(
       'individual_scans',
-      {
-        'sessionId': operatorScanId,
-        'content': content,
-        'result': result,
-        'groupNumber': groupNumber,
-        'created_at': DateTime.now().toIso8601String(),
-      },
+      where: 'id = ?',
+      whereArgs: [id],
     );
+    if (inserted.isNotEmpty) {
+      print('Verified inserted data: ${inserted.first}');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getScanContents(int sessionId) async {
@@ -881,7 +945,7 @@ class DatabaseHelper {
     String? excludeSessionId,
   }) async {
     final db = await database;
-    
+
     String query = '''
       SELECT 
         SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as goodCount,
@@ -894,15 +958,13 @@ class DatabaseHelper {
     List<dynamic> args = [itemName];
 
     if (excludeSessionId != null) {
-      query = query.replaceAll(
-        'WHERE ss.itemName = ?',
-        'WHERE ss.itemName = ? AND s.sessionId != ?'
-      );
+      query = query.replaceAll('WHERE ss.itemName = ?',
+          'WHERE ss.itemName = ? AND s.sessionId != ?');
       args.add(excludeSessionId);
     }
 
     final result = await db.rawQuery(query, args);
-    
+
     return {
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
@@ -945,11 +1007,13 @@ class DatabaseHelper {
 
   Future<Map<String, dynamic>?> getCurrentUser() async {
     final db = await database;
-    
+
     // Get the current user ID from the current_user table
     final currentUserResult = await db.query('current_user', limit: 1);
-    final userId = currentUserResult.isNotEmpty ? currentUserResult.first['user_id'] as int : null;
-    
+    final userId = currentUserResult.isNotEmpty
+        ? currentUserResult.first['user_id'] as int
+        : null;
+
     if (userId == null) return null;
 
     // Get the user details from the users table
@@ -968,7 +1032,7 @@ class DatabaseHelper {
     try {
       // First delete any existing entries
       await db.delete('current_user');
-      
+
       // Then insert the new user ID
       await db.insert(
         'current_user',
@@ -1003,7 +1067,8 @@ class DatabaseHelper {
     return userId;
   }
 
-  Future<int> getCompletedGroupsCount(int operatorScanId, int codesPerGroup) async {
+  Future<int> getCompletedGroupsCount(
+      int operatorScanId, int codesPerGroup) async {
     final db = await database;
     final result = await db.rawQuery('''
       SELECT COUNT(DISTINCT groupNumber) as completed_groups
@@ -1026,7 +1091,7 @@ class DatabaseHelper {
     String sessionId,
   ) async {
     final db = await database;
-    
+
     final result = await db.rawQuery('''
       SELECT 
         COUNT(*) as total_count,
@@ -1036,7 +1101,7 @@ class DatabaseHelper {
       JOIN scanning_sessions ss ON s.sessionId = ss.id
       WHERE ss.itemName = ? AND s.sessionId = ?
     ''', [itemName, sessionId]);
-    
+
     return {
       'groupCount': result.first['total_count'] as int? ?? 0,
       'goodCount': result.first['goodCount'] as int? ?? 0,
@@ -1046,7 +1111,7 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getPreviousScans(String itemName) async {
     final db = await database;
-    
+
     // First get all unique session IDs ordered by timestamp
     final sessions = await db.rawQuery('''
       SELECT DISTINCT session_id 
@@ -1054,14 +1119,14 @@ class DatabaseHelper {
       WHERE item_name = ? 
       ORDER BY timestamp
     ''', [itemName]);
-    
+
     List<Map<String, dynamic>> allScans = [];
-    
+
     // Process each session separately
     for (var session in sessions) {
       String sessionId = session['session_id']?.toString() ?? '';
-      if (sessionId.isEmpty) continue;  // Skip if session_id is null or empty
-      
+      if (sessionId.isEmpty) continue; // Skip if session_id is null or empty
+
       // Get scans for this session
       final scans = await db.rawQuery('''
         SELECT 
@@ -1075,16 +1140,16 @@ class DatabaseHelper {
         AND s.session_id = ?
         ORDER BY s.timestamp
       ''', [itemName, sessionId]);
-      
+
       allScans.addAll(scans);
     }
-    
+
     return allScans;
   }
 
   Future<void> clearAllDataForItem(String itemName) async {
     final db = await database;
-    
+
     // Get all session IDs for this item
     final sessions = await db.query(
       'scanning_sessions',
@@ -1096,20 +1161,22 @@ class DatabaseHelper {
     if (sessions.isEmpty) return;
 
     final sessionIds = sessions.map((s) => s['id']).toList();
-    
+
     // Start a transaction to ensure all deletes happen together
     await db.transaction((txn) async {
       // Delete all individual scans for these sessions
       await txn.delete(
         'individual_scans',
-        where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
+        where:
+            'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
         whereArgs: sessionIds,
       );
 
       // Delete all box labels for these sessions
       await txn.delete(
         'box_labels',
-        where: 'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
+        where:
+            'sessionId IN (${List.filled(sessionIds.length, '?').join(',')})',
         whereArgs: sessionIds,
       );
 
@@ -1124,22 +1191,22 @@ class DatabaseHelper {
 
   Future<void> saveCurrentState(Map<String, dynamic> state) async {
     final db = await database;
-    
+
     // Convert complex objects to JSON strings
     final serializedState = Map<String, dynamic>.from(state);
     serializedState['tableData'] = jsonEncode(state['tableData']);
-    
+
     // Convert boolean values to integers for SQLite
     serializedState['isQtyPerBoxReached'] = state['isQtyPerBoxReached'] ? 1 : 0;
     serializedState['isTotalQtyReached'] = state['isTotalQtyReached'] ? 1 : 0;
-    
+
     // Delete previous state for this item
     await db.delete(
       'current_states',
       where: 'itemName = ?',
       whereArgs: [state['itemName']],
     );
-    
+
     // Insert new state
     await db.insert(
       'current_states',
@@ -1150,7 +1217,7 @@ class DatabaseHelper {
 
   Future<Map<String, dynamic>?> getLastSavedState(String itemName) async {
     final db = await database;
-    
+
     final List<Map<String, dynamic>> results = await db.query(
       'current_states',
       where: 'itemName = ?',
@@ -1163,20 +1230,20 @@ class DatabaseHelper {
       final state = Map<String, dynamic>.from(results.first);
       // Deserialize complex objects
       state['tableData'] = jsonDecode(state['tableData'].toString());
-      
+
       // Convert integers back to booleans
       state['isQtyPerBoxReached'] = state['isQtyPerBoxReached'] == 1;
       state['isTotalQtyReached'] = state['isTotalQtyReached'] == 1;
-      
+
       return state;
     }
-    
+
     return null;
   }
 
   Future<List<Map<String, dynamic>>> getBoxQuantities(String itemName) async {
     final db = await database;
-    
+
     return await db.rawQuery('''
       SELECT 
         bl.qtyPerBox,

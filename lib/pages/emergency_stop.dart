@@ -74,9 +74,11 @@ class _EmergencyStopState extends State<EmergencyStop> {
   Future<void> _loadCounts() async {
     try {
       // Get total counts for the item
-      final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(widget.itemName);
-      final totalScans = await DatabaseHelper().getTotalScansForItem(widget.itemName);
-      
+      final counts =
+          await DatabaseHelper().getTotalGoodNoGoodCounts(widget.itemName);
+      final totalScans =
+          await DatabaseHelper().getTotalScansForItem(widget.itemName);
+
       setState(() {
         _counts = {
           'goodCount': counts['goodCount'] ?? 0,
@@ -163,12 +165,13 @@ class _EmergencyStopState extends State<EmergencyStop> {
   }
 
   void _showSummaryPage() {
-    print('EmergencyStop - Showing summary with:');
-    print('itemName: ${widget.itemName}');
-    print('lotNumber: ${widget.lotNumber}');
-    print('content: ${widget.content}');
-    print('poNo: ${widget.poNo}');
-    print('quantity: ${widget.quantity}');
+    print(
+        'emergency_stop > _showSummaryPage > EmergencyStop - Showing summary with:');
+    print('emergency_stop > _showSummaryPage > itemName: ${widget.itemName}');
+    print('emergency_stop > _showSummaryPage > lotNumber: ${widget.lotNumber}');
+    print('emergency_stop > _showSummaryPage > content: ${widget.content}');
+    print('emergency_stop > _showSummaryPage > poNo: ${widget.poNo}');
+    print('emergency_stop > _showSummaryPage > quantity: ${widget.quantity}');
 
     Navigator.push(
       context,
@@ -188,17 +191,20 @@ class _EmergencyStopState extends State<EmergencyStop> {
               // Clear data only after showing summary and printing
               try {
                 await DatabaseHelper().clearAllDataForItem(widget.itemName);
-                print('Successfully cleared all data for item: ${widget.itemName}');
-                
+                print(
+                    'Successfully cleared all data for item: ${widget.itemName}');
+
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('All data has been cleared. Starting fresh on next scan.'),
+                      content: Text(
+                          'All data has been cleared. Starting fresh on next scan.'),
                       backgroundColor: Colors.green,
                       duration: Duration(seconds: 3),
                     ),
                   );
-                  Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil('/login', (route) => false);
                 }
               } catch (e) {
                 print('Error clearing data: $e');
@@ -420,7 +426,7 @@ class EmergencySummary extends StatelessWidget {
             _buildInfoSection('P.O Number', poNo),
             _buildInfoSection('Quantity', quantity),
             _buildInfoSection('Remarks', remarks),
-            
+
             // Add counts section
             const SizedBox(height: 20),
             Container(
@@ -441,13 +447,16 @@ class EmergencySummary extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildCountRow('Inspection QTY', counts['inspectionQty'] ?? 0),
-                  _buildCountRow('Good Count', counts['goodCount'] ?? 0, color: Colors.green),
-                  _buildCountRow('No Good Count', counts['noGoodCount'] ?? 0, color: Colors.red),
+                  _buildCountRow(
+                      'Inspection QTY', counts['inspectionQty'] ?? 0),
+                  _buildCountRow('Good Count', counts['goodCount'] ?? 0,
+                      color: Colors.green),
+                  _buildCountRow('No Good Count', counts['noGoodCount'] ?? 0,
+                      color: Colors.red),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
             const Text(
               'Results Table',
