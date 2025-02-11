@@ -1,6 +1,6 @@
 ## Database Directory
 
-/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/users.db
+/Users/ysabellelenon/Library/Containers/com.jae.qrbarcode/Data/Documents/users.db
 
 ## Moving `users.db` to Your Flutter Project Directory
 
@@ -8,7 +8,7 @@ To move your `users.db` file from its current location to your Flutter project d
 
 ### Current Location of `users.db`
 
-Your database file is currently located at: /Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents
+Your database file is currently located at: /Users/ysabellelenon/Library/Containers/com.jae.qrbarcode/Data/Documents
 
 ### Steps to Move `users.db` to Your Flutter Project
 
@@ -18,7 +18,7 @@ Your database file is currently located at: /Users/ysabellelenon/Library/Contain
 
    ```bash
    # Navigate to the current directory of users.db
-   cd /Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/
+   cd /Users/ysabellelenon/Library/Containers/com.jae.qrbarcode/Data/Documents/
    
    # Create destination directories if they don't exist yet
    mkdir -p /Users/ysabellelenon/Desktop/qrbarcode/assets/databases/
@@ -114,10 +114,10 @@ K1HY02YY0012_240528A
 # Debug and View the database in Finder:
 ```bash
 # Remove the database from the project directory
-rm "/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db"
-rm "/Users/rickylenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db"
+rm "/Users/ysabellelenon/Library/Containers/com.jae.qrbarcode/Data/Documents/databases/users.db"
+rm "/Users/rickylenon/Library/Containers/com.jae.qrbarcode/Data/Documents/databases/users.db"
 
 # Copy the database to the project directory
-rm users.db && cp "/Users/ysabellelenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db" users.db
-rm users.db && cp "/Users/rickylenon/Library/Containers/com.example.qrbarcode/Data/Documents/databases/users.db" users.db
+rm users.db && cp "/Users/ysabellelenon/Library/Containers/com.jae.qrbarcode/Data/Documents/databases/users.db" users.db
+rm users.db && cp "/Users/rickylenon/Library/Containers/com.jae.qrbarcode/Data/Documents/databases/users.db" users.db
 ```

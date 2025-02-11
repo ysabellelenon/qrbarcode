@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../constants.dart'; // Import the constants file
 import '../database_helper.dart';
+import '../services/license_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,12 +17,31 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
+  String? _licenseKey;
+  String? _machineId;
+  String _version = '';
+  String _appName = '';
 
   @override
   void initState() {
     super.initState();
     _passwordController.text =
         'password123'; // Set initial password for development
+    _loadAppInfo();
+  }
+
+  Future<void> _loadAppInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final licenseService = await LicenseService.getInstance();
+    final storedLicense = await licenseService.getStoredLicense();
+    final machineId = await licenseService.getMachineId();
+
+    setState(() {
+      _version = 'v${packageInfo.version} (${packageInfo.buildNumber})';
+      _appName = "JAE QR Barcode System";
+      _licenseKey = storedLicense ?? "Not activated";
+      _machineId = machineId;
+    });
   }
 
   @override
@@ -55,11 +76,11 @@ class _LoginPageState extends State<LoginPage> {
           // Store the current user ID
           print('DEBUG: Setting current user ID: ${user['id']}');
           await DatabaseHelper().setCurrentUserId(user['id'] as int);
-          
+
           // Verify the current user was set
           final currentUser = await DatabaseHelper().getCurrentUser();
           print('DEBUG: Verified current user after setting: $currentUser');
-          
+
           if (mounted) {
             setState(() {
               _isLoading = false;
@@ -75,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
         } else {
           if (mounted) {
             setState(() {
-              _isLoading = false;  // Set loading to false when login fails
+              _isLoading = false; // Set loading to false when login fails
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -105,111 +126,154 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackgroundColor,
-      body: Center(
-        child: Card(
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
+      body: Stack(
+        children: [
+          Center(
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: kBorderRadiusSmallAll,
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                padding: const EdgeInsets.all(32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo
+                      Image.asset(
+                        'assets/images/jae-logo.jpg',
+                        height: 100,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Username field
+                      TextFormField(
+                        controller: _usernameController,
+                        onFieldSubmitted: (_) => _handleLogin(),
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: OutlineInputBorder(
+                            borderRadius: kBorderRadiusSmallAll,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter username';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password field
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: !_isPasswordVisible,
+                        onFieldSubmitted: (_) => _handleLogin(),
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: kBorderRadiusSmallAll,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter password';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Login button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: kBorderRadiusSmallAll,
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white),
+                                )
+                              : const Text(
+                                  'Login',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(32),
-            child: Form(
-              key: _formKey,
+          // License information footer at the bottom
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo
-                  Image.asset(
-                    'assets/images/jae-logo.jpg',
-                    height: 100,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Username field
-                  TextFormField(
-                    controller: _usernameController,
-                    onFieldSubmitted: (_) => _handleLogin(),
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: kBorderRadiusSmallAll,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter username';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password field
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible,
-                    onFieldSubmitted: (_) => _handleLogin(),
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: kBorderRadiusSmallAll,
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter password';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Login button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: kBorderRadiusSmallAll,
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(fontSize: 16),
-                            ),
+                  Text(
+                    '$_appName v.$_version',
+                    style: TextStyle(
+                      color: const Color(0xFF666666),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  if (_licenseKey != null)
+                    Text(
+                      'License: $_licenseKey',
+                      style: TextStyle(
+                        color: const Color(0xFF666666),
+                        fontSize: 11,
+                      ),
+                    ),
+                  if (_machineId != null)
+                    Text(
+                      'Machine ID: $_machineId',
+                      style: TextStyle(
+                        color: const Color(0xFF666666),
+                        fontSize: 11,
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

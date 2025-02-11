@@ -9,49 +9,71 @@ class LicenseActivationPage extends StatefulWidget {
 }
 
 class _LicenseActivationPageState extends State<LicenseActivationPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _licenseController = TextEditingController();
-  bool _isLoading = false;
-  String? _errorMessage;
+  late Future<LicenseService> _licenseServiceFuture;
+  final _licenseKeyController = TextEditingController();
+  String? _machineId;
+  bool _isLoading = true;
+  String? _error;
 
   @override
-  void dispose() {
-    _licenseController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _licenseServiceFuture = LicenseService.getInstance();
+    _loadMachineId();
   }
 
-  Future<void> _activateLicense() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
+  Future<void> _loadMachineId() async {
     try {
-      final licenseService = await LicenseService.getInstance();
-      final isValid =
-          await licenseService.validateLicense(_licenseController.text);
-
-      if (isValid) {
-        await licenseService.saveLicenseLocally(_licenseController.text);
-        if (mounted) {
-          Navigator.of(context)
-              .pushReplacementNamed('/'); // Navigate to main app
-        }
-      } else {
+      final licenseService = await _licenseServiceFuture;
+      final machineId = await licenseService.getMachineId();
+      if (mounted) {
         setState(() {
-          _errorMessage = 'Invalid license key or license is already in use';
+          _machineId = machineId;
+          _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _errorMessage =
-            'Failed to validate license. Please check your internet connection.';
-      });
-    } finally {
       if (mounted) {
         setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _activateLicense() async {
+    if (_licenseKeyController.text.isEmpty) {
+      setState(() {
+        _error = 'Please enter a license key';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final licenseService = await _licenseServiceFuture;
+      final licenseKey = _licenseKeyController.text.trim();
+
+      // Try to activate the license
+      final isActivated = await licenseService.activateLicense(licenseKey);
+      if (!isActivated) {
+        throw Exception(
+            'License activation failed. Please check your license key and try again.');
+      }
+
+      if (!mounted) return;
+
+      // Navigate to login page after successful activation
+      Navigator.of(context).pushReplacementNamed('/login');
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
           _isLoading = false;
         });
       }
@@ -62,70 +84,111 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'QR Barcode System',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _licenseController,
-                  decoration: const InputDecoration(
-                    labelText: 'License Key',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.key),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your license key';
-                    }
-                    return null;
-                  },
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _activateLicense,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
+        child: Card(
+          margin: const EdgeInsets.all(32),
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(32),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'QR Barcode System',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'License Activation Required',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      if (_error != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        )
-                      : const Text('Activate License'),
-                ),
-              ],
-            ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red.shade700,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                      const Text(
+                        'Machine ID',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SelectableText(
+                        _machineId ?? 'Error getting machine ID',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'License Key',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _licenseKeyController,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter your license key',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _activateLicense,
+                          child: const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text('Activate License'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _licenseKeyController.dispose();
+    super.dispose();
   }
 }
