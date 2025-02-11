@@ -119,15 +119,21 @@ class _ScanItemState extends State<ScanItem> {
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
       print('Codes per group: $codesPerGroup');
 
-      // Group the scans by session and group number
+      // Get all scans for this item
+      final allScans = await db.getAllHistoricalScans(itemName);
+
+      // Group scans by session and group number
       Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
+      for (var scan in allScans) {
+        String sessionId = scan['sessionId']?.toString() ?? '';
 
-      // Process current session scans
-      for (var scan
-          in _tableData.where((item) => item['result']?.isNotEmpty == true)) {
-        String sessionId = scan['sessionId'] ?? _sessionId;
+        // Skip current session scans when grouping historical data
+        if (sessionId == operatorScanId.toString()) {
+          print('Skipping current session scan in historical grouping');
+          continue;
+        }
+
         int groupNum = scan['groupNumber'] ?? 1;
-
         groupedScans[sessionId] = groupedScans[sessionId] ?? {};
         groupedScans[sessionId]![groupNum] =
             groupedScans[sessionId]![groupNum] ?? [];
@@ -137,30 +143,72 @@ class _ScanItemState extends State<ScanItem> {
       int totalGoodGroups = 0;
       int totalNoGoodGroups = 0;
 
-      // Count completed groups
+      // Count completed groups from historical sessions
       groupedScans.forEach((sessionId, groups) {
         groups.forEach((groupNum, scans) {
           if (scans.length == codesPerGroup) {
-            // Only count completed groups
+            // Only count complete groups
             bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
             if (isGroupGood) {
               totalGoodGroups++;
+              print(
+                  'Historical Good Group - Session: $sessionId, Group: $groupNum');
             } else {
               totalNoGoodGroups++;
+              print(
+                  'Historical No Good Group - Session: $sessionId, Group: $groupNum');
             }
           }
         });
       });
 
-      print('Total Good Groups: $totalGoodGroups');
-      print('Total No Good Groups: $totalNoGoodGroups');
+      print('Historical - Good Groups: $totalGoodGroups');
+      print('Historical - No Good Groups: $totalNoGoodGroups');
 
+      // Add current session counts
+      final currentSessionScans = _tableData
+          .where((item) => item['result']?.isNotEmpty == true)
+          .toList();
+      int currentSessionGoodGroups = 0;
+      int currentSessionNoGoodGroups = 0;
+
+      // Process current session scans in groups
+      for (int i = 0; i < currentSessionScans.length; i += codesPerGroup) {
+        // Only process complete groups
+        if (i + codesPerGroup <= currentSessionScans.length) {
+          final groupScans = currentSessionScans.sublist(i, i + codesPerGroup);
+          bool isGroupGood =
+              groupScans.every((scan) => scan['result'] == 'Good');
+
+          if (isGroupGood) {
+            currentSessionGoodGroups++;
+            print(
+                'Current Session Good Group - Index: ${(i ~/ codesPerGroup) + 1}');
+          } else {
+            currentSessionNoGoodGroups++;
+            print(
+                'Current Session No Good Group - Index: ${(i ~/ codesPerGroup) + 1}');
+          }
+        }
+      }
+
+      print('Current session - Good Groups: $currentSessionGoodGroups');
+      print('Current session - No Good Groups: $currentSessionNoGoodGroups');
+
+      // Update the total counts
       setState(() {
-        goodCountController.text = totalGoodGroups.toString();
-        noGoodCountController.text = totalNoGoodGroups.toString();
+        goodCountController.text =
+            (totalGoodGroups + currentSessionGoodGroups).toString();
+        noGoodCountController.text =
+            (totalNoGoodGroups + currentSessionNoGoodGroups).toString();
       });
+
+      print(
+          'Total Good Groups (all sessions): ${totalGoodGroups + currentSessionGoodGroups}');
+      print(
+          'Total No Good Groups (all sessions): ${totalNoGoodGroups + currentSessionNoGoodGroups}');
     } catch (e) {
-      print('Error updating total Good/No Good counts: $e');
+      print('Error updating total counts: $e');
     }
   }
 
@@ -1053,6 +1101,15 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    /* Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Back'),
+                      ),
+                    ), */
                     const Text(
                       'Scan Item',
                       style: TextStyle(
