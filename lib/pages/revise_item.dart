@@ -318,6 +318,7 @@ class _ReviseItemState extends State<ReviseItem> {
     if (_formKey.currentState!.validate()) {
       bool allCodesValid = true;
 
+      // Check if all codes have valid categories
       for (var container in codeContainers) {
         String? category = selectedCategories[container.codeNumber];
         if (category == null ||
@@ -337,23 +338,26 @@ class _ReviseItemState extends State<ReviseItem> {
         return;
       }
 
-      final uniqueCategories = selectedCategories.values.toSet();
-      if (uniqueCategories.length > 1) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Inconsistent Categories'),
-            content: const Text(
-                'All codes must have the same category. Please ensure all categories are consistent before proceeding.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-        return;
+      // Only check for inconsistency if there is more than one code
+      if (codeContainers.length > 1) {
+        final uniqueCategories = selectedCategories.values.toSet();
+        if (uniqueCategories.length > 1) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Inconsistent Categories'),
+              content: const Text(
+                  'All codes must have the same category. Please ensure all categories are consistent before proceeding.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
       }
 
       // Get the category that will be used for all codes
