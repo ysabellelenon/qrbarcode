@@ -1,5 +1,5 @@
 name: qrbarcode
-description: "A new Flutter project."
+description: QR Barcode System for Windows Desktop
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.4
+  sdk: '>=3.0.0 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,23 +30,27 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  sqflite: ^2.0.0
-  sqflite_common_ffi: ^2.0.0
-  path: ^1.8.0
-  path_provider: ^2.0.11
-  pdf: ^3.11.1
-  printing: ^5.12.0
+  cupertino_icons: ^1.0.2
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
+  intl: ^0.18.1
+  pdf: ^3.10.4
+  printing: ^5.11.0
   window_size:
     git:
       url: https://github.com/google/flutter-desktop-embedding.git
       path: plugins/window_size
-      ref: 6c66ad23ee79749f30a8eece542cf54eaf157ed8
-  file_picker: ^6.1.1
+  # Add Google Sheets dependencies
+  googleapis: ^11.4.0
+  googleapis_auth: ^1.4.1
+  url_launcher: ^6.1.14
   shared_preferences: ^2.2.2
+  device_info_plus: ^9.1.1
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
+# The following adds the Cupertino Icons font to your application.
+# Use with the CupertinoIcons class for iOS style icons.
 
 dev_dependencies:
   flutter_test:
@@ -57,7 +61,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^4.0.0
+  flutter_lints: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -103,3 +107,4 @@ flutter:
 
   assets:
     - assets/images/jae-logo.jpg
+    - assets/credentials.json
