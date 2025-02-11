@@ -71,7 +71,7 @@ Future<void> generateAndSavePdf({
     print('Total No Good Groups: $totalNoGoodGroups');
 
     // Reduce rows per page to avoid TooManyPagesException
-    final int rowsPerPage = 25;
+    final int rowsPerPage = 15;
     final chunks = <List<Map<String, dynamic>>>[];
 
     // Process the table data to add display_group_number
@@ -195,6 +195,7 @@ Future<void> generateAndSavePdf({
 
     pdf.addPage(
       pw.MultiPage(
+        maxPages: 100,
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
         header: (pw.Context context) {
