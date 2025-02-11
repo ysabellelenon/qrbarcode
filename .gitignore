@@ -49,3 +49,4 @@ macos/Runner/AppDelegate.swift
 android/local.properties
 pchartsystem/*
 pchartsystem/lib/*
+assets/credentials.json
