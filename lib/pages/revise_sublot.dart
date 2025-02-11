@@ -40,37 +40,29 @@ class _ReviseSublotState extends State<ReviseSublot> {
       final content = code['content']?.toString() ?? '';
       print('DEBUG: Processing code content: $content');
       
-      Map<String, dynamic> defaultCode = {
-        'hasSubLot': 0,
-        'serialCount': '1',
-        'content': content,
-        'category': 'Counting'
-      };
-
-      // Find the corresponding code in allCodes to get existing values
-      Map<String, dynamic> existingCode;
-      try {
-        existingCode = widget.allCodes.firstWhere(
-          (c) => c['content']?.toString() == content,
-          orElse: () => defaultCode,
-        );
-      } catch (e) {
-        print('DEBUG: Error finding existing code: $e');
-        existingCode = defaultCode;
-      }
+      // Find the matching code in allCodes with proper typing
+      var matchingCode = widget.allCodes.firstWhere(
+        (c) => c['content']?.toString() == content,
+        orElse: () => <String, Object>{
+          'hasSubLot': 0,
+          'serialCount': '1',
+          'content': content,
+          'category': 'Counting'
+        },
+      );
       
-      print('DEBUG: Existing code found: $existingCode');
+      print('DEBUG: Matching code found: $matchingCode');
       
-      bool hasSubLot = false;
-      if (existingCode['hasSubLot'] != null) {
-        hasSubLot = existingCode['hasSubLot'] == 1 || existingCode['hasSubLot'] == true;
-      }
-      
+      // Initialize enableRules with the existing hasSubLot value
+      bool hasSubLot = matchingCode['hasSubLot'] == 1 || matchingCode['hasSubLot'] == true;
       enableRules[content] = hasSubLot;
-      selectedSerialCounts[content] = existingCode['serialCount']?.toString() ?? '1';
+      
+      // Initialize selectedSerialCounts with the existing serialCount value
+      String serialCount = matchingCode['serialCount']?.toString() ?? '1';
+      selectedSerialCounts[content] = serialCount;
       
       print('DEBUG: Set enableRules[$content] = $hasSubLot');
-      print('DEBUG: Set selectedSerialCounts[$content] = ${selectedSerialCounts[content]}');
+      print('DEBUG: Set selectedSerialCounts[$content] = $serialCount');
     }
   }
 
