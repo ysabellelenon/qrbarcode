@@ -77,19 +77,89 @@ class _FinishedItemState extends State<FinishedItem> {
 
   Future<void> _loadCounts() async {
     try {
-      // Get total counts for the item
-      final counts = await DatabaseHelper().getTotalGoodNoGoodCounts(widget.itemName);
-      final totalScans = await DatabaseHelper().getTotalScansForItem(widget.itemName);
-      
+      print('\n=== Loading Finished Item Counts ===');
+      print('Item Name: ${widget.itemName}');
+
+      // Get codes per group from item configuration
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == widget.itemName,
+        orElse: () => {},
+      );
+      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+      print('Codes per group from configuration: $codesPerGroup');
+
+      // Group the scans by session and group number
+      Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
+      print('\nProcessing scans for grouping:');
+      print('Total scans to process: ${_scannedData.length}');
+
+      // Process all scans
+      for (var scan
+          in _scannedData.where((item) => item['result']?.isNotEmpty == true)) {
+        String sessionId = scan['sessionId']?.toString() ?? '';
+        int groupNum = scan['groupNumber'] ?? 1;
+
+        print('\nProcessing scan:');
+        print('Session ID: $sessionId');
+        print('Group Number: $groupNum');
+        print('Content: ${scan['content']}');
+        print('Result: ${scan['result']}');
+
+        groupedScans[sessionId] = groupedScans[sessionId] ?? {};
+        groupedScans[sessionId]![groupNum] =
+            groupedScans[sessionId]![groupNum] ?? [];
+        groupedScans[sessionId]![groupNum]!.add(scan);
+      }
+
+      int totalGoodGroups = 0;
+      int totalNoGoodGroups = 0;
+      int totalCompletedGroups = 0;
+
+      print('\nCounting completed groups:');
+      // Count completed groups
+      groupedScans.forEach((sessionId, groups) {
+        print('\nSession: $sessionId');
+        groups.forEach((groupNum, scans) {
+          print('Group $groupNum - Scans count: ${scans.length}');
+          if (scans.length == codesPerGroup) {
+            totalCompletedGroups++;
+            bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
+            print('Group $groupNum is complete:');
+            print('- All scans good? $isGroupGood');
+            print('- Scan results: ${scans.map((s) => s['result']).toList()}');
+
+            if (isGroupGood) {
+              totalGoodGroups++;
+              print('- Counted as Good Group');
+            } else {
+              totalNoGoodGroups++;
+              print(
+                  '- Counted as No Good Group (contains at least one No Good)');
+            }
+          } else {
+            print(
+                'Group $groupNum is incomplete (${scans.length}/$codesPerGroup scans)');
+          }
+        });
+      });
+
+      print('\nFinal Counts:');
+      print('Total Completed Groups: $totalCompletedGroups');
+      print('Total Good Groups: $totalGoodGroups');
+      print('Total No Good Groups: $totalNoGoodGroups');
+
       setState(() {
         _counts = {
-          'goodCount': counts['goodCount'] ?? 0,
-          'noGoodCount': counts['noGoodCount'] ?? 0,
-          'inspectionQty': totalScans,
+          'goodCount': totalGoodGroups,
+          'noGoodCount': totalNoGoodGroups,
+          'inspectionQty': totalCompletedGroups,
         };
       });
+      print('State updated with new counts');
     } catch (e) {
-      print('Error loading counts: $e');
+      print('Error in _loadCounts: $e');
+      print('Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -518,7 +588,7 @@ class _FinishedItemState extends State<FinishedItem> {
                 'Content', '${widget.content}_${widget.lotNumber}'),
             _buildInfoSection('P.O Number', widget.poNo),
             _buildInfoSection('Quantity', widget.quantity),
-            
+
             // Add counts section
             const SizedBox(height: 20),
             Container(
@@ -539,14 +609,18 @@ class _FinishedItemState extends State<FinishedItem> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildCountRow('Total QTY', int.tryParse(widget.quantity) ?? 0),
-                  _buildCountRow('Inspection QTY', _counts['inspectionQty'] ?? 0),
-                  _buildCountRow('Good Count', _counts['goodCount'] ?? 0, color: Colors.green),
-                  _buildCountRow('No Good Count', _counts['noGoodCount'] ?? 0, color: Colors.red),
+                  _buildCountRow(
+                      'Total QTY', int.tryParse(widget.quantity) ?? 0),
+                  _buildCountRow(
+                      'Inspection QTY', _counts['inspectionQty'] ?? 0),
+                  _buildCountRow('Good Count', _counts['goodCount'] ?? 0,
+                      color: Colors.green),
+                  _buildCountRow('No Good Count', _counts['noGoodCount'] ?? 0,
+                      color: Colors.red),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
             Container(
               width: double.infinity,
@@ -678,16 +752,18 @@ class _FinishedItemState extends State<FinishedItem> {
       try {
         await DatabaseHelper().clearAllDataForItem(widget.itemName);
         print('Successfully cleared all data for item: ${widget.itemName}');
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('All data has been cleared. Starting fresh on next scan.'),
+              content: Text(
+                  'All data has been cleared. Starting fresh on next scan.'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 3),
             ),
           );
-          Navigator.of(context).pushNamedAndRemoveUntil('/operator-login', (route) => false);
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/operator-login', (route) => false);
         }
       } catch (e) {
         print('Error clearing data: $e');
