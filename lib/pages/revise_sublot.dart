@@ -58,7 +58,12 @@ class _ReviseSublotState extends State<ReviseSublot> {
       enableRules[content] = hasSubLot;
       
       // Initialize selectedSerialCounts with the existing serialCount value
+      // Ensure it's a valid value between 1-20, defaulting to '1' if invalid
       String serialCount = matchingCode['serialCount']?.toString() ?? '1';
+      int serialCountNum = int.tryParse(serialCount) ?? 0;
+      if (serialCountNum < 1 || serialCountNum > 20) {
+        serialCount = '1';
+      }
       selectedSerialCounts[content] = serialCount;
       
       print('DEBUG: Set enableRules[$content] = $hasSubLot');
