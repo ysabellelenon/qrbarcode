@@ -71,41 +71,14 @@ class _EditUserState extends State<EditUser> {
   void _handleUpdate() async {
     if (_formKey.currentState!.validate()) {
       // Check if passwords match when changing password
-      if (_isCurrentUser && _passwordController.text != widget.user['password']) {
-        if (_passwordController.text != _confirmPasswordController.text) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Passwords do not match'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        // Show confirmation dialog for password change
-        bool? confirm = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Confirm Password Change'),
-              content: const Text('Are you sure you want to change your password?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            );
-          },
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Passwords do not match'),
+            backgroundColor: Colors.red,
+          ),
         );
-
-        if (confirm != true) {
-          return;
-        }
+        return;
       }
 
       final updatedUser = {
@@ -330,7 +303,6 @@ class _EditUserState extends State<EditUser> {
                                           const SizedBox(height: 16),
                                           TextFormField(
                                             controller: _passwordController,
-                                            enabled: _isCurrentUser,
                                             decoration: InputDecoration(
                                               labelText: 'Password',
                                               border: const OutlineInputBorder(),
@@ -338,45 +310,42 @@ class _EditUserState extends State<EditUser> {
                                                 icon: Icon(
                                                   _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                                                 ),
-                                                onPressed: _isCurrentUser ? () {
+                                                onPressed: () {
                                                   setState(() {
                                                     _isPasswordVisible = !_isPasswordVisible;
                                                   });
-                                                } : null,
+                                                },
                                               ),
-                                              helperText: _isCurrentUser ? null : 'Only the account owner can change the password',
                                             ),
                                             obscureText: !_isPasswordVisible,
                                             validator: (value) => value!.isEmpty ? 'Required' : null,
                                           ),
-                                          if (_isCurrentUser) ...[
-                                            const SizedBox(height: 16),
-                                            TextFormField(
-                                              controller: _confirmPasswordController,
-                                              decoration: InputDecoration(
-                                                labelText: 'Confirm Password',
-                                                border: const OutlineInputBorder(),
-                                                suffixIcon: IconButton(
-                                                  icon: Icon(
-                                                    _isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                                                  ),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                                                    });
-                                                  },
+                                          const SizedBox(height: 16),
+                                          TextFormField(
+                                            controller: _confirmPasswordController,
+                                            decoration: InputDecoration(
+                                              labelText: 'Confirm Password',
+                                              border: const OutlineInputBorder(),
+                                              suffixIcon: IconButton(
+                                                icon: Icon(
+                                                  _isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
                                                 ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                                                  });
+                                                },
                                               ),
-                                              obscureText: !_isConfirmPasswordVisible,
-                                              validator: (value) {
-                                                if (value!.isEmpty) return 'Required';
-                                                if (value != _passwordController.text) {
-                                                  return 'Passwords do not match';
-                                                }
-                                                return null;
-                                              },
                                             ),
-                                          ],
+                                            obscureText: !_isConfirmPasswordVisible,
+                                            validator: (value) {
+                                              if (value!.isEmpty) return 'Required';
+                                              if (value != _passwordController.text) {
+                                                return 'Passwords do not match';
+                                              }
+                                              return null;
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),
