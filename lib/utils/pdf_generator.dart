@@ -38,23 +38,39 @@ Future<void> generateAndSavePdf({
       print('Input row: $row');
     });
 
-    // First pass: Group rows by sessionId and groupNumber to determine positions
+    // Create a deep copy of the table data
+    final List<Map<String, dynamic>> mutableTableData = tableData.map((row) {
+      return Map<String, dynamic>.from(row);
+    }).toList();
+
+    // First pass: Group rows by sessionId and groupNumber to determine positions and results
     Map<String, List<Map<String, dynamic>>> groupedRows = {};
-    for (var row in tableData) {
+    for (var row in mutableTableData) {
       final key = '${row['sessionId']}_${row['groupNumber']}';
       groupedRows[key] = groupedRows[key] ?? [];
       groupedRows[key]!.add(row);
     }
 
-    // Sort each group by created_at
+    // Sort each group by created_at and update results
     groupedRows.forEach((key, rows) {
+      // Sort by timestamp
       rows.sort((a, b) => DateTime.parse(a['created_at'])
           .compareTo(DateTime.parse(b['created_at'])));
+
+      // Check if any scan in the group is No Good
+      bool hasNoGood = rows.any((row) => row['result'] == 'No Good');
+
+      // If any scan is No Good, mark all scans in the group as No Good
+      if (hasNoGood) {
+        for (var row in rows) {
+          row['result'] = 'No Good';
+        }
+      }
     });
 
     print('\n=== Processing Table Data ===');
-    // Second pass: Process rows with position information
-    for (var row in tableData) {
+    // Second pass: Process rows with position information and synchronized results
+    for (var row in mutableTableData) {
       print('\nProcessing row with content: ${row['content']}');
       print('Raw row data: $row');
 
@@ -77,6 +93,10 @@ Future<void> generateAndSavePdf({
         processedRow['display_group_number'] = '';
         print('Not first in group, using empty string');
       }
+
+      // Use the synchronized result from the grouped data
+      processedRow['result'] =
+          groupRows.firstWhere((r) => r['id'] == row['id'])['result'];
 
       print('Final processed row: $processedRow');
       processedData.add(processedRow);
