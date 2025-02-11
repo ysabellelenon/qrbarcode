@@ -44,7 +44,7 @@ class _ScanItemState extends State<ScanItem> {
   bool _hasShownQtyReachedDialog = false;
   bool _isTotalQtyReached = false; // Add this flag
   bool _hasSubLotRules = false; // Add this variable
-  bool _preserveHistory = false;  // Add this flag
+  bool _preserveHistory = false; // Add this flag
 
   // Add variables for historical data
   int _historicalGoodCount = 0; // New variable for historical good count
@@ -111,21 +111,34 @@ class _ScanItemState extends State<ScanItem> {
         excludeSessionId: _sessionId,
       );
       print('Historical counts: $historicalCounts');
-      
+
       // Get current session counts
       final currentCounts = await DatabaseHelper().getCurrentSessionCounts(
         itemName,
         _sessionId,
       );
       print('Current session counts: $currentCounts');
-      
-      // Calculate total counts
-      final totalGoodCount = (historicalCounts['goodCount'] ?? 0) + (currentCounts['goodCount'] ?? 0);
-      final totalNoGoodCount = (historicalCounts['noGoodCount'] ?? 0) + (currentCounts['noGoodCount'] ?? 0);
-      
+
+      // Get codes per group from item configuration
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == itemName,
+        orElse: () => {},
+      );
+      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+      print('Codes per group: $codesPerGroup');
+
+      // Calculate total counts based on completed groups
+      final totalGoodCount = ((historicalCounts['goodCount'] ?? 0) +
+              (currentCounts['goodCount'] ?? 0)) ~/
+          codesPerGroup;
+      final totalNoGoodCount = ((historicalCounts['noGoodCount'] ?? 0) +
+              (currentCounts['noGoodCount'] ?? 0)) ~/
+          codesPerGroup;
+
       print('Total Good Count: $totalGoodCount');
       print('Total No Good Count: $totalNoGoodCount');
-      
+
       setState(() {
         goodCountController.text = totalGoodCount.toString();
         noGoodCountController.text = totalNoGoodCount.toString();
@@ -141,11 +154,20 @@ class _ScanItemState extends State<ScanItem> {
       // Get total completed scans across all sessions
       final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
       print('Total completed scans across all sessions: $totalScans');
-      
+
+      // Get codes per group from item configuration
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == itemName,
+        orElse: () => {},
+      );
+      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+      print('Codes per group: $codesPerGroup');
+
       setState(() {
-        inspectionQtyController.text = totalScans.toString();
+        inspectionQtyController.text = (totalScans ~/ codesPerGroup).toString();
       });
-      
+
       // Check and update QTY status after updating inspection QTY
       _checkAndUpdateQtyStatus();
     } catch (e) {
@@ -285,32 +307,48 @@ class _ScanItemState extends State<ScanItem> {
       print('\n=== Checking and Updating QTY Status ===');
       // Count good results in current session
       int currentGoodCount = _tableData
-          .where((item) => 
-            item['result'] == 'Good' && 
-            item['sessionId'] == _sessionId)
+          .where((item) =>
+              item['result'] == 'Good' && item['sessionId'] == _sessionId)
           .length;
+
+      // Get codes per group from item configuration
+      final items = await DatabaseHelper().getItems();
+      final matchingItem = items.firstWhere(
+        (item) => item['itemCode'] == itemName,
+        orElse: () => {},
+      );
+      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+
+      // Calculate completed groups
+      int completedGroups = currentGoodCount ~/ codesPerGroup;
       print('Current session good count: $currentGoodCount');
-      
+      print('Codes per group: $codesPerGroup');
+      print('Completed groups: $completedGroups');
+
       setState(() {
-        // Update QTY per box with current session Good count
-        qtyPerBoxController.text = currentGoodCount.toString();
-        print('Updated QTY per box: $currentGoodCount');
+        // Update QTY per box with completed groups count
+        qtyPerBoxController.text = completedGroups.toString();
+        print('Updated QTY per box: $completedGroups');
 
         // Check if QTY per box is reached
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-        _isQtyPerBoxReached = targetQty > 0 && currentGoodCount >= targetQty;
+        _isQtyPerBoxReached = targetQty > 0 && completedGroups >= targetQty;
         print('QTY per box reached: $_isQtyPerBoxReached (Target: $targetQty)');
 
         // Check if total QTY has been reached
-        int totalInspectionQty = int.tryParse(inspectionQtyController.text) ?? 0;
+        int totalInspectionQty =
+            int.tryParse(inspectionQtyController.text) ?? 0;
         int totalTargetQty = int.tryParse(totalQtyController.text) ?? 0;
         _isTotalQtyReached = totalInspectionQty >= totalTargetQty;
-        print('Total QTY reached: $_isTotalQtyReached (Total: $totalInspectionQty, Target: $totalTargetQty)');
+        print(
+            'Total QTY reached: $_isTotalQtyReached (Total: $totalInspectionQty, Target: $totalTargetQty)');
       });
 
       // Show dialogs if needed
-      if (_isQtyPerBoxReached && !_isTotalQtyReached && !_hasShownQtyReachedDialog) {
+      if (_isQtyPerBoxReached &&
+          !_isTotalQtyReached &&
+          !_hasShownQtyReachedDialog) {
         _hasShownQtyReachedDialog = true;
         _showQtyReachedDialog();
       }
@@ -429,9 +467,10 @@ class _ScanItemState extends State<ScanItem> {
   List<DataRow> _buildTableRows() {
     // Group data by session first
     Map<String, List<Map<String, dynamic>>> sessionGroups = {};
-    
-    for (var data in _tableData.where((item) => 
-      item['content']?.isNotEmpty == true)) {  // Only include rows with content
+
+    for (var data
+        in _tableData.where((item) => item['content']?.isNotEmpty == true)) {
+      // Only include rows with content
       String sessionId = data['sessionId'] ?? _sessionId;
       if (!sessionGroups.containsKey(sessionId)) {
         sessionGroups[sessionId] = [];
@@ -441,31 +480,31 @@ class _ScanItemState extends State<ScanItem> {
 
     List<DataRow> allRows = [];
     int lastGroupNumber = 0;
-    
+
     // Process each session's data separately
     sessionGroups.forEach((sessionId, sessionData) {
       // Sort by timestamp if available
-      sessionData.sort((a, b) => 
-        (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
-      
+      sessionData.sort(
+          (a, b) => (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
+
       // Process rows for this session
       for (int i = 0; i < sessionData.length; i++) {
         var data = sessionData[i];
         int codesInGroup = data['codesInGroup'] ?? 1;
-        
+
         // Show group number only for first scan in each group within this session
         bool isFirstInGroup = i % codesInGroup == 0;
         int groupNumber = (i ~/ codesInGroup) + 1;
-        
+
         if (isFirstInGroup) {
           lastGroupNumber = groupNumber;
         }
-        
+
         allRows.add(DataRow(
           cells: [
             DataCell(Text(isFirstInGroup ? groupNumber.toString() : '')),
             DataCell(
-              Text(data['content'] ?? ''),  // Show completed scans as text
+              Text(data['content'] ?? ''), // Show completed scans as text
             ),
             DataCell(
               Text(
@@ -490,7 +529,7 @@ class _ScanItemState extends State<ScanItem> {
             controller: TextEditingController(),
             focusNode: _ensureFocusNode(allRows.length),
             enabled: !_isTotalQtyReached,
-            autofocus: true,  // Automatically focus the input field
+            autofocus: true, // Automatically focus the input field
             onChanged: (value) {
               _scanBuffer = value;
             },
@@ -558,7 +597,8 @@ class _ScanItemState extends State<ScanItem> {
     );
 
     String result = 'No Good'; // Default to No Good
-    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1'); // Default to 1 if not specified
+    int codeCount = int.parse(
+        matchingItem['codeCount'] ?? '1'); // Default to 1 if not specified
 
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
@@ -571,11 +611,14 @@ class _ScanItemState extends State<ScanItem> {
 
       if (isCountingItem) {
         // Get the serial count for validation
-        int serialCount = int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
+        int serialCount =
+            int.tryParse(countingCode['serialCount']?.toString() ?? '0') ?? 0;
 
         // Get the base content (everything before the serial number)
-        String baseDisplayContent = _displayContent.substring(0, _displayContent.length - serialCount);
-        String scannedBaseContent = value.substring(0, value.length - serialCount);
+        String baseDisplayContent =
+            _displayContent.substring(0, _displayContent.length - serialCount);
+        String scannedBaseContent =
+            value.substring(0, value.length - serialCount);
 
         print('Base Display Content: "$baseDisplayContent"');
         print('Scanned Base Content: "$scannedBaseContent"');
@@ -590,7 +633,8 @@ class _ScanItemState extends State<ScanItem> {
           if (serialPart.length == serialCount) {
             // Check for duplicates
             bool isDuplicate = _tableData.any((row) {
-              if (_tableData.indexOf(row) == index || row['content']?.isEmpty == true) return false;
+              if (_tableData.indexOf(row) == index ||
+                  row['content']?.isEmpty == true) return false;
               return row['content'] == value;
             });
 
@@ -612,17 +656,16 @@ class _ScanItemState extends State<ScanItem> {
 
     // Calculate group information for current session
     final currentSessionScans = _tableData
-        .where((row) => 
-          row['result']?.isNotEmpty == true && 
-          row['sessionId'] == _sessionId)
+        .where((row) =>
+            row['result']?.isNotEmpty == true && row['sessionId'] == _sessionId)
         .toList();
-    
+
     // Calculate current group based only on scans from this session
-    int previousCompletedGroups = currentSessionScans.length ~/ noOfCodes;
+    int previousCompletedGroups = currentSessionScans.length ~/ codeCount;
     int currentGroup = previousCompletedGroups + 1;
 
     // Get position within current group (0-based)
-    int positionInGroup = currentSessionScans.length % noOfCodes;
+    int positionInGroup = currentSessionScans.length % codeCount;
 
     // Save to database and update UI
     try {
@@ -633,7 +676,7 @@ class _ScanItemState extends State<ScanItem> {
         result,
         groupNumber: currentGroup,
         groupPosition: positionInGroup + 1,
-        codesInGroup: noOfCodes,
+        codesInGroup: codeCount,
         sessionId: _sessionId,
       );
 
@@ -643,7 +686,7 @@ class _ScanItemState extends State<ScanItem> {
           'result': result,
           'isLocked': true,
           'sessionId': _sessionId,
-          'codesInGroup': noOfCodes,
+          'codesInGroup': codeCount,
           'groupNumber': currentGroup,
           'groupPosition': positionInGroup + 1,
           'timestamp': DateTime.now().toString(),
@@ -859,18 +902,24 @@ class _ScanItemState extends State<ScanItem> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    print("Emergency button pressed - checking if it's a valid mouse click");
+                    print(
+                        "Emergency button pressed - checking if it's a valid mouse click");
                     // Only handle direct mouse clicks, ignore keyboard events
-                    if (RendererBinding.instance.mouseTracker.mouseIsConnected) {
-                      print("Mouse is connected - proceeding with emergency stop");
+                    if (RendererBinding
+                        .instance.mouseTracker.mouseIsConnected) {
+                      print(
+                          "Mouse is connected - proceeding with emergency stop");
                       // Add a small delay to prevent accidental triggers
                       Future.delayed(const Duration(milliseconds: 100), () {
                         if (mounted) {
                           // Calculate progress info
-                          final int currentQty = int.tryParse(qtyPerBoxController.text) ?? 0;
-                          final int targetQty = int.tryParse(widget.scanData?['qtyPerBox'] ?? '0') ?? 0;
+                          final int currentQty =
+                              int.tryParse(qtyPerBoxController.text) ?? 0;
+                          final int targetQty = int.tryParse(
+                                  widget.scanData?['qtyPerBox'] ?? '0') ??
+                              0;
                           final bool isIncomplete = currentQty < targetQty;
-                          
+
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -881,8 +930,10 @@ class _ScanItemState extends State<ScanItem> {
                               poNo: poNo,
                               quantity: totalQtyController.text,
                               tableData: _tableData
-                                  .where((item) => item['content']?.isNotEmpty == true)
-                                  .map((item) => Map<String, dynamic>.from(item))
+                                  .where((item) =>
+                                      item['content']?.isNotEmpty == true)
+                                  .map(
+                                      (item) => Map<String, dynamic>.from(item))
                                   .toList(),
                               username: 'operator',
                               isIncomplete: isIncomplete,
@@ -1250,9 +1301,9 @@ class _ScanItemState extends State<ScanItem> {
     if (_itemCategory == 'Non-Counting') {
       // Group scans by session first
       Map<String, List<Map<String, dynamic>>> sessionGroups = {};
-      
-      for (var data in _tableData.where((item) => 
-        item['result']?.isNotEmpty == true)) {
+
+      for (var data
+          in _tableData.where((item) => item['result']?.isNotEmpty == true)) {
         String sessionId = data['sessionId'] ?? _sessionId;
         if (!sessionGroups.containsKey(sessionId)) {
           sessionGroups[sessionId] = [];
@@ -1261,16 +1312,16 @@ class _ScanItemState extends State<ScanItem> {
       }
 
       int totalGroups = 0;
-      
+
       // Count completed groups for each session separately
       sessionGroups.forEach((sessionId, sessionData) {
         // Sort data by timestamp
-        sessionData.sort((a, b) => 
-          (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
-        
+        sessionData.sort(
+            (a, b) => (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''));
+
         // Get the codes in group for this session
         int codesInGroup = sessionData.first['codesInGroup'] ?? 1;
-        
+
         // Count complete groups in this session
         int completeGroups = sessionData.length ~/ codesInGroup;
         totalGroups += completeGroups;
@@ -1279,9 +1330,7 @@ class _ScanItemState extends State<ScanItem> {
       return totalGroups;
     } else {
       // For counting items, count individual good scans
-      return _tableData
-        .where((item) => item['result'] == 'Good')
-        .length;
+      return _tableData.where((item) => item['result'] == 'Good').length;
     }
   }
 
@@ -1319,7 +1368,7 @@ class _ScanItemState extends State<ScanItem> {
     try {
       print('\n=== Restoring Previous State ===');
       final previousState = await DatabaseHelper().getLastSavedState(itemName);
-      
+
       if (previousState != null && previousState['timestamp'] != null) {
         // Check if the state is from the last 24 hours
         final savedTime = DateTime.parse(previousState['timestamp']);
@@ -1332,12 +1381,13 @@ class _ScanItemState extends State<ScanItem> {
             noGoodCountController.text = previousState['noGoodCount'] ?? '';
             _isQtyPerBoxReached = previousState['isQtyPerBoxReached'] ?? false;
             _isTotalQtyReached = previousState['isTotalQtyReached'] ?? false;
-            
+
             // Restore table data
             _tableData.clear();
             final savedTableData = previousState['tableData'] as List;
-            _tableData.addAll(savedTableData.map((item) => Map<String, dynamic>.from(item)));
-            
+            _tableData.addAll(
+                savedTableData.map((item) => Map<String, dynamic>.from(item)));
+
             print('Previous state restored successfully');
           });
         } else {
@@ -1357,7 +1407,7 @@ class _ScanItemState extends State<ScanItem> {
 class NeverFocusableNode extends FocusNode {
   @override
   bool get canRequestFocus => false;
-  
+
   @override
   bool consumeKeyboardToken() {
     return false;

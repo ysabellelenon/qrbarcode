@@ -261,15 +261,16 @@ The following requirements specify how the grouping functionality should work:
 ```
 1. Group Activation:
    - Grouping functionality is always active for all items
-   - Default group size is 1 scan per group
-   - Applies to both counting and non-counting items
+   - Groups are determined by the item's codeCount value
+   - Default group size is 1 if codeCount is null or empty
+   - Applies uniformly to all items regardless of category
 
 2. Group Counting:
-   - Every N scans form one group, where N is the No. of Code value
-   - Example: If No. of Code = 2, every 2 scans = 1 group
+   - Every N scans form one group, where N is the codeCount value
+   - Example: If codeCount = 2, every 2 scans = 1 group
    - Groups are session-specific and never merge across sessions
    - Each session starts its own group numbering from 1
-   - All quantity tracking should count completed groups as single units:
+   - All quantity tracking counts completed groups as single units:
      * QTY per box
      * Inspection QTY
      * Good count
@@ -307,7 +308,7 @@ The following requirements specify how the grouping functionality should work:
      * Session ID to track which session it belongs to
      * Group number relative to its session
      * Position within its group
-     * Number of codes required for its group
+     * Number of codes required for its group (codeCount)
      * Box ID for box-level tracking
    - Queries must:
      * Calculate group numbers within each session
@@ -341,20 +342,20 @@ Future<void> _validateContent(String value, int index) async {
       (item) => item['itemCode'] == itemName,
       orElse: () => {},
     );
-    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+    int codeCount = int.parse(matchingItem['codeCount'] ?? '1');
     
     // Calculate current group based on completed scans
     int previousCompletedGroups = (_tableData
             .where((row) => row['result']?.isNotEmpty == true)
             .length ~/
-        noOfCodes);
+        codeCount);
     int currentGroup = previousCompletedGroups + 1;
 
     // Get position within current group (0-based)
     int positionInGroup = _tableData
             .where((row) => row['result']?.isNotEmpty == true)
             .length %
-        noOfCodes;
+        codeCount;
 
     // Save to database with group information
     await DatabaseHelper().insertScanContent(
@@ -363,7 +364,7 @@ Future<void> _validateContent(String value, int index) async {
       result,
       groupNumber: currentGroup,
       groupPosition: positionInGroup + 1,
-      codesInGroup: noOfCodes,
+      codesInGroup: codeCount,
       sessionId: _sessionId,
     );
   }
@@ -427,7 +428,7 @@ List<DataRow> _buildTableRows() {
     Map<String, dynamic> data = entry.value;
     
     // Calculate group information
-    int noOfCodes = int.parse(matchingItem['codeCount'] ?? '1');
+    int codeCount = int.parse(matchingItem['codeCount'] ?? '1');
     int previousScans = _tableData
         .where((row) =>
             row['result']?.isNotEmpty == true &&
@@ -435,12 +436,12 @@ List<DataRow> _buildTableRows() {
         .length;
     
     // Show row number only for first scan in group
-    bool isFirstInGroup = previousScans % noOfCodes == 0;
+    bool isFirstInGroup = previousScans % codeCount == 0;
     
     return DataRow(
       cells: [
         DataCell(Text(isFirstInGroup ? 
-          ((previousScans ~/ noOfCodes) + 1).toString() : '')),
+          ((previousScans ~/ codeCount) + 1).toString() : '')),
         // ... other cells ...
       ],
     );
