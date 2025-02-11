@@ -26,9 +26,13 @@ void main() async {
       if (screen != null) {
         final screenFrame = screen.frame;
         // Set minimum size to 720p and use screen size directly
+        // setWindowMinSize(const Size(1280, 720));
         setWindowMinSize(const Size(1280, 720));
-        setWindowMaxSize(screenFrame.size);
-
+        if (Platform.isMacOS) {
+          setWindowMaxSize(const Size(1440, 900));
+        } else {
+          setWindowMaxSize(screenFrame.size);
+        }
         // Set to screen size directly
         setWindowFrame(Rect.fromLTWH(
           screenFrame.left,
