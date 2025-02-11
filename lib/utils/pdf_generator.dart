@@ -10,7 +10,8 @@ Future<void> generateAndSavePdf({
   required String lotNumber,
   required String content,
   required String poNo,
-  required String quantity,
+  required String
+      quantity, // This will be ignored as we'll calculate from groups
   required List<Map<String, dynamic>> tableData,
   required String remarks,
   required bool isEmergencyStop,
@@ -18,10 +19,56 @@ Future<void> generateAndSavePdf({
   required Function(String) onError,
 }) async {
   try {
+    print('\n=== Generating PDF with Group-Based Counts ===');
     final pdf = pw.Document();
 
     // Get box quantities
     final boxQuantities = await DatabaseHelper().getBoxQuantities(itemName);
+
+    // Get codes per group from item configuration
+    final items = await DatabaseHelper().getItems();
+    final matchingItem = items.firstWhere(
+      (item) => item['itemCode'] == itemName,
+      orElse: () => {},
+    );
+    int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
+    print('Codes per group from configuration: $codesPerGroup');
+
+    // Group the scans for counting
+    Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
+    for (var scan
+        in tableData.where((item) => item['result']?.isNotEmpty == true)) {
+      String sessionId = scan['sessionId']?.toString() ?? '';
+      int groupNum = scan['groupNumber'] ?? 1;
+
+      groupedScans[sessionId] = groupedScans[sessionId] ?? {};
+      groupedScans[sessionId]![groupNum] =
+          groupedScans[sessionId]![groupNum] ?? [];
+      groupedScans[sessionId]![groupNum]!.add(scan);
+    }
+
+    // Count completed groups
+    int totalGoodGroups = 0;
+    int totalNoGoodGroups = 0;
+    int totalCompletedGroups = 0;
+
+    groupedScans.forEach((sessionId, groups) {
+      groups.forEach((groupNum, scans) {
+        if (scans.length == codesPerGroup) {
+          totalCompletedGroups++;
+          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
+          if (isGroupGood) {
+            totalGoodGroups++;
+          } else {
+            totalNoGoodGroups++;
+          }
+        }
+      });
+    });
+
+    print('Total Completed Groups: $totalCompletedGroups');
+    print('Total Good Groups: $totalGoodGroups');
+    print('Total No Good Groups: $totalNoGoodGroups');
 
     // Reduce rows per page to avoid TooManyPagesException
     final int rowsPerPage = 25;
@@ -178,7 +225,8 @@ Future<void> generateAndSavePdf({
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('P.O Number: $poNo', style: baseTextStyle),
-                        pw.Text('Total QTY: $quantity', style: baseTextStyle),
+                        pw.Text('Total QTY: $totalCompletedGroups',
+                            style: baseTextStyle),
                         pw.SizedBox(height: 5),
                         pw.Text('Remarks: $remarks', style: baseTextStyle),
                       ],
@@ -198,13 +246,13 @@ Future<void> generateAndSavePdf({
                   children: [
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
-                    pw.Text('Total QTY: $quantity', style: baseTextStyle),
-                    pw.Text('Total Inspection QTY: $totalScans',
+                    pw.Text('Total QTY: $totalCompletedGroups',
                         style: baseTextStyle),
-                    pw.Text('Total Good Count: ${totalCounts['goodCount']}',
+                    pw.Text('Total Inspection QTY: $totalCompletedGroups',
                         style: baseTextStyle),
-                    pw.Text(
-                        'Total No Good Count: ${totalCounts['noGoodCount']}',
+                    pw.Text('Total Good Count: $totalGoodGroups',
+                        style: baseTextStyle),
+                    pw.Text('Total No Good Count: $totalNoGoodGroups',
                         style: baseTextStyle),
                   ],
                 ),
@@ -226,8 +274,50 @@ Future<void> generateAndSavePdf({
                           DateTime.parse(box['createdAt']);
                       final String formattedDate =
                           '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')} ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+
+                      // Get scans for this box by session ID
+                      final boxScans = tableData.where((scan) {
+                        return scan['boxId']?.toString() ==
+                            box['id']?.toString();
+                      }).toList();
+
+                      print('\nProcessing box ${box['id']}:');
+                      print('Found ${boxScans.length} scans for this box');
+
+                      // Group scans by group number
+                      Map<int, List<Map<String, dynamic>>> boxGroups = {};
+                      for (var scan in boxScans) {
+                        int groupNum = scan['groupNumber'] ?? 1;
+                        boxGroups[groupNum] = boxGroups[groupNum] ?? [];
+                        boxGroups[groupNum]!.add(scan);
+                      }
+
+                      print('Grouped into ${boxGroups.length} groups');
+
+                      // Count good and no good groups
+                      int boxGoodGroups = 0;
+                      int boxNoGoodGroups = 0;
+
+                      boxGroups.forEach((groupNum, scans) {
+                        print('Group $groupNum has ${scans.length} scans');
+                        if (scans.length == codesPerGroup) {
+                          bool isGroupGood =
+                              scans.every((scan) => scan['result'] == 'Good');
+                          print(
+                              'Group $groupNum complete - all good? $isGroupGood');
+                          if (isGroupGood) {
+                            boxGoodGroups++;
+                          } else {
+                            boxNoGoodGroups++;
+                          }
+                        }
+                      });
+
+                      print(
+                          'Box counts - Good: $boxGoodGroups, No Good: $boxNoGoodGroups');
+
                       return pw.Text(
-                        'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}, Good: ${box['goodGroups']}, No Good: ${box['noGoodGroups']}',
+                        'Box (${formattedDate}): Target QTY: ${box['qtyPerBox']}, Good: $boxGoodGroups, No Good: $boxNoGoodGroups',
                         style: baseTextStyle,
                       );
                     }).toList(),
