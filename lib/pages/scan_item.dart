@@ -52,6 +52,9 @@ class _ScanItemState extends State<ScanItem> {
 
   String _scanBuffer = ''; // Add this line to store scanner input
 
+  // Add new field to store pending scans
+  final List<Map<String, dynamic>> _pendingScans = [];
+
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo =>
@@ -625,8 +628,7 @@ class _ScanItemState extends State<ScanItem> {
     );
 
     String result = 'No Good'; // Default to No Good
-    int codeCount = int.parse(
-        matchingItem['codeCount'] ?? '1'); // Default to 1 if not specified
+    int codeCount = int.parse(matchingItem['codeCount'] ?? '1');
 
     if (matchingItem.isNotEmpty) {
       final codes = matchingItem['codes'] as List;
@@ -727,56 +729,82 @@ class _ScanItemState extends State<ScanItem> {
     // Get position within current group (0-based)
     int positionInGroup = currentSessionScans.length % codeCount;
 
-    // Save to database and update UI
-    try {
-      // Save to database with session and group information
-      await DatabaseHelper().insertScanContent(
-        operatorScanId,
-        value,
-        result,
-        groupNumber: currentGroup,
-        groupPosition: positionInGroup + 1,
-        codesInGroup: codeCount,
-        sessionId: _sessionId,
-      );
+    // Create scan data
+    final scanData = {
+      'content': value,
+      'result': result,
+      'isLocked': true,
+      'sessionId': _sessionId,
+      'codesInGroup': codeCount,
+      'groupNumber': currentGroup,
+      'groupPosition': positionInGroup + 1,
+      'timestamp': DateTime.now().toString(),
+    };
 
-      setState(() {
-        _tableData[index] = {
-          'content': value,
-          'result': result,
-          'isLocked': true,
-          'sessionId': _sessionId,
-          'codesInGroup': codeCount,
-          'groupNumber': currentGroup,
-          'groupPosition': positionInGroup + 1,
-          'timestamp': DateTime.now().toString(),
-        };
-      });
+    // Add to pending scans
+    _pendingScans.add(scanData);
 
-      // Update totals after the state is updated
-      await _updateTotalInspectionQty();
-      await _updateTotalGoodNoGoodCounts();
-      _checkAndUpdateQtyStatus();
+    // Update UI immediately to show the scan
+    setState(() {
+      _tableData[index] = scanData;
+    });
+
+    // Check if we have a complete group
+    if (_pendingScans.length == codeCount) {
+      print('\n=== Processing Complete Group ===');
+      print('Pending scans count: ${_pendingScans.length}');
+      print('Codes per group: $codeCount');
+
+      try {
+        // Save all scans in the group to database
+        for (var scan in _pendingScans) {
+          await DatabaseHelper().insertScanContent(
+            operatorScanId,
+            scan['content'],
+            scan['result'],
+            groupNumber: scan['groupNumber'],
+            groupPosition: scan['groupPosition'],
+            codesInGroup: scan['codesInGroup'],
+            sessionId: scan['sessionId'],
+          );
+        }
+
+        // Clear pending scans after successful save
+        _pendingScans.clear();
+
+        // Update totals after the group is saved
+        await _updateTotalInspectionQty();
+        await _updateTotalGoodNoGoodCounts();
+        _checkAndUpdateQtyStatus();
+
+        if (!_isTotalQtyReached) {
+          _addRow();
+        }
+
+        // If any scan in the group is "No Good", show an alert dialog
+        if (_tableData.any((scan) => scan['result'] == 'No Good')) {
+          _showNoGoodAlert();
+        }
+
+        // Save current state after successful group save
+        await _saveCurrentState();
+      } catch (e) {
+        print('Error saving scan group: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving scan group: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else {
+      print('\n=== Group Not Complete Yet ===');
+      print('Pending scans: ${_pendingScans.length}');
+      print('Required scans per group: $codeCount');
 
       if (!_isTotalQtyReached) {
         _addRow();
       }
-
-      // If the result is "No Good", show an alert dialog
-      if (result == 'No Good') {
-        _showNoGoodAlert();
-      }
-
-      // Save current state after successful scan
-      await _saveCurrentState();
-    } catch (e) {
-      print('Error saving scan content: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving scan: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
