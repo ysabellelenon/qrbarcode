@@ -42,6 +42,16 @@ class _ArticleLabelState extends State<ArticleLabel> {
   int get totalQty => widget.resumeData?['totalQty'] ?? widget.totalQty ?? 0;
 
   void _validateArticleLabel(String articleLabel) {
+    // If articleLabel is empty, set error state and return early
+    if (articleLabel.isEmpty) {
+      setState(() {
+        isError = true;
+        lotNumberController.clear(); // Clear the fields
+        qtyController.clear();
+      });
+      return;
+    }
+
     print('\nArticle Label Validation:');
     print('Original Input: $articleLabel');
 
@@ -237,8 +247,10 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         const SizedBox(height: 16),
                         // Error message
                         if (isError)
-                          const Text(
-                            'Wrong Article Label entered!',
+                          Text(
+                            articleLabelController.text.isEmpty 
+                              ? 'Please scan or enter Article Label'
+                              : 'Wrong Article Label entered!',
                             style: TextStyle(color: Colors.red),
                           ),
                         const SizedBox(height: 16),
@@ -288,7 +300,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                         // Centering the Proceed button
                         Center(
                           child: ElevatedButton(
-                            onPressed: isError
+                            onPressed: (isError || articleLabelController.text.isEmpty)
                                 ? null
                                 : () async {
                                     print('\n=== Article Label Processing ===');
@@ -389,7 +401,7 @@ class _ArticleLabelState extends State<ArticleLabel> {
                                     );
                                   },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isError
+                              backgroundColor: (isError || articleLabelController.text.isEmpty)
                                   ? Colors.grey
                                   : Colors.deepPurple, // Grey when disabled
                               foregroundColor: Colors.white,
