@@ -47,5 +47,6 @@ android/local.properties
 macos/Podfile.lock
 macos/Runner/AppDelegate.swift
 android/local.properties
-pchartsystem/
+pchartsystem/*
 pchartsystem/lib/*
+assets/credentials.json

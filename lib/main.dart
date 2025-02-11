@@ -13,7 +13,9 @@ import 'pages/item_masterlist.dart';
 import 'pages/register_item.dart';
 import 'pages/revise_item.dart';
 import 'pages/operator_login.dart';
+import 'pages/license_activation.dart';
 import 'database_helper.dart';
+import 'services/license_service.dart';
 import 'dart:io';
 
 void main() async {
@@ -64,15 +66,59 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isLoading = true;
+  bool _isLicensed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLicense();
+  }
+
+  Future<void> _checkLicense() async {
+    try {
+      final licenseService = await LicenseService.getInstance();
+      final storedLicense = await licenseService.getStoredLicense();
+
+      if (storedLicense != null) {
+        final isValid = await licenseService.validateLicense(storedLicense);
+        setState(() {
+          _isLicensed = isValid;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLicensed = false;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking license: $e');
+      setState(() {
+        _isLicensed = false;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'QR Barcode System',
-      home: const LoginPage(),
+      home: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _isLicensed
+              ? const LoginPage()
+              : const LicenseActivationPage(),
       routes: {
         '/login': (context) => const LoginPage(),
         '/engineer-login': (context) => const EngineerLogin(),
@@ -89,6 +135,7 @@ class MyApp extends StatelessWidget {
               item: ModalRoute.of(context)!.settings.arguments
                   as Map<String, dynamic>,
             ),
+        '/license-activation': (context) => const LicenseActivationPage(),
       },
     );
   }
