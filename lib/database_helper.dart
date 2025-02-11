@@ -944,31 +944,101 @@ class DatabaseHelper {
     String itemName, {
     String? excludeSessionId,
   }) async {
+    print('\n=== DEBUG: getTotalGoodNoGoodCounts ===');
+    print('Item Name: $itemName');
+    print('Exclude Session ID: $excludeSessionId');
+
     final db = await database;
 
-    String query = '''
-      SELECT 
-        SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+    // First get raw scan data for debugging
+    final rawScans = await db.rawQuery('''
+      SELECT s.*, ss.itemName
       FROM individual_scans s
       JOIN scanning_sessions ss ON s.sessionId = ss.id
       WHERE ss.itemName = ?
+      ORDER BY s.sessionId, s.groupNumber, s.created_at
+    ''', [itemName]);
+
+    print('\nRaw Scans Data:');
+    for (var scan in rawScans) {
+      print(
+          'Session: ${scan['sessionId']}, Group: ${scan['groupNumber']}, Result: ${scan['result']}');
+    }
+
+    // Modified query to count groups based on new rules
+    String query = '''
+      WITH GroupScans AS (
+        SELECT 
+          s.sessionId,
+          s.groupNumber,
+          COUNT(*) as total_scans,
+          SUM(CASE WHEN s.result = 'Good' THEN 1 ELSE 0 END) as good_scans
+        FROM individual_scans s
+        JOIN scanning_sessions ss ON s.sessionId = ss.id
+        WHERE ss.itemName = ?
+        ${excludeSessionId != null ? 'AND s.sessionId != ?' : ''}
+        GROUP BY s.sessionId, s.groupNumber
+      ),
+      GroupResults AS (
+        SELECT 
+          sessionId,
+          groupNumber,
+          total_scans,
+          good_scans,
+          CASE 
+            WHEN total_scans = good_scans THEN 'Good'
+            ELSE 'No Good'
+          END as groupResult
+        FROM GroupScans
+      )
+      SELECT 
+        COUNT(*) as total_groups,
+        SUM(CASE WHEN groupResult = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN groupResult = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+      FROM GroupResults
     ''';
 
     List<dynamic> args = [itemName];
-
     if (excludeSessionId != null) {
-      query = query.replaceAll('WHERE ss.itemName = ?',
-          'WHERE ss.itemName = ? AND s.sessionId != ?');
       args.add(excludeSessionId);
+    }
+
+    // Get intermediate results for debugging
+    final groupScans = await db.rawQuery('''
+      SELECT 
+        s.sessionId,
+        s.groupNumber,
+        COUNT(*) as total_scans,
+        SUM(CASE WHEN s.result = 'Good' THEN 1 ELSE 0 END) as good_scans
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ?
+      ${excludeSessionId != null ? 'AND s.sessionId != ?' : ''}
+      GROUP BY s.sessionId, s.groupNumber
+    ''', args);
+
+    print('\nGroup Scans Analysis:');
+    for (var group in groupScans) {
+      print('Session: ${group['sessionId']}, Group: ${group['groupNumber']}');
+      print(
+          'Total Scans: ${group['total_scans']}, Good Scans: ${group['good_scans']}');
+      print(
+          'Group Result: ${group['total_scans'] == group['good_scans'] ? 'Good' : 'No Good'}');
     }
 
     final result = await db.rawQuery(query, args);
 
-    return {
+    final counts = {
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };
+
+    print('\nFinal Counts:');
+    print('Total Groups: ${result.first['total_groups']}');
+    print('Good Groups: ${counts['goodCount']}');
+    print('No Good Groups: ${counts['noGoodCount']}');
+
+    return counts;
   }
 
   Future<List<Map<String, dynamic>>> getAllHistoricalScans(
@@ -1086,27 +1156,90 @@ class DatabaseHelper {
     return result.first['completed_groups'] as int? ?? 0;
   }
 
-  Future<Map<String, int>> getCurrentSessionCounts(
+  Future<Map<String, dynamic>> getCurrentSessionCounts(
     String itemName,
     String sessionId,
   ) async {
+    print('\n=== DEBUG: getCurrentSessionCounts ===');
+    print('Item Name: $itemName');
+    print('Session ID: $sessionId');
+
     final db = await database;
 
-    final result = await db.rawQuery('''
-      SELECT 
-        COUNT(*) as total_count,
-        SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as goodCount,
-        SUM(CASE WHEN result = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+    // First get raw scan data for debugging
+    final rawScans = await db.rawQuery('''
+      SELECT s.*, ss.itemName
       FROM individual_scans s
       JOIN scanning_sessions ss ON s.sessionId = ss.id
       WHERE ss.itemName = ? AND s.sessionId = ?
+      ORDER BY s.groupNumber, s.created_at
     ''', [itemName, sessionId]);
 
-    return {
+    print('\nRaw Scans Data for Current Session:');
+    for (var scan in rawScans) {
+      print('Group: ${scan['groupNumber']}, Result: ${scan['result']}');
+    }
+
+    // Get intermediate results for debugging
+    final groupScans = await db.rawQuery('''
+      SELECT 
+        groupNumber,
+        COUNT(*) as total_scans,
+        SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as good_scans
+      FROM individual_scans s
+      JOIN scanning_sessions ss ON s.sessionId = ss.id
+      WHERE ss.itemName = ? AND s.sessionId = ?
+      GROUP BY groupNumber
+    ''', [itemName, sessionId]);
+
+    print('\nGroup Analysis for Current Session:');
+    for (var group in groupScans) {
+      print('Group: ${group['groupNumber']}');
+      print(
+          'Total Scans: ${group['total_scans']}, Good Scans: ${group['good_scans']}');
+      print(
+          'Group Result: ${group['total_scans'] == group['good_scans'] ? 'Good' : 'No Good'}');
+    }
+
+    final result = await db.rawQuery('''
+      WITH GroupScans AS (
+        SELECT 
+          groupNumber,
+          COUNT(*) as total_scans,
+          SUM(CASE WHEN result = 'Good' THEN 1 ELSE 0 END) as good_scans
+        FROM individual_scans s
+        JOIN scanning_sessions ss ON s.sessionId = ss.id
+        WHERE ss.itemName = ? AND s.sessionId = ?
+        GROUP BY groupNumber
+      ),
+      GroupResults AS (
+        SELECT 
+          groupNumber,
+          CASE 
+            WHEN total_scans = good_scans THEN 'Good'
+            ELSE 'No Good'
+          END as groupResult
+        FROM GroupScans
+      )
+      SELECT 
+        COUNT(*) as total_count,
+        SUM(CASE WHEN groupResult = 'Good' THEN 1 ELSE 0 END) as goodCount,
+        SUM(CASE WHEN groupResult = 'No Good' THEN 1 ELSE 0 END) as noGoodCount
+      FROM GroupResults
+    ''', [itemName, sessionId]);
+
+    final counts = {
       'groupCount': result.first['total_count'] as int? ?? 0,
       'goodCount': result.first['goodCount'] as int? ?? 0,
       'noGoodCount': result.first['noGoodCount'] as int? ?? 0,
     };
+
+    print('\nFinal Counts for Current Session:');
+    print('Total Groups: ${counts['groupCount']}');
+    print('Good Groups: ${counts['goodCount']}');
+    print('No Good Groups: ${counts['noGoodCount']}');
+
+    return counts;
   }
 
   Future<List<Map<String, dynamic>>> getPreviousScans(String itemName) async {
@@ -1245,17 +1378,31 @@ class DatabaseHelper {
     final db = await database;
 
     return await db.rawQuery('''
+      WITH GroupResults AS (
+        SELECT 
+          bl.id as box_id,
+          s.groupNumber,
+          CASE 
+            WHEN COUNT(*) = SUM(CASE WHEN s.result = 'Good' THEN 1 ELSE 0 END) THEN 'Good'
+            ELSE 'No Good'
+          END as groupResult
+        FROM box_labels bl
+        JOIN scanning_sessions ss ON bl.sessionId = ss.id
+        LEFT JOIN individual_scans s ON s.sessionId = ss.id
+        WHERE ss.itemName = ?
+        GROUP BY bl.id, s.groupNumber
+      )
       SELECT 
         bl.qtyPerBox,
         bl.createdAt,
-        COUNT(DISTINCT CASE WHEN s.result = 'Good' THEN s.groupNumber END) as goodGroups,
-        COUNT(DISTINCT CASE WHEN s.result = 'No Good' THEN s.groupNumber END) as noGoodGroups
+        COUNT(DISTINCT CASE WHEN gr.groupResult = 'Good' THEN gr.groupNumber END) as goodGroups,
+        COUNT(DISTINCT CASE WHEN gr.groupResult = 'No Good' THEN gr.groupNumber END) as noGoodGroups
       FROM box_labels bl
       JOIN scanning_sessions ss ON bl.sessionId = ss.id
-      LEFT JOIN individual_scans s ON s.sessionId = ss.id
+      LEFT JOIN GroupResults gr ON gr.box_id = bl.id
       WHERE ss.itemName = ?
       GROUP BY bl.id
       ORDER BY bl.createdAt ASC
-    ''', [itemName]);
+    ''', [itemName, itemName]);
   }
 }

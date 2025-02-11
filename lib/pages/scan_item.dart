@@ -129,12 +129,10 @@ class _ScanItemState extends State<ScanItem> {
       print('Codes per group: $codesPerGroup');
 
       // Calculate total counts based on completed groups
-      final totalGoodCount = ((historicalCounts['goodCount'] ?? 0) +
-              (currentCounts['goodCount'] ?? 0)) ~/
-          codesPerGroup;
-      final totalNoGoodCount = ((historicalCounts['noGoodCount'] ?? 0) +
-              (currentCounts['noGoodCount'] ?? 0)) ~/
-          codesPerGroup;
+      final totalGoodCount = (historicalCounts['goodCount'] ?? 0) +
+          (currentCounts['goodCount'] ?? 0);
+      final totalNoGoodCount = (historicalCounts['noGoodCount'] ?? 0) +
+          (currentCounts['noGoodCount'] ?? 0);
 
       print('Total Good Count: $totalGoodCount');
       print('Total No Good Count: $totalNoGoodCount');
@@ -305,11 +303,18 @@ class _ScanItemState extends State<ScanItem> {
   void _checkAndUpdateQtyStatus() async {
     try {
       print('\n=== Checking and Updating QTY Status ===');
-      // Count good results in current session
-      int currentGoodCount = _tableData
-          .where((item) =>
-              item['result'] == 'Good' && item['sessionId'] == _sessionId)
-          .length;
+
+      // Get historical counts (excluding current session)
+      final historicalCounts = await DatabaseHelper().getTotalGoodNoGoodCounts(
+        itemName,
+        excludeSessionId: _sessionId,
+      );
+
+      // Get current session counts
+      final currentCounts = await DatabaseHelper().getCurrentSessionCounts(
+        itemName,
+        _sessionId,
+      );
 
       // Get codes per group from item configuration
       final items = await DatabaseHelper().getItems();
@@ -319,21 +324,20 @@ class _ScanItemState extends State<ScanItem> {
       );
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
 
-      // Calculate completed groups
-      int completedGroups = currentGoodCount ~/ codesPerGroup;
-      print('Current session good count: $currentGoodCount');
-      print('Codes per group: $codesPerGroup');
-      print('Completed groups: $completedGroups');
+      // Calculate total good groups from both historical and current sessions
+      int totalGoodGroups = ((historicalCounts['goodCount'] ?? 0) +
+              (currentCounts['goodCount'] ?? 0))
+          .toInt();
 
       setState(() {
-        // Update QTY per box with completed groups count
-        qtyPerBoxController.text = completedGroups.toString();
-        print('Updated QTY per box: $completedGroups');
+        // Update QTY per box with total good groups count
+        qtyPerBoxController.text = totalGoodGroups.toString();
+        print('Updated QTY per box: $totalGoodGroups');
 
         // Check if QTY per box is reached
         String qtyPerBoxStr = widget.scanData?['qtyPerBox'] ?? '';
         int targetQty = int.tryParse(qtyPerBoxStr) ?? 0;
-        _isQtyPerBoxReached = targetQty > 0 && completedGroups >= targetQty;
+        _isQtyPerBoxReached = targetQty > 0 && totalGoodGroups >= targetQty;
         print('QTY per box reached: $_isQtyPerBoxReached (Target: $targetQty)');
 
         // Check if total QTY has been reached
