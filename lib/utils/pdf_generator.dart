@@ -34,41 +34,12 @@ Future<void> generateAndSavePdf({
     int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
     print('Codes per group from configuration: $codesPerGroup');
 
-    // Group the scans for counting
-    Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
-    for (var scan
-        in tableData.where((item) => item['result']?.isNotEmpty == true)) {
-      String sessionId = scan['sessionId']?.toString() ?? '';
-      int groupNum = scan['groupNumber'] ?? 1;
-
-      groupedScans[sessionId] = groupedScans[sessionId] ?? {};
-      groupedScans[sessionId]![groupNum] =
-          groupedScans[sessionId]![groupNum] ?? [];
-      groupedScans[sessionId]![groupNum]!.add(scan);
-    }
-
-    // Count completed groups
-    int totalGoodGroups = 0;
-    int totalNoGoodGroups = 0;
-    int totalCompletedGroups = 0;
-
-    groupedScans.forEach((sessionId, groups) {
-      groups.forEach((groupNum, scans) {
-        if (scans.length == codesPerGroup) {
-          totalCompletedGroups++;
-          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-          if (isGroupGood) {
-            totalGoodGroups++;
-          } else {
-            totalNoGoodGroups++;
-          }
-        }
-      });
-    });
-
-    print('Total Completed Groups: $totalCompletedGroups');
-    print('Total Good Groups: $totalGoodGroups');
-    print('Total No Good Groups: $totalNoGoodGroups');
+    // Get group counts from database
+    final db = DatabaseHelper();
+    final counts = await db.getGroupedScanCounts(itemName, poNo);
+    print('Total Completed Groups: ${counts['inspectionQty']}');
+    print('Total Good Groups: ${counts['goodCount']}');
+    print('Total No Good Groups: ${counts['noGoodCount']}');
 
     // Reduce rows per page to avoid TooManyPagesException
     final int rowsPerPage = 15;
@@ -189,7 +160,8 @@ Future<void> generateAndSavePdf({
     );
 
     // Get total counts
-    final totalCounts = await DatabaseHelper().getGroupedScanCounts(itemName);
+    final totalCounts =
+        await DatabaseHelper().getGroupedScanCounts(itemName, poNo);
     final totalScans = await DatabaseHelper().getTotalScansForItem(itemName);
 
     pdf.addPage(
@@ -225,7 +197,8 @@ Future<void> generateAndSavePdf({
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('P.O Number: $poNo', style: baseTextStyle),
-                        pw.Text('Total QTY: $quantity', style: baseTextStyle),
+                        pw.Text('Total QTY: ${counts['inspectionQty']}',
+                            style: baseTextStyle),
                         pw.SizedBox(height: 5),
                         pw.Text('Remarks: $remarks', style: baseTextStyle),
                       ],
@@ -245,12 +218,13 @@ Future<void> generateAndSavePdf({
                   children: [
                     pw.Text('Summary Counts:', style: headerTextStyle),
                     pw.SizedBox(height: 5),
-                    pw.Text('Total QTY: $quantity', style: baseTextStyle),
-                    pw.Text('Total Inspection QTY: $totalCompletedGroups',
+                    pw.Text('Total QTY: ${counts['inspectionQty']}',
                         style: baseTextStyle),
-                    pw.Text('Total Good Count: $totalGoodGroups',
+                    pw.Text('Total Inspection QTY: ${counts['inspectionQty']}',
                         style: baseTextStyle),
-                    pw.Text('Total No Good Count: $totalNoGoodGroups',
+                    pw.Text('Total Good Count: ${counts['goodCount']}',
+                        style: baseTextStyle),
+                    pw.Text('Total No Good Count: ${counts['noGoodCount']}',
                         style: baseTextStyle),
                   ],
                 ),

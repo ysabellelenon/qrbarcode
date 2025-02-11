@@ -874,7 +874,7 @@ class DatabaseHelper {
 
     final db = await database;
 
-    // Get the item details from scanning_sessions instead of operator_scans
+    // Get the item details from scanning_sessions
     final itemDetails = await db.query(
       'scanning_sessions',
       where: 'id = ?',
@@ -887,25 +887,61 @@ class DatabaseHelper {
     }
 
     String itemName = itemDetails.first['itemName'] as String;
-    print('Found itemName: $itemName');
+    String poNo = itemDetails.first['poNo'] as String;
+    print('Found itemName: $itemName, poNo: $poNo');
 
-    // Calculate group information for this session only
-    if (groupNumber == null || groupPosition == null) {
-      final previousScans = await db.query(
-        'individual_scans',
-        where: 'sessionId = ?',
-        whereArgs: [operatorScanId],
-        orderBy: 'created_at',
-      );
-      print('Previous scans count: ${previousScans.length}');
+    // Get the highest group number for this item and PO combination
+    print('\n=== Calculating Group Numbers ===');
+    print('Getting highest group number for:');
+    print('Item Name: $itemName');
+    print('PO Number: $poNo');
 
-      final codesPerGroup = codesInGroup ?? 1;
-      groupNumber = (previousScans.length ~/ codesPerGroup) + 1;
-      groupPosition = (previousScans.length % codesPerGroup) + 1;
+    final queryResult = await db.rawQuery('''
+        SELECT MAX(s.groupNumber) as maxGroup
+        FROM scanning_sessions ss
+        JOIN individual_scans s ON s.sessionId = ss.id
+        WHERE ss.itemName = ? AND ss.poNo = ?
+      ''', [itemName, poNo]);
 
-      print('Calculated groupNumber: $groupNumber');
-      print('Calculated groupPosition: $groupPosition');
+    final highestGroupNumber = queryResult.first['maxGroup'] as int? ?? 0;
+    print('Raw query result: $queryResult');
+    print('Highest existing group number: $highestGroupNumber');
+
+    // Get count of scans in the current group
+    final codesPerGroup = codesInGroup ?? 1;
+    print('\nGetting current session scans:');
+    print('Session ID: $operatorScanId');
+    print('Codes required per group: $codesPerGroup');
+
+    final currentSessionScans = await db.query(
+      'individual_scans',
+      where: 'sessionId = ?',
+      whereArgs: [operatorScanId],
+      orderBy: 'created_at DESC',
+    );
+    print('Current session scans count: ${currentSessionScans.length}');
+
+    // Calculate new group number
+    final scansInCurrentGroup = currentSessionScans.length % codesPerGroup;
+    print('\nCalculating group details:');
+    print('Scans in current group (not yet complete): $scansInCurrentGroup');
+    print('Codes per group: $codesPerGroup');
+
+    if (scansInCurrentGroup == 0) {
+      // Start a new group
+      groupNumber = highestGroupNumber + 1;
+      print('\nStarting new group:');
+      print('Previous highest group number: $highestGroupNumber');
+      print('New group number: $groupNumber');
+    } else {
+      // Continue the current group
+      groupNumber = highestGroupNumber;
+      print('\nContinuing current group:');
+      print('Current group number: $groupNumber');
     }
+
+    print('\nFinal group assignment:');
+    print('Group Number: $groupNumber');
 
     final scanData = {
       'sessionId': operatorScanId,
@@ -941,9 +977,7 @@ class DatabaseHelper {
   }
 
   Future<Map<String, int>> getGroupedScanCounts(
-    String itemName, {
-    String? excludeSessionId,
-  }) async {
+      String itemName, String poNo) async {
     final db = await database;
 
     // First get the item's codeCount to know how many scans make a complete group
@@ -957,6 +991,7 @@ class DatabaseHelper {
 
     print('\n=== DEBUG: getGroupedScanCounts ===');
     print('Item: $itemName');
+    print('PO Number: $poNo');
     print('Codes per group: $codesPerGroup');
 
     // Build the query to count groups
@@ -971,8 +1006,7 @@ class DatabaseHelper {
           SUM(CASE WHEN s.result = 'Good' THEN 1 ELSE 0 END) as goodScansInGroup
         FROM scanning_sessions ss
         JOIN individual_scans s ON s.sessionId = ss.id
-        WHERE ss.itemName = ?
-          ${excludeSessionId != null ? 'AND ss.id != ?' : ''}
+        WHERE ss.itemName = ? AND ss.poNo = ?
         GROUP BY ss.itemName, ss.poNo, ss.id, s.groupNumber
         HAVING COUNT(*) = ? -- Only consider complete groups
       )
@@ -983,13 +1017,7 @@ class DatabaseHelper {
       FROM GroupedScans
     ''';
 
-    List<dynamic> args = [itemName];
-    if (excludeSessionId != null) {
-      args.add(excludeSessionId);
-    }
-    args.add(codesPerGroup);
-
-    final result = await db.rawQuery(query, args);
+    final result = await db.rawQuery(query, [itemName, poNo, codesPerGroup]);
     print('Query result: $result');
 
     return {

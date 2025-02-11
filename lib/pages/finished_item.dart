@@ -79,82 +79,19 @@ class _FinishedItemState extends State<FinishedItem> {
     try {
       print('\n=== Loading Finished Item Counts ===');
       print('Item Name: ${widget.itemName}');
+      print('PO Number: ${widget.poNo}');
 
-      // Get codes per group from item configuration
-      final items = await DatabaseHelper().getItems();
-      final matchingItem = items.firstWhere(
-        (item) => item['itemCode'] == widget.itemName,
-        orElse: () => {},
-      );
-      int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
-      print('Codes per group from configuration: $codesPerGroup');
-
-      // Group the scans by session and group number
-      Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
-      print('\nProcessing scans for grouping:');
-      print('Total scans to process: ${_scannedData.length}');
-
-      // Process all scans
-      for (var scan
-          in _scannedData.where((item) => item['result']?.isNotEmpty == true)) {
-        String sessionId = scan['sessionId']?.toString() ?? '';
-        int groupNum = scan['groupNumber'] ?? 1;
-
-        print('\nProcessing scan:');
-        print('Session ID: $sessionId');
-        print('Group Number: $groupNum');
-        print('Content: ${scan['content']}');
-        print('Result: ${scan['result']}');
-
-        groupedScans[sessionId] = groupedScans[sessionId] ?? {};
-        groupedScans[sessionId]![groupNum] =
-            groupedScans[sessionId]![groupNum] ?? [];
-        groupedScans[sessionId]![groupNum]!.add(scan);
-      }
-
-      int totalGoodGroups = 0;
-      int totalNoGoodGroups = 0;
-      int totalCompletedGroups = 0;
-
-      print('\nCounting completed groups:');
-      // Count completed groups
-      groupedScans.forEach((sessionId, groups) {
-        print('\nSession: $sessionId');
-        groups.forEach((groupNum, scans) {
-          print('Group $groupNum - Scans count: ${scans.length}');
-          if (scans.length == codesPerGroup) {
-            totalCompletedGroups++;
-            bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-            print('Group $groupNum is complete:');
-            print('- All scans good? $isGroupGood');
-            print('- Scan results: ${scans.map((s) => s['result']).toList()}');
-
-            if (isGroupGood) {
-              totalGoodGroups++;
-              print('- Counted as Good Group');
-            } else {
-              totalNoGoodGroups++;
-              print(
-                  '- Counted as No Good Group (contains at least one No Good)');
-            }
-          } else {
-            print(
-                'Group $groupNum is incomplete (${scans.length}/$codesPerGroup scans)');
-          }
-        });
-      });
+      final db = DatabaseHelper();
+      final counts =
+          await db.getGroupedScanCounts(widget.itemName, widget.poNo);
 
       print('\nFinal Counts:');
-      print('Total Completed Groups: $totalCompletedGroups');
-      print('Total Good Groups: $totalGoodGroups');
-      print('Total No Good Groups: $totalNoGoodGroups');
+      print('Total Completed Groups: ${counts['inspectionQty']}');
+      print('Total Good Groups: ${counts['goodCount']}');
+      print('Total No Good Groups: ${counts['noGoodCount']}');
 
       setState(() {
-        _counts = {
-          'goodCount': totalGoodGroups,
-          'noGoodCount': totalNoGoodGroups,
-          'inspectionQty': totalCompletedGroups,
-        };
+        _counts = counts;
       });
       print('State updated with new counts');
     } catch (e) {

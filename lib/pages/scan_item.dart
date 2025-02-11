@@ -110,11 +110,8 @@ class _ScanItemState extends State<ScanItem> {
       print('\n=== Updating Group Counts ===');
       final db = await DatabaseHelper();
 
-      // Get counts using the new function, excluding current session
-      final counts = await db.getGroupedScanCounts(
-        itemName,
-        excludeSessionId: operatorScanId.toString(),
-      );
+      // Get all completed group counts from database
+      final counts = await db.getGroupedScanCounts(itemName, poNo);
 
       // Get codes per group from item configuration
       final items = await db.getItems();
@@ -125,9 +122,11 @@ class _ScanItemState extends State<ScanItem> {
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
       print('Codes per group: $codesPerGroup');
 
-      // Count current session groups
+      // Count current session groups that aren't saved to database yet
       final currentSessionScans = _tableData
-          .where((item) => item['result']?.isNotEmpty == true)
+          .where((item) =>
+              item['result']?.isNotEmpty == true &&
+              !item['isLocked'] == true) // Only count unlocked (unsaved) scans
           .toList();
       int currentSessionGoodGroups = 0;
       int currentSessionNoGoodGroups = 0;
@@ -154,13 +153,12 @@ class _ScanItemState extends State<ScanItem> {
         }
       }
 
-      print('Historical - Inspection QTY: ${counts['inspectionQty']}');
-      print('Historical - Good Groups: ${counts['goodCount']}');
-      print('Historical - No Good Groups: ${counts['noGoodCount']}');
-      print(
-          'Current session - Completed Groups: $currentSessionCompletedGroups');
-      print('Current session - Good Groups: $currentSessionGoodGroups');
-      print('Current session - No Good Groups: $currentSessionNoGoodGroups');
+      print('Database - Inspection QTY: ${counts['inspectionQty']}');
+      print('Database - Good Groups: ${counts['goodCount']}');
+      print('Database - No Good Groups: ${counts['noGoodCount']}');
+      print('Pending - Completed Groups: $currentSessionCompletedGroups');
+      print('Pending - Good Groups: $currentSessionGoodGroups');
+      print('Pending - No Good Groups: $currentSessionNoGoodGroups');
 
       // Update all counts
       setState(() {
@@ -174,11 +172,11 @@ class _ScanItemState extends State<ScanItem> {
       });
 
       print(
-          'Total Inspection QTY (all sessions): ${counts['inspectionQty']! + currentSessionCompletedGroups}');
+          'Total Inspection QTY: ${counts['inspectionQty']! + currentSessionCompletedGroups}');
       print(
-          'Total Good Groups (all sessions): ${counts['goodCount']! + currentSessionGoodGroups}');
+          'Total Good Groups: ${counts['goodCount']! + currentSessionGoodGroups}');
       print(
-          'Total No Good Groups (all sessions): ${counts['noGoodCount']! + currentSessionNoGoodGroups}');
+          'Total No Good Groups: ${counts['noGoodCount']! + currentSessionNoGoodGroups}');
 
       // Check and update QTY status after updating counts
       _checkAndUpdateQtyStatus();
