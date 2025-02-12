@@ -8,7 +8,8 @@ class LicenseService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // This salt will be compiled into the binary
-  static const String _salt = "QB2024";
+  static const String _salt = "QB2024"; 
+  
 
   // All valid license keys hardcoded
   static const List<String> _validLicenses = [
