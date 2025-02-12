@@ -655,35 +655,37 @@ class _ScanItemState extends State<ScanItem> {
         if (hasSubLotRules && lotNumber.contains('-')) {
           // Use the original lot number format for validation
           String baseContent = _labelContent ?? '';
-          expectedBaseContent = '$baseContent$lotNumber';
-
-          // Remove the dash if present in the expected content
-          expectedBaseContent = expectedBaseContent.replaceAll('-', '');
-
+          
+          // Split the lot number to handle sub-lot part
+          final parts = lotNumber.split('-');
+          final mainPart = parts[0];
+          final subLotPart = parts[1];
+          
+          // Parse the sub-lot number
+          int subLotNum = int.tryParse(subLotPart) ?? 0;
+          
+          // For validation, normalize the sub-lot number (remove leading zeros)
+          String normalizedSubLot = subLotNum.toString();
+          expectedBaseContent = '$baseContent$mainPart$normalizedSubLot';
+          
+          print('Original lot number: $lotNumber');
+          print('Normalized sub-lot: $normalizedSubLot');
           print('Expected Base Content: "$expectedBaseContent"');
           print('Scanned Base Content: "$scannedBaseContent"');
 
-          // Compare the scanned content against the original format
-          if (scannedBaseContent.startsWith(baseContent)) {
-            // Extract and compare the lot number portion
-            String scannedLotPortion =
-                scannedBaseContent.substring(baseContent.length);
-            String expectedLotPortion =
-                expectedBaseContent.substring(baseContent.length);
+          // Compare the scanned content against the normalized format
+          if (scannedBaseContent == expectedBaseContent) {
+            // Validate the serial part
+            String serialPart = value.substring(value.length - serialCount);
+            if (serialPart.length == serialCount) {
+              // Check for duplicates
+              bool isDuplicate = _tableData.any((row) {
+                if (_tableData.indexOf(row) == index ||
+                    row['content']?.isEmpty == true) return false;
+                return row['content'] == value;
+              });
 
-            if (scannedLotPortion == expectedLotPortion) {
-              // Validate the serial part
-              String serialPart = value.substring(value.length - serialCount);
-              if (serialPart.length == serialCount) {
-                // Check for duplicates
-                bool isDuplicate = _tableData.any((row) {
-                  if (_tableData.indexOf(row) == index ||
-                      row['content']?.isEmpty == true) return false;
-                  return row['content'] == value;
-                });
-
-                result = isDuplicate ? 'No Good' : 'Good';
-              }
+              result = isDuplicate ? 'No Good' : 'Good';
             }
           }
         } else {
@@ -887,7 +889,7 @@ class _ScanItemState extends State<ScanItem> {
               final subLotPart = parts[1];
 
               if (hasSubLotRules) {
-                // Convert sub-lot number according to rules if between 10-20
+                // Parse the sub-lot number
                 int subLotNum = int.tryParse(subLotPart) ?? 0;
                 String convertedSubLot;
 
@@ -897,17 +899,20 @@ class _ScanItemState extends State<ScanItem> {
                   // Convert to letters A-J (11=A, 12=B, etc.)
                   convertedSubLot =
                       String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+                } else if (subLotNum < 10) {
+                  // For numbers less than 10, just use the number without leading zeros
+                  convertedSubLot = subLotNum.toString();
                 } else {
-                  // For numbers outside 10-20, just use the number
+                  // For numbers outside 10-20, just use the number as is
                   convertedSubLot = subLotNum.toString();
                 }
 
                 formattedLotNumber = '$mainPart$convertedSubLot';
                 print('Sub-lot conversion: $subLotPart -> $convertedSubLot');
               } else {
-                // No sub-lot rules, just remove leading zeros
+                // No sub-lot rules, just remove leading zeros from sub-lot part
                 int subLotNum = int.tryParse(subLotPart) ?? 0;
-                formattedLotNumber = '$mainPart$subLotNum';
+                formattedLotNumber = '$mainPart-$subLotNum';
               }
             } else {
               formattedLotNumber = lotNumber;
@@ -1059,8 +1064,7 @@ class _ScanItemState extends State<ScanItem> {
                           Navigator.of(context).pop();
                         },
                         child: const Text('Back'),
-                      ),
-                    ), */
+                      ), */
                     const Text(
                       'Scan Item',
                       style: TextStyle(
