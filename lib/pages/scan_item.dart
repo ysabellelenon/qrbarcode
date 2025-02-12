@@ -650,12 +650,9 @@ class _ScanItemState extends State<ScanItem> {
         bool hasSubLotRules =
             countingCode['hasSubLot'] == 1 || countingCode['hasSubLot'] == true;
 
-        // For validation, we need to compare against the original lot number format
+        // For validation, we need to compare against the displayed format for numbers 10-20
         String expectedBaseContent;
         if (hasSubLotRules && lotNumber.contains('-')) {
-          // Use the original lot number format for validation
-          String baseContent = _labelContent ?? '';
-          
           // Split the lot number to handle sub-lot part
           final parts = lotNumber.split('-');
           final mainPart = parts[0];
@@ -664,16 +661,33 @@ class _ScanItemState extends State<ScanItem> {
           // Parse the sub-lot number
           int subLotNum = int.tryParse(subLotPart) ?? 0;
           
-          // For validation, normalize the sub-lot number (remove leading zeros)
-          String normalizedSubLot = subLotNum.toString();
-          expectedBaseContent = '$baseContent$mainPart$normalizedSubLot';
+          // For validation, use the converted format for numbers 10-20
+          String convertedSubLot;
+          if (subLotNum >= 10 && subLotNum <= 20) {
+            // Use the converted letter format for validation
+            if (subLotNum == 10) {
+              convertedSubLot = '0';
+            } else {
+              // Convert to letters A-J (11=A, 12=B, etc.)
+              convertedSubLot = String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+            }
+          } else if (subLotNum < 10) {
+            // For numbers less than 10, normalize by removing leading zeros
+            convertedSubLot = subLotNum.toString();
+          } else {
+            // For numbers > 20, use as is
+            convertedSubLot = subLotNum.toString();
+          }
+          
+          expectedBaseContent = baseDisplayContent;
           
           print('Original lot number: $lotNumber');
-          print('Normalized sub-lot: $normalizedSubLot');
+          print('Sub-lot number: $subLotNum');
+          print('Converted sub-lot: $convertedSubLot');
           print('Expected Base Content: "$expectedBaseContent"');
           print('Scanned Base Content: "$scannedBaseContent"');
 
-          // Compare the scanned content against the normalized format
+          // Compare the scanned content against the converted format
           if (scannedBaseContent == expectedBaseContent) {
             // Validate the serial part
             String serialPart = value.substring(value.length - serialCount);
