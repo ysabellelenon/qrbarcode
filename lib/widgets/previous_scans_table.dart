@@ -369,7 +369,7 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton.icon(
+                      /* TextButton.icon(
                         onPressed: _clearScans,
                         icon:
                             const Icon(Icons.delete_forever, color: Colors.red),
@@ -377,7 +377,7 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                           'Clear All Scans (Dev Only)',
                           style: TextStyle(color: Colors.red),
                         ),
-                      ),
+                      ), */
                     ],
                   ),
                 ],
