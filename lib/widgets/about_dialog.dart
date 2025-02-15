@@ -4,7 +4,7 @@ import 'update_dialog.dart';
 import '../constants.dart';  // Import constants for border radius
 
 // Using a different name since AboutDialog is already a Flutter widget
-class AppAboutDialog extends StatelessWidget {
+class AppAboutDialog extends StatefulWidget {
   final String version;
   final String licenseKey;
   final UpdateService updateService;
@@ -17,6 +17,14 @@ class AppAboutDialog extends StatelessWidget {
     required this.updateService,
     this.onVersionChanged,
   });
+
+  @override
+  State<AppAboutDialog> createState() => _AppAboutDialogState();
+}
+
+class _AppAboutDialogState extends State<AppAboutDialog> {
+  String? _statusMessage;
+  bool _isChecking = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,67 +46,91 @@ class AppAboutDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Version: $version'),
+          Text('Version: ${widget.version}'),
           const SizedBox(height: 8),
-          Text('License: $licenseKey'),
+          Text('License: ${widget.licenseKey}'),
           const SizedBox(height: 16),
           const Text('JAE QR Barcode System for Production Line'),
           const Text('© 2024 JAE. All rights reserved.'),
           const SizedBox(height: 24),
           Center(
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.system_update),
-              label: const Text('Check for Updates'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: kBorderRadiusSmallAll,
-                ),
-              ),
-              onPressed: () async {
-                try {
-                  final updateInfo = await updateService.checkForUpdates();
-                  if (!context.mounted) return;
-                  
-                  if (updateInfo['error'] != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error checking for updates: ${updateInfo['error']}'),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 5),
-                      ),
-                    );
-                    return;
-                  }
-                  
-                  if (updateInfo['hasUpdate']) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => UpdateDialog(
-                        updateInfo: updateInfo,
-                        updateService: updateService,
-                        onUpdateComplete: onVersionChanged,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('You have the latest version'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to check for updates: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 5),
+            child: Column(
+              children: [
+                ElevatedButton.icon(
+                  icon: _isChecking 
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.system_update),
+                  label: Text(_isChecking ? 'Checking...' : 'Check for Updates'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: kBorderRadiusSmallAll,
                     ),
-                  );
-                }
-              },
+                  ),
+                  onPressed: _isChecking ? null : () async {
+                    setState(() {
+                      _isChecking = true;
+                      _statusMessage = null;
+                    });
+                    
+                    try {
+                      final updateInfo = await widget.updateService.checkForUpdates();
+                      if (!mounted) return;
+                      
+                      setState(() {
+                        _isChecking = false;
+                      });
+                      
+                      if (updateInfo['error'] != null) {
+                        setState(() {
+                          _statusMessage = 'Error: ${updateInfo['error']}';
+                        });
+                        return;
+                      }
+                      
+                      if (updateInfo['hasUpdate']) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => UpdateDialog(
+                            updateInfo: updateInfo,
+                            updateService: widget.updateService,
+                            onUpdateComplete: widget.onVersionChanged,
+                          ),
+                        );
+                      } else {
+                        setState(() {
+                          _statusMessage = 'You have the latest version (${widget.version})';
+                        });
+                      }
+                    } catch (e) {
+                      if (!mounted) return;
+                      setState(() {
+                        _isChecking = false;
+                        _statusMessage = 'Failed to check for updates: ${e.toString()}';
+                      });
+                    }
+                  },
+                ),
+                if (_statusMessage != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _statusMessage!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _statusMessage!.startsWith('Error') || _statusMessage!.startsWith('Failed')
+                          ? Colors.red
+                          : Colors.green,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

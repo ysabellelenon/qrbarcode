@@ -21,10 +21,12 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final Directory documentsDirectory =
-        await getApplicationDocumentsDirectory();
-    final Directory dbDirectory =
-        Directory(join(documentsDirectory.path, 'databases'));
+    // Get the local app data directory
+    final String localAppData = Platform.isWindows
+        ? Platform.environment['LOCALAPPDATA']!
+        : (await getApplicationDocumentsDirectory()).path;
+    
+    final Directory dbDirectory = Directory(join(localAppData, 'QRBarcode', 'databases'));
     if (!await dbDirectory.exists()) {
       await dbDirectory.create(recursive: true);
     }

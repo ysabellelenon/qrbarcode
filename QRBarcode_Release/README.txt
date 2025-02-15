@@ -1,381 +1,105 @@
-QRBarcode - Standalone Windows Application
-=========================================
+QRBarcode Windows Application
+==========================
 
-Installation Instructions:
-------------------------
-1. DO NOT install in Program Files directory. Instead, extract to one of these locations:
-   - C:\Users\[YourUsername]\Documents\QRBarcode
-   - C:\Users\[YourUsername]\AppData\Local\QRBarcode
+Thank you for using QRBarcode! This document contains important information about installing, running, and maintaining your application.
 
-2. Required Prerequisites:
-   - Microsoft Visual C++ Redistributable 2015-2022 (x64)
-     Download from: https://aka.ms/vs/17/release/vc_redist.x64.exe
+Installation
+-----------
+1. Extract the ZIP file to your desired location
+   - You can place the folder anywhere on your system
+   - IMPORTANT: Once you run the application and create a database, DO NOT move the application folder
+   - The database will be created in a 'databases' folder outside the application directory
 
-Running the Application:
------------------------
-1. Normal Launch:
-   - Double-click qrbarcode.exe
+2. First-Time Setup:
+   - Run setup_dlls.bat as administrator (if you encounter any DLL-related issues)
+   - The script will automatically detect your system architecture and install appropriate DLLs
 
-2. Troubleshooting Launch:
-   - Run run_with_log.bat for detailed diagnostics
+Running the Application
+---------------------
+1. Regular Systems:
+   - Double-click qrbarcode.exe to start the application
+   - First run will create necessary database files
 
-Common Issues:
--------------
-1. App doesn't start:
-   - Ensure Visual C++ Redistributable is installed
-   - Move app out of Program Files directory
-   - Run as administrator (right-click -> Run as administrator)
+2. ARM Systems:
+   - Use launch_arm.bat for optimal performance
+   - This script includes special optimizations for ARM processors
 
-2. Permission errors:
-   - Move the entire folder to a user-writable location
-   - Don't split up the files - keep all files together
+Database Location
+---------------
+IMPORTANT: The application creates and maintains a SQLite database in:
+%LOCALAPPDATA%\QRBarcode\databases\
 
-3. Black screen or no window:
-   - Check if antivirus is blocking the application
-   - Ensure all .dll files are present in the same folder
+- DO NOT move the application folder after database creation
+- Database contains all your QR code data and settings
+- If you need to move the application:
+  1. Export any important data first
+  2. Close the application
+  3. Move the folder to the new location
+  4. Run the application (it will create a new database)
+  5. Import your data back
 
-For any issues, run run_with_log.bat to get detailed error information.
+Updates
+-------
+Updates are performed manually:
+1. Download the latest version from the releases page
+2. Extract to a new location
+3. Copy your database from %LOCALAPPDATA%\QRBarcode\databases to the new installation
+4. Run the new version of the application
 
-Support:
---------
-If problems persist after following these steps, please contact support with the log output from run_with_log.bat. - Alternative: launch_virtual.bat 
+Note: Always back up your database before updating.
+
+Troubleshooting
+--------------
+1. DLL Issues:
+   - Run setup_dlls.bat as administrator
+   - This script will automatically fix most DLL-related problems
+
+2. Display Issues:
+   - For ARM systems, use launch_arm.bat
+   - Try pressing Alt+Tab if the window doesn't appear
+   - Check the taskbar for hidden windows
+
+3. Database Issues:
+   - Ensure the application has write permissions to %LOCALAPPDATA%\QRBarcode
+   - Do not modify the databases folder manually
+   - Keep regular backups of important data
+
+Technical Support
+---------------
+- For technical support or bug reports, please visit our issue tracker
+- Include the application version (found in About screen) in your reports
+- Export logs using the diagnostic tools if requested
+
+System Requirements
+-----------------
+- Windows 10 or later
+- Visual C++ Redistributable 2015-2022
+- Minimum 4GB RAM recommended
+- 100MB free disk space for installation
+- Additional space for database (varies with usage)
+
+Note: Keep this README file for future reference. It contains important information about your installation and troubleshooting steps.
  
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
  
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
  
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
  
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
  
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
  
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 
-- Alternative: launch_virtual.bat 
- 
-If the window doesn't appear: 
-1. Try pressing Alt+Tab to switch windows 
-2. Check the taskbar for hidden windows 
-3. Try running with different launch scripts 
-4. Make sure Visual C++ Redistributable is installed 
- 
-Troubleshooting: 
-- Run check_logs.ps1 for diagnostics 
-- Use run_with_log.bat for detailed logging 

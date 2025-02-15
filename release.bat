@@ -148,9 +148,49 @@ if exist "QRBarcode_Release\data" (
 )
 xcopy /E /I /Y "%BUILD_DIR%\data" "QRBarcode_Release\data\"
 
+:: Ensure DLLs directory structure is maintained
+echo Organizing DLLs...
+if not exist "QRBarcode_Release\dlls" mkdir "QRBarcode_Release\dlls"
+if not exist "QRBarcode_Release\dlls\x64" mkdir "QRBarcode_Release\dlls\x64"
+if not exist "QRBarcode_Release\dlls\x86" mkdir "QRBarcode_Release\dlls\x86"
+if not exist "QRBarcode_Release\dlls\arm64" mkdir "QRBarcode_Release\dlls\arm64"
+
+:: Move existing DLLs to architecture-specific folders
+echo Moving DLLs to architecture folders...
+:: x64 DLLs
+for %%F in (msvcp140.dll vcruntime140.dll vcruntime140_1.dll) do (
+    if exist "QRBarcode_Release\%%F" (
+        move /Y "QRBarcode_Release\%%F" "QRBarcode_Release\dlls\x64\" >nul
+        echo [+] Moved %%F to x64 folder
+    )
+)
+
+:: Copy setup_dlls.bat
+echo Adding DLL setup script...
+copy /Y "setup_dlls.bat" "QRBarcode_Release\" >nul
+if errorlevel 1 (
+    echo ERROR: Failed to copy setup_dlls.bat
+    echo Please ensure the file exists and is not locked
+    pause
+    exit /b 1
+) else (
+    echo [+] Added setup_dlls.bat
+)
+
+:: Update README to include information about setup_dlls.bat
+echo Updating README...
+echo. >> "QRBarcode_Release\README.txt"
+echo DLL Setup >> "QRBarcode_Release\README.txt"
+echo ========= >> "QRBarcode_Release\README.txt"
+echo If you encounter any DLL-related issues: >> "QRBarcode_Release\README.txt"
+echo 1. Run setup_dlls.bat as administrator >> "QRBarcode_Release\README.txt"
+echo 2. This script will automatically detect your system architecture >> "QRBarcode_Release\README.txt"
+echo 3. It will install the appropriate Visual C++ Runtime DLLs >> "QRBarcode_Release\README.txt"
+echo. >> "QRBarcode_Release\README.txt"
+
 :: Ensure Visual C++ Runtime DLLs are present
 echo Copying Visual C++ Runtime DLLs...
-wmic computersystem get manufacturer | findstr /i "Parallels" >nul
+wmic os get caption | findstr "ARM" >nul
 if not errorlevel 1 (
     :: ARM64 build - copy ARM64 DLLs
     echo Copying ARM64 Visual C++ Runtime DLLs...
@@ -219,19 +259,81 @@ if not exist "QRBarcode_Release\README.txt" (
     echo QRBarcode Windows Application > "QRBarcode_Release\README.txt"
     echo ========================== >> "QRBarcode_Release\README.txt"
     echo. >> "QRBarcode_Release\README.txt"
-    echo For ARM/Parallels users: >> "QRBarcode_Release\README.txt"
-    echo - First try: launch_arm.bat (recommended for ARM systems) >> "QRBarcode_Release\README.txt"
-    echo - Alternative: launch_virtual.bat >> "QRBarcode_Release\README.txt"
+    echo Thank you for using QRBarcode! This document contains important information about installing, running, and maintaining your application. >> "QRBarcode_Release\README.txt"
     echo. >> "QRBarcode_Release\README.txt"
-    echo If the window doesn't appear: >> "QRBarcode_Release\README.txt"
-    echo 1. Try pressing Alt+Tab to switch windows >> "QRBarcode_Release\README.txt"
-    echo 2. Check the taskbar for hidden windows >> "QRBarcode_Release\README.txt"
-    echo 3. Try running with different launch scripts >> "QRBarcode_Release\README.txt"
-    echo 4. Make sure Visual C++ Redistributable is installed >> "QRBarcode_Release\README.txt"
+    echo Installation >> "QRBarcode_Release\README.txt"
+    echo ----------- >> "QRBarcode_Release\README.txt"
+    echo 1. Extract the ZIP file to your desired location >> "QRBarcode_Release\README.txt"
+    echo    - You can place the folder anywhere on your system >> "QRBarcode_Release\README.txt"
+    echo    - IMPORTANT: Once you run the application and create a database, DO NOT move the application folder >> "QRBarcode_Release\README.txt"
+    echo    - The database will be created in a 'databases' folder outside the application directory >> "QRBarcode_Release\README.txt"
     echo. >> "QRBarcode_Release\README.txt"
-    echo Troubleshooting: >> "QRBarcode_Release\README.txt"
-    echo - Run check_logs.ps1 for diagnostics >> "QRBarcode_Release\README.txt"
-    echo - Use run_with_log.bat for detailed logging >> "QRBarcode_Release\README.txt"
+    echo 2. First-Time Setup: >> "QRBarcode_Release\README.txt"
+    echo    - Run setup_dlls.bat as administrator ^(if you encounter any DLL-related issues^) >> "QRBarcode_Release\README.txt"
+    echo    - The script will automatically detect your system architecture and install appropriate DLLs >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo Running the Application >> "QRBarcode_Release\README.txt"
+    echo --------------------- >> "QRBarcode_Release\README.txt"
+    echo 1. Regular Systems: >> "QRBarcode_Release\README.txt"
+    echo    - Double-click qrbarcode.exe to start the application >> "QRBarcode_Release\README.txt"
+    echo    - First run will create necessary database files >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo 2. ARM Systems: >> "QRBarcode_Release\README.txt"
+    echo    - Use launch_arm.bat for optimal performance >> "QRBarcode_Release\README.txt"
+    echo    - This script includes special optimizations for ARM processors >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo Database Location >> "QRBarcode_Release\README.txt"
+    echo --------------- >> "QRBarcode_Release\README.txt"
+    echo IMPORTANT: The application creates and maintains a SQLite database in: >> "QRBarcode_Release\README.txt"
+    echo %%LOCALAPPDATA%%\QRBarcode\databases\ >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo - DO NOT move the application folder after database creation >> "QRBarcode_Release\README.txt"
+    echo - Database contains all your QR code data and settings >> "QRBarcode_Release\README.txt"
+    echo - If you need to move the application: >> "QRBarcode_Release\README.txt"
+    echo   1. Export any important data first >> "QRBarcode_Release\README.txt"
+    echo   2. Close the application >> "QRBarcode_Release\README.txt"
+    echo   3. Move the folder to the new location >> "QRBarcode_Release\README.txt"
+    echo   4. Run the application ^(it will create a new database^) >> "QRBarcode_Release\README.txt"
+    echo   5. Import your data back >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo Updates >> "QRBarcode_Release\README.txt"
+    echo ------- >> "QRBarcode_Release\README.txt"
+    echo 1. Automatic Updates: >> "QRBarcode_Release\README.txt"
+    echo    - The application will check for updates automatically >> "QRBarcode_Release\README.txt"
+    echo    - When available, an update notification will appear in the About screen >> "QRBarcode_Release\README.txt"
+    echo    - Click "Check for Updates" to manually check >> "QRBarcode_Release\README.txt"
+    echo    - Follow the prompts to download and install updates >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo 2. Manual Updates: >> "QRBarcode_Release\README.txt"
+    echo    - Download the latest version from the releases page >> "QRBarcode_Release\README.txt"
+    echo    - Extract to a new location >> "QRBarcode_Release\README.txt"
+    echo    - Copy your database from the old installation if needed >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo Troubleshooting >> "QRBarcode_Release\README.txt"
+    echo -------------- >> "QRBarcode_Release\README.txt"
+    echo 1. DLL Issues: >> "QRBarcode_Release\README.txt"
+    echo    - Run setup_dlls.bat as administrator >> "QRBarcode_Release\README.txt"
+    echo    - This script will automatically fix most DLL-related problems >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo 2. Display Issues: >> "QRBarcode_Release\README.txt"
+    echo    - For ARM systems, use launch_arm.bat >> "QRBarcode_Release\README.txt"
+    echo    - Try pressing Alt+Tab if the window doesn't appear >> "QRBarcode_Release\README.txt"
+    echo    - Check the taskbar for hidden windows >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo 3. Database Issues: >> "QRBarcode_Release\README.txt"
+    echo    - Ensure the application has write permissions to %%LOCALAPPDATA%%\QRBarcode >> "QRBarcode_Release\README.txt"
+    echo    - Do not modify the databases folder manually >> "QRBarcode_Release\README.txt"
+    echo    - Keep regular backups of important data >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo System Requirements >> "QRBarcode_Release\README.txt"
+    echo ------------------ >> "QRBarcode_Release\README.txt"
+    echo - Windows 10 or later >> "QRBarcode_Release\README.txt"
+    echo - Visual C++ Redistributable 2015-2022 >> "QRBarcode_Release\README.txt"
+    echo - Minimum 4GB RAM recommended >> "QRBarcode_Release\README.txt"
+    echo - 100MB free disk space for installation >> "QRBarcode_Release\README.txt"
+    echo - Additional space for database ^(varies with usage^) >> "QRBarcode_Release\README.txt"
+    echo. >> "QRBarcode_Release\README.txt"
+    echo Note: Keep this README file for future reference. It contains important information about your installation and troubleshooting steps. >> "QRBarcode_Release\README.txt"
 )
 
 echo.
