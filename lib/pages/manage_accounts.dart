@@ -18,12 +18,12 @@ class _ManageAccountsState extends State<ManageAccounts> {
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> filteredUsers = [];
   final TextEditingController searchController = TextEditingController();
-  int? currentUserId;  // Store the current user's ID
+  int? currentUserId; // Store the current user's ID
 
   @override
   void initState() {
     super.initState();
-    _loadCurrentUser();  // Load current user when initializing
+    _loadCurrentUser(); // Load current user when initializing
     _loadUsers();
     searchController.addListener(_filterUsers);
   }
@@ -48,7 +48,9 @@ class _ManageAccountsState extends State<ManageAccounts> {
   }
 
   Future<void> _loadUsers() async {
-    final data = await DatabaseHelper().getUsers();
+    final db = await DatabaseHelper().database;
+    final data = await db.query('users',
+        where: 'username NOT IN (?)', whereArgs: ['dev_operator']);
     setState(() {
       users = data;
       filteredUsers = data;
@@ -66,7 +68,9 @@ class _ManageAccountsState extends State<ManageAccounts> {
     final query = searchController.text.toLowerCase();
     setState(() {
       filteredUsers = users.where((user) {
-        final fullName = '${user['firstName']} ${user['middleName']} ${user['lastName']}'.toLowerCase();
+        final fullName =
+            '${user['firstName']} ${user['middleName']} ${user['lastName']}'
+                .toLowerCase();
         return fullName.contains(query);
       }).toList();
     });
@@ -76,10 +80,10 @@ class _ManageAccountsState extends State<ManageAccounts> {
     try {
       // Get the IDs of selected users
       final selectedIds = selectedUsers.toList();
-      
+
       // Get current user ID
       final currentId = await DatabaseHelper().getCurrentUserId();
-      
+
       // Safety check - don't delete if current user is in selection
       if (currentId != null && selectedIds.contains(currentId)) {
         if (mounted) {
@@ -103,7 +107,7 @@ class _ManageAccountsState extends State<ManageAccounts> {
 
       // Refresh the users list
       await _loadUsers();
-      
+
       setState(() {
         selectedUsers.clear();
         selectAll = false;
@@ -176,7 +180,8 @@ class _ManageAccountsState extends State<ManageAccounts> {
                 children: [
                   // Back Button
                   OutlinedButton(
-                    onPressed: () => Navigator.of(context).pushReplacementNamed('/account-settings'),
+                    onPressed: () => Navigator.of(context)
+                        .pushReplacementNamed('/account-settings'),
                     child: const Text('Back'),
                   ),
                   const SizedBox(height: 20),
@@ -238,8 +243,11 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                             if (selectAll) {
                                               selectedUsers.clear();
                                               for (var user in filteredUsers) {
-                                                if (user['id'] != currentUserId) {  // Don't select current user
-                                                  selectedUsers.add(user['id'] as int);
+                                                if (user['id'] !=
+                                                    currentUserId) {
+                                                  // Don't select current user
+                                                  selectedUsers
+                                                      .add(user['id'] as int);
                                                 }
                                               }
                                             } else {
@@ -264,18 +272,29 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                         cells: [
                                           DataCell(
                                             Checkbox(
-                                              value: selectedUsers.contains(user['id']),
-                                              onChanged: user['id'] == currentUserId 
-                                                  ? null  // Disable checkbox for current user
+                                              value: selectedUsers
+                                                  .contains(user['id']),
+                                              onChanged: user['id'] ==
+                                                      currentUserId
+                                                  ? null // Disable checkbox for current user
                                                   : (bool? value) {
                                                       setState(() {
                                                         if (value == true) {
-                                                          selectedUsers.add(user['id'] as int);
-                                                          if (selectedUsers.length == filteredUsers.length - 1) {  // -1 to account for current user
+                                                          selectedUsers.add(
+                                                              user['id']
+                                                                  as int);
+                                                          if (selectedUsers
+                                                                  .length ==
+                                                              filteredUsers
+                                                                      .length -
+                                                                  1) {
+                                                            // -1 to account for current user
                                                             selectAll = true;
                                                           }
                                                         } else {
-                                                          selectedUsers.remove(user['id'] as int);
+                                                          selectedUsers.remove(
+                                                              user['id']
+                                                                  as int);
                                                           selectAll = false;
                                                         }
                                                       });
@@ -293,7 +312,8 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => EditUser(user: user),
+                                                    builder: (context) =>
+                                                        EditUser(user: user),
                                                   ),
                                                 );
                                               },
@@ -322,7 +342,8 @@ class _ManageAccountsState extends State<ManageAccounts> {
                                           vertical: 16,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                       ),
                                       onPressed: _deleteSelectedUsers,
@@ -344,4 +365,4 @@ class _ManageAccountsState extends State<ManageAccounts> {
       ),
     );
   }
-} 
+}

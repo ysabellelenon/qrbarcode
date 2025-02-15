@@ -74,6 +74,9 @@ class _ScanItemState extends State<ScanItem> {
 
   final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
+  bool _isDevOperator =
+      false; // Add this variable to track if the current user is dev_operator
+
   // Add this method to convert sub-lot numbers
   String _convertSubLotNumber(String lotNumber) {
     if (!_hasSubLotRules || lotNumber.isEmpty) return lotNumber;
@@ -262,6 +265,9 @@ class _ScanItemState extends State<ScanItem> {
     if (!_preserveHistory) {
       _restorePreviousState();
     }
+
+    // Check if the current user is dev_operator
+    _checkIfDevOperator();
   }
 
   // New method to initialize counts and check status
@@ -657,10 +663,10 @@ class _ScanItemState extends State<ScanItem> {
           final parts = lotNumber.split('-');
           final mainPart = parts[0];
           final subLotPart = parts[1];
-          
+
           // Parse the sub-lot number
           int subLotNum = int.tryParse(subLotPart) ?? 0;
-          
+
           // For validation, use the converted format for numbers 10-20
           String convertedSubLot;
           if (subLotNum >= 10 && subLotNum <= 20) {
@@ -669,7 +675,8 @@ class _ScanItemState extends State<ScanItem> {
               convertedSubLot = '0';
             } else {
               // Convert to letters A-J (11=A, 12=B, etc.)
-              convertedSubLot = String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
+              convertedSubLot =
+                  String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
             }
           } else if (subLotNum < 10) {
             // For numbers less than 10, normalize by removing leading zeros
@@ -678,9 +685,9 @@ class _ScanItemState extends State<ScanItem> {
             // For numbers > 20, use as is
             convertedSubLot = subLotNum.toString();
           }
-          
+
           expectedBaseContent = baseDisplayContent;
-          
+
           print('Original lot number: $lotNumber');
           print('Sub-lot number: $subLotNum');
           print('Converted sub-lot: $convertedSubLot');
@@ -1071,21 +1078,28 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    /* Padding(
-                      padding: const EdgeInsets.only(left: 20),
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Back'),
-                      ), */
-                    const Text(
-                      'Scan Item',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C3E50),
-                      ),
+                    Row(
+                      children: [
+                        if (_isDevOperator)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 20),
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text('Back'),
+                            ),
+                          ),
+                        const SizedBox(width: 20),
+                        const Text(
+                          'Scan Item',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                      ],
                     ),
                     Row(
                       children: [
@@ -1514,6 +1528,20 @@ class _ScanItemState extends State<ScanItem> {
 
   // Add periodic state saving
   Timer? _autoSaveTimer;
+
+  // Add method to check if the current user is dev_operator
+  Future<void> _checkIfDevOperator() async {
+    try {
+      final currentUser = await DatabaseHelper().getCurrentUser();
+      if (currentUser != null && currentUser['username'] == 'dev_operator') {
+        setState(() {
+          _isDevOperator = true;
+        });
+      }
+    } catch (e) {
+      print('Error checking if current user is dev_operator: $e');
+    }
+  }
 }
 
 // Add this class at the top of the file or in a separate utilities file

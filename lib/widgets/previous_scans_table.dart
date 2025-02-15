@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../database_helper.dart';
+import '../utils/logout_helper.dart';
 
 class PreviousScansTable extends StatefulWidget {
   final String itemName;
@@ -29,11 +30,22 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
   String _searchQuery = '';
   String _sortColumn = 'created_at';
   bool _sortAscending = false;
+  bool _isDevOperator = false;
 
   @override
   void initState() {
     super.initState();
     _loadHistoricalData();
+    _checkIfDevOperator();
+  }
+
+  Future<void> _checkIfDevOperator() async {
+    final currentUser = await DatabaseHelper().getCurrentUser();
+    if (currentUser != null) {
+      setState(() {
+        _isDevOperator = currentUser['username'] == 'dev_operator';
+      });
+    }
   }
 
   Future<void> _loadHistoricalData() async {
@@ -364,12 +376,12 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                     ],
                   ),
                 ),
-                if (widget.showClearButton) ...[
+                if (widget.showClearButton && _isDevOperator) ...[
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      /* TextButton.icon(
+                      TextButton.icon(
                         onPressed: _clearScans,
                         icon:
                             const Icon(Icons.delete_forever, color: Colors.red),
@@ -377,7 +389,18 @@ class _PreviousScansTableState extends State<PreviousScansTable> {
                           'Clear All Scans (Dev Only)',
                           style: TextStyle(color: Colors.red),
                         ),
-                      ), */
+                      ),
+                      const SizedBox(width: 16),
+                      TextButton.icon(
+                        onPressed: () =>
+                            LogoutHelper.showLogoutConfirmation(context),
+                        icon:
+                            const Icon(Icons.logout, color: Colors.deepPurple),
+                        label: const Text(
+                          'Logout (Dev Only)',
+                          style: TextStyle(color: Colors.deepPurple),
+                        ),
+                      ),
                     ],
                   ),
                 ],

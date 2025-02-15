@@ -58,7 +58,7 @@ class DatabaseHelper {
       onUpgrade: (db, oldVersion, newVersion) async {
         // First ensure license_info table exists
         await _createTablesIfNotExist(db);
-        
+
         if (oldVersion < 2) {
           await _migrateToVersion2(db);
         }
@@ -426,6 +426,26 @@ class DatabaseHelper {
       print('Inserted Operator user with lineNo: Assembly');
     } else {
       print('Operator user already exists. No action taken.');
+    }
+
+    List<Map<String, dynamic>> devoperatorUser = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: ['dev_operator'],
+    );
+
+    if (devoperatorUser.isEmpty) {
+      await db.insert('users', {
+        'firstName': 'Dev Operator',
+        'lastName': 'User',
+        'username': 'dev_operator',
+        'password': 'pass123',
+        'section': 'Operations',
+        'lineNo': 'Assembly',
+      });
+      print('Inserted Dev Operator user with lineNo: Assembly');
+    } else {
+      print('Dev Operator user already exists. No action taken.');
     }
   }
 

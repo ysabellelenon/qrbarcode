@@ -195,6 +195,7 @@ class _EmergencyStopState extends State<EmergencyStop> {
               ),
               maxLines: 3,
               autofocus: true,
+              textInputAction: TextInputAction.done,
               onSubmitted: (_) async {
                 if (_remarksController.text.trim().isEmpty) {
                   setState(() {
@@ -419,11 +420,10 @@ class _EmergencyStopState extends State<EmergencyStop> {
             controller: _passwordController,
             obscureText: true,
             autofocus: true,
-            textInputAction: TextInputAction.none,
+            textInputAction: TextInputAction.done,
             keyboardType: TextInputType.text,
             enableInteractiveSelection: true,
-            onEditingComplete: null,
-            onSubmitted: null,
+            onSubmitted: (_) => _validatePassword(),
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               errorText: _errorMessage.isNotEmpty ? _errorMessage : null,
@@ -515,7 +515,8 @@ class EmergencySummary extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildCountRow('Inspection QTY', counts['inspectionQty'] ?? 0),
+                  _buildCountRow(
+                      'Inspection QTY', counts['inspectionQty'] ?? 0),
                   _buildCountRow('Good Count', counts['goodCount'] ?? 0,
                       color: Colors.green),
                   _buildCountRow('No Good Count', counts['noGoodCount'] ?? 0,
