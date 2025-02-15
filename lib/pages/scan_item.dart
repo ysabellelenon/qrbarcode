@@ -699,14 +699,29 @@ class _ScanItemState extends State<ScanItem> {
             // Validate the serial part
             String serialPart = value.substring(value.length - serialCount);
             if (serialPart.length == serialCount) {
-              // Check for duplicates
-              bool isDuplicate = _tableData.any((row) {
+              // Check for duplicates in current session
+              bool isDuplicateInSession = _tableData.any((row) {
                 if (_tableData.indexOf(row) == index ||
                     row['content']?.isEmpty == true) return false;
                 return row['content'] == value;
               });
 
-              result = isDuplicate ? 'No Good' : 'Good';
+              // Check for duplicates in historical scans
+              final historicalScans =
+                  await DatabaseHelper().getAllHistoricalScans(itemName);
+              bool isDuplicateInHistory =
+                  historicalScans.any((scan) => scan['content'] == value);
+
+              result = (isDuplicateInSession || isDuplicateInHistory)
+                  ? 'No Good'
+                  : 'Good';
+
+              if (isDuplicateInSession) {
+                print('Duplicate found in current session');
+              }
+              if (isDuplicateInHistory) {
+                print('Duplicate found in historical scans');
+              }
             }
           }
         } else {
@@ -715,14 +730,29 @@ class _ScanItemState extends State<ScanItem> {
             // Validate the serial part
             String serialPart = value.substring(value.length - serialCount);
             if (serialPart.length == serialCount) {
-              // Check for duplicates
-              bool isDuplicate = _tableData.any((row) {
+              // Check for duplicates in current session
+              bool isDuplicateInSession = _tableData.any((row) {
                 if (_tableData.indexOf(row) == index ||
                     row['content']?.isEmpty == true) return false;
                 return row['content'] == value;
               });
 
-              result = isDuplicate ? 'No Good' : 'Good';
+              // Check for duplicates in historical scans
+              final historicalScans =
+                  await DatabaseHelper().getAllHistoricalScans(itemName);
+              bool isDuplicateInHistory =
+                  historicalScans.any((scan) => scan['content'] == value);
+
+              result = (isDuplicateInSession || isDuplicateInHistory)
+                  ? 'No Good'
+                  : 'Good';
+
+              if (isDuplicateInSession) {
+                print('Duplicate found in current session');
+              }
+              if (isDuplicateInHistory) {
+                print('Duplicate found in historical scans');
+              }
             }
           }
         }
