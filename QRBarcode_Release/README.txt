@@ -71,3 +71,58 @@ If the window doesn't appear:
 Troubleshooting: 
 - Run check_logs.ps1 for diagnostics 
 - Use run_with_log.bat for detailed logging 
+- Alternative: launch_virtual.bat 
+ 
+If the window doesn't appear: 
+1. Try pressing Alt+Tab to switch windows 
+2. Check the taskbar for hidden windows 
+3. Try running with different launch scripts 
+4. Make sure Visual C++ Redistributable is installed 
+ 
+Troubleshooting: 
+- Run check_logs.ps1 for diagnostics 
+- Use run_with_log.bat for detailed logging 
+- Alternative: launch_virtual.bat 
+ 
+If the window doesn't appear: 
+1. Try pressing Alt+Tab to switch windows 
+2. Check the taskbar for hidden windows 
+3. Try running with different launch scripts 
+4. Make sure Visual C++ Redistributable is installed 
+ 
+Troubleshooting: 
+- Run check_logs.ps1 for diagnostics 
+- Use run_with_log.bat for detailed logging 
+- Alternative: launch_virtual.bat 
+ 
+If the window doesn't appear: 
+1. Try pressing Alt+Tab to switch windows 
+2. Check the taskbar for hidden windows 
+3. Try running with different launch scripts 
+4. Make sure Visual C++ Redistributable is installed 
+ 
+Troubleshooting: 
+- Run check_logs.ps1 for diagnostics 
+- Use run_with_log.bat for detailed logging 
+- Alternative: launch_virtual.bat 
+ 
+If the window doesn't appear: 
+1. Try pressing Alt+Tab to switch windows 
+2. Check the taskbar for hidden windows 
+3. Try running with different launch scripts 
+4. Make sure Visual C++ Redistributable is installed 
+ 
+Troubleshooting: 
+- Run check_logs.ps1 for diagnostics 
+- Use run_with_log.bat for detailed logging 
+- Alternative: launch_virtual.bat 
+ 
+If the window doesn't appear: 
+1. Try pressing Alt+Tab to switch windows 
+2. Check the taskbar for hidden windows 
+3. Try running with different launch scripts 
+4. Make sure Visual C++ Redistributable is installed 
+ 
+Troubleshooting: 
+- Run check_logs.ps1 for diagnostics 
+- Use run_with_log.bat for detailed logging 

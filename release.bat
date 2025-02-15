@@ -2,6 +2,10 @@
 echo Starting release build process...
 echo.
 
+:: Add force update flag at the start of the script
+set "FORCE_UPDATE="
+if "%1"=="--force" set "FORCE_UPDATE=1"
+
 :: Kill any running instances of qrbarcode
 echo Checking for running instances...
 taskkill /F /IM qrbarcode.exe /T >nul 2>&1
@@ -106,17 +110,22 @@ if not exist "%BUILD_DIR%\qrbarcode.exe" (
 echo Copying/updating core files...
 if not exist "QRBarcode_Release\qrbarcode.exe" (
     copy /Y "%BUILD_DIR%\qrbarcode.exe" "QRBarcode_Release\" >nul
-) else (
+    echo [+] Copied new qrbarcode.exe
+) else if defined FORCE_UPDATE (
     xcopy /Y /D "%BUILD_DIR%\qrbarcode.exe" "QRBarcode_Release\" >nul
+    echo [*] Updated qrbarcode.exe
 )
 
-:: Only copy DLLs if they don't exist or are newer
+:: Only copy DLLs if they don't exist or force update is specified
 for %%F in (flutter_windows.dll window_size_plugin.dll printing_plugin.dll pdfium.dll) do (
     if not exist "QRBarcode_Release\%%F" (
         copy /Y "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
         echo [+] Copied missing file: %%F
-    ) else (
+    ) else if defined FORCE_UPDATE (
         xcopy /Y /D "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
+        echo [*] Updated: %%F
+    ) else (
+        echo [=] Keeping existing: %%F
     )
 )
 
@@ -248,14 +257,20 @@ echo Creating release archive...
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
 set ARCHIVE_NAME=QRBarcode_Release_%datetime:~0,8%_%datetime:~8,2%%datetime:~10,2%
 
+:: Create QRBarcode_Release_ZIP directory if it doesn't exist
+if not exist "QRBarcode_Release_ZIP" (
+    mkdir QRBarcode_Release_ZIP
+    echo Created QRBarcode_Release_ZIP directory
+)
+
 :: Move back to root directory before creating zip
 cd ..
 
 :: Create zip file using PowerShell
-powershell -Command "& { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('QRBarcode_Release', '%ARCHIVE_NAME%.zip') }"
+powershell -Command "& { Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('QRBarcode_Release', 'QRBarcode_Release_ZIP\%ARCHIVE_NAME%.zip') }"
 
-if exist "%ARCHIVE_NAME%.zip" (
-    echo Successfully created archive: %ARCHIVE_NAME%.zip
+if exist "QRBarcode_Release_ZIP\%ARCHIVE_NAME%.zip" (
+    echo Successfully created archive: QRBarcode_Release_ZIP\%ARCHIVE_NAME%.zip
 ) else (
     echo Failed to create archive
 )
@@ -263,6 +278,6 @@ if exist "%ARCHIVE_NAME%.zip" (
 echo.
 echo Release build process completed!
 echo Your release files have been updated in the "QRBarcode_Release" directory
-echo A backup archive has been created as "%ARCHIVE_NAME%.zip"
+echo A backup archive has been created as "QRBarcode_Release_ZIP\%ARCHIVE_NAME%.zip"
 echo.
 pause 
