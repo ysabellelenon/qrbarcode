@@ -94,7 +94,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
     if (item['lastUpdated'] != null) {
       try {
         final DateTime updateTime = DateTime.parse(item['lastUpdated']);
-        lastUpdated = '${updateTime.year}-${updateTime.month.toString().padLeft(2, '0')}-${updateTime.day.toString().padLeft(2, '0')} '
+        lastUpdated =
+            '${updateTime.year}-${updateTime.month.toString().padLeft(2, '0')}-${updateTime.day.toString().padLeft(2, '0')} '
             '${updateTime.hour.toString().padLeft(2, '0')}:${updateTime.minute.toString().padLeft(2, '0')}';
       } catch (e) {
         lastUpdated = 'N/A';
@@ -238,7 +239,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                       ),
                       Expanded(
                         flex: 3,
-                        child: Text(code['content'] ?? ''),
+                        // child: Text(code['content'] ?? ''),
+                        child: Text('"${code['content'] ?? ''}"'),
                       ),
                       if (code['category'] == 'Counting')
                         Expanded(
@@ -443,7 +445,8 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                       const Expanded(child: Text('REV.')),
                                       const Expanded(child: Text('Category')),
                                       const Expanded(child: Text('Sub-Lot')),
-                                      const Expanded(child: Text('Last Updated')),
+                                      const Expanded(
+                                          child: Text('Last Updated')),
                                       const SizedBox(
                                           width: 100, child: Text('Actions')),
                                       const SizedBox(
@@ -482,7 +485,9 @@ class _ItemMasterlistState extends State<ItemMasterlist> {
                                                 BorderRadius.circular(8),
                                           ),
                                         ),
-                                        onPressed: selectedItems.isEmpty ? null : _deleteSelectedItems,
+                                        onPressed: selectedItems.isEmpty
+                                            ? null
+                                            : _deleteSelectedItems,
                                         child: const Text('Delete Selected'),
                                       ),
                                     ),

@@ -204,53 +204,83 @@ class _ReviseItemState extends State<ReviseItem> {
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _itemNameController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Item Name',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: kBorderRadiusSmallAll,
+                                  borderSide:
+                                      const BorderSide(color: kPrimaryColor),
+                                ),
                               ),
                               validator: (value) =>
                                   value!.isEmpty ? 'Required' : null,
                             ),
-                            const SizedBox(height: 24),
-
-                            DropdownButtonFormField<String>(
-                              value: _selectedRevision,
-                              decoration: const InputDecoration(
-                                labelText: 'Rev No.',
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 20),
-                              ),
-                              items: _revisionNumbers.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _selectedRevision = newValue;
-                                });
-                              },
-                              validator: (value) =>
-                                  value == null ? 'Required' : null,
-                            ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
 
                             Row(
                               children: [
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
-                                    value: _selectedCodeCount,
-                                    decoration: const InputDecoration(
-                                      labelText: 'No. of Code',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 20),
+                                    value: _selectedRevision,
+                                    decoration: InputDecoration(
+                                      labelText: 'Rev No.',
+                                      border: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: const BorderSide(
+                                            color: kPrimaryColor),
+                                      ),
                                     ),
-                                    hint: const Text('Select Number of Codes'),
+                                    items: _revisionNumbers.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        _selectedRevision = newValue;
+                                      });
+                                    },
+                                    validator: (value) =>
+                                        value == null ? 'Required' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedCodeCount,
+                                    decoration: InputDecoration(
+                                      labelText: 'No. of Code',
+                                      border: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: BorderSide(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: kBorderRadiusSmallAll,
+                                        borderSide: const BorderSide(
+                                            color: kPrimaryColor),
+                                      ),
+                                    ),
                                     items: _codeCounts.map((String value) {
                                       return DropdownMenuItem<String>(
                                         value: value,
@@ -379,9 +409,10 @@ class _ReviseItemState extends State<ReviseItem> {
       if (category == 'Counting') {
         // Navigate to ReviseSublot if the category is Counting
         print('DEBUG: Navigating to ReviseSublot with counting codes');
-        
+
         // Convert the codes to the correct format
-        final List<Map<String, dynamic>> formattedCodes = codeContainers.map((container) {
+        final List<Map<String, dynamic>> formattedCodes =
+            codeContainers.map((container) {
           return {
             'category': category,
             'content': container.labelController.text,
@@ -389,9 +420,9 @@ class _ReviseItemState extends State<ReviseItem> {
             'serialCount': container.serialCount,
           };
         }).toList();
-        
+
         print('DEBUG: Formatted codes for ReviseSublot: $formattedCodes');
-        
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -416,28 +447,30 @@ class _ReviseItemState extends State<ReviseItem> {
     try {
       print('\n=== DEBUG: ReviseItem._updateItem ===');
       final now = DateTime.now().toIso8601String();
-      
+
       // Get the category from the first code since we ensure all codes have the same category
       final category = codes.first['category'];
       print('Original item ID: ${widget.item['id']}');
       print('Original item data: ${widget.item}');
       print('New codes to be saved: $codes');
       print('Selected category: $category');
-      
+
       // Prepare the complete updated item data
       final updatedItem = {
         'itemCode': _itemNameController.text,
         'revision': _selectedRevision,
         'codeCount': codes.length.toString(),
         'category': category, // Ensure category is set from the codes
-        'codes': codes.map((code) => {
-          'category': category, // Use the same category for all codes
-          'content': code['content'],
-          'hasSubLot': code['hasSubLot'] ? 1 : 0,
-          'serialCount': code['serialCount'] ?? '0',
-          'isActive': 1,
-          'lastUpdated': now,
-        }).toList(),
+        'codes': codes
+            .map((code) => {
+                  'category': category, // Use the same category for all codes
+                  'content': code['content'],
+                  'hasSubLot': code['hasSubLot'] ? 1 : 0,
+                  'serialCount': code['serialCount'] ?? '0',
+                  'isActive': 1,
+                  'lastUpdated': now,
+                })
+            .toList(),
         'isActive': 1,
         'lastUpdated': now,
       };

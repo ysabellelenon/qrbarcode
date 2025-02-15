@@ -26,6 +26,14 @@ class _RegisterItemState extends State<RegisterItem> {
       List.generate(10, (i) => (i + 1).toString());
   final List<String> _codeCounts = List.generate(20, (i) => (i + 1).toString());
 
+  @override
+  void initState() {
+    super.initState();
+    _selectedRevision = '1';
+    _selectedCodeCount = '1';
+    _updateCodeContainers('1');
+  }
+
   void _updateCodeContainers(String? count) {
     if (count == null) return;
 
@@ -54,7 +62,8 @@ class _RegisterItemState extends State<RegisterItem> {
 
       for (var container in codeContainers) {
         String? category = selectedCategories[container.codeNumber];
-        if (category == null || (category != 'Counting' && category != 'Non-Counting')) {
+        if (category == null ||
+            (category != 'Counting' && category != 'Non-Counting')) {
           allCodesValid = false;
           break;
         }
@@ -63,7 +72,8 @@ class _RegisterItemState extends State<RegisterItem> {
       if (!allCodesValid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select "Counting" or "Non-Counting" for each code.'),
+            content: Text(
+                'Please select "Counting" or "Non-Counting" for each code.'),
           ),
         );
         return;
@@ -259,8 +269,10 @@ class _RegisterItemState extends State<RegisterItem> {
                                                 color: kPrimaryColor),
                                           ),
                                         ),
-                                        hint: const Text('Select Revision Number'),
-                                        items: _revisionNumbers.map((String value) {
+                                        hint: const Text(
+                                            'Select Revision Number'),
+                                        items: _revisionNumbers
+                                            .map((String value) {
                                           return DropdownMenuItem<String>(
                                             value: value,
                                             child: Text(value),
@@ -295,7 +307,8 @@ class _RegisterItemState extends State<RegisterItem> {
                                                 color: kPrimaryColor),
                                           ),
                                         ),
-                                        hint: const Text('Select Number of Codes'),
+                                        hint: const Text(
+                                            'Select Number of Codes'),
                                         items: _codeCounts.map((String value) {
                                           return DropdownMenuItem<String>(
                                             value: value,
