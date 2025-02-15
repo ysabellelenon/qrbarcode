@@ -403,6 +403,9 @@ class _ScanItemState extends State<ScanItem> {
         // Also prevent dismissing with back button
         onWillPop: () async => false,
         child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
@@ -867,6 +870,9 @@ class _ScanItemState extends State<ScanItem> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: kBorderRadiusSmallAll,
+          ),
           title: const Text('Alert'),
           content: const Text(
               'A "No Good" result has been recorded. Please review the issue.'),

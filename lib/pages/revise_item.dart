@@ -375,6 +375,9 @@ class _ReviseItemState extends State<ReviseItem> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: kBorderRadiusSmallAll,
+              ),
               title: const Text('Inconsistent Categories'),
               content: const Text(
                   'All codes must have the same category. Please ensure all categories are consistent before proceeding.'),

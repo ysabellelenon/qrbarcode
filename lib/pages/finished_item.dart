@@ -471,6 +471,9 @@ class _FinishedItemState extends State<FinishedItem> {
               context: context,
               builder: (BuildContext context) {
                 return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: kBorderRadiusSmallAll,
+                  ),
                   title: const Text('Error'),
                   content: Text('Failed to generate PDF: $error'),
                   actions: [
@@ -492,6 +495,9 @@ class _FinishedItemState extends State<FinishedItem> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: kBorderRadiusSmallAll,
+              ),
               title: const Text('Error'),
               content: Text('Failed to generate PDF: $e'),
               actions: [
