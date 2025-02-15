@@ -1,0 +1,27 @@
+2025-02-15 23:55:12: Starting DLL extraction process...
+2025-02-15 23:55:12: Cleaning directory: .\QRBarcode_Release_extractdll\temp_extract
+2025-02-15 23:55:12: Cleaning directory: .\QRBarcode_Release\dlls\x64
+2025-02-15 23:55:12: Cleaning directory: .\QRBarcode_Release\dlls\x86
+2025-02-15 23:55:12: Cleaning directory: .\QRBarcode_Release\dlls\arm64
+2025-02-15 23:55:12: Processing x64 redistributable...
+2025-02-15 23:55:12: Extracting from: .\QRBarcode_Release_extractdll\vc_redist\VC_redist.x64.exe
+2025-02-15 23:55:12: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x64
+2025-02-15 23:55:12: Extracting bundle with dark.exe...
+2025-02-15 23:55:16: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x64\AttachedContainer\packages\vcRuntimeAdditional_amd64\cab1.cab
+2025-02-15 23:55:16: Extracting DLLs from CAB...
+2025-02-15 23:55:16: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x64\cab_content
+2025-02-15 23:55:17: Found 14 DLLs in CAB
+2025-02-15 23:55:17: WARNING: No matching DLLs found in CAB for x64
+2025-02-15 23:55:17: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x64\AttachedContainer\packages\vcRuntimeMinimum_amd64\cab1.cab
+2025-02-15 23:55:17: Extracting DLLs from CAB...
+2025-02-15 23:55:17: Cleaning directory: .\QRBarcode_Release_extractdll\temp_extract\x64\cab_content
+2025-02-15 23:55:18: Found 12 DLLs in CAB
+2025-02-15 23:55:18: Copied and renamed 'msvcp140_codecvt_ids.dll_amd64' to 'msvcp140_codecvt_ids.dll'
+2025-02-15 23:55:18: Copied and renamed 'msvcp140.dll_amd64' to 'msvcp140.dll'
+2025-02-15 23:55:18: Copied and renamed 'msvcp140_1.dll_amd64' to 'msvcp140_1.dll'
+2025-02-15 23:55:18: Copied and renamed 'msvcp140_2.dll_amd64' to 'msvcp140_2.dll'
+2025-02-15 23:55:18: Copied and renamed 'msvcp140_atomic_wait.dll_amd64' to 'msvcp140_atomic_wait.dll'
+2025-02-15 23:55:18: Copied and renamed 'vcruntime140.dll_amd64' to 'vcruntime140.dll'
+2025-02-15 23:55:18: Copied and renamed 'vcruntime140_1.dll_amd64' to 'vcruntime140_1.dll'
+2025-02-15 23:55:18: Copied and renamed 'vcruntime140_threads.dll_amd64' to 'vcruntime140_threads.dll'
+2025-02-15 23:55:18: Successfully copied 8 DLLs for x64

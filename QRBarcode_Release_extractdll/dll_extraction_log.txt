@@ -1,0 +1,99 @@
+﻿2025-02-15 23:59:45: Starting DLL extraction process...
+2025-02-15 23:59:45: Cleaning directory: .\QRBarcode_Release_extractdll\temp_extract
+2025-02-15 23:59:45: Cleaning directory: .\QRBarcode_Release\dlls\x64
+2025-02-15 23:59:45: Cleaning directory: .\QRBarcode_Release\dlls\x86
+2025-02-15 23:59:45: Cleaning directory: .\QRBarcode_Release\dlls\arm64
+2025-02-15 23:59:45: Processing x64 redistributable...
+2025-02-15 23:59:45: Extracting from: .\QRBarcode_Release_extractdll\vc_redist\VC_redist.x64.exe
+2025-02-15 23:59:45: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x64
+2025-02-15 23:59:45: Extracting bundle with dark.exe...
+2025-02-15 23:59:49: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x64\AttachedContainer\packages\vcRuntimeAdditional_amd64\cab1.cab
+2025-02-15 23:59:49: Extracting DLLs from CAB...
+2025-02-15 23:59:49: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x64\cab_content
+2025-02-15 23:59:50: Found 14 DLLs in CAB
+2025-02-15 23:59:50: WARNING: No matching DLLs found in CAB for x64
+2025-02-15 23:59:50: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x64\AttachedContainer\packages\vcRuntimeMinimum_amd64\cab1.cab
+2025-02-15 23:59:50: Extracting DLLs from CAB...
+2025-02-15 23:59:50: Cleaning directory: .\QRBarcode_Release_extractdll\temp_extract\x64\cab_content
+2025-02-15 23:59:51: Found 12 DLLs in CAB
+2025-02-15 23:59:51: Copied and renamed 'msvcp140_codecvt_ids.dll_amd64' to 'msvcp140_codecvt_ids.dll'
+2025-02-15 23:59:51: Copied and renamed 'msvcp140.dll_amd64' to 'msvcp140.dll'
+2025-02-15 23:59:51: Copied and renamed 'msvcp140_1.dll_amd64' to 'msvcp140_1.dll'
+2025-02-15 23:59:51: Copied and renamed 'msvcp140_2.dll_amd64' to 'msvcp140_2.dll'
+2025-02-15 23:59:51: Copied and renamed 'msvcp140_atomic_wait.dll_amd64' to 'msvcp140_atomic_wait.dll'
+2025-02-15 23:59:51: Copied and renamed 'vcruntime140.dll_amd64' to 'vcruntime140.dll'
+2025-02-15 23:59:51: Copied and renamed 'vcruntime140_1.dll_amd64' to 'vcruntime140_1.dll'
+2025-02-15 23:59:51: Copied and renamed 'vcruntime140_threads.dll_amd64' to 'vcruntime140_threads.dll'
+2025-02-15 23:59:51: Successfully copied 8 DLLs for x64
+2025-02-15 23:59:51: Processing x86 redistributable...
+2025-02-15 23:59:51: Extracting from: .\QRBarcode_Release_extractdll\vc_redist\VC_redist.x86.exe
+2025-02-15 23:59:51: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x86
+2025-02-15 23:59:51: Extracting bundle with dark.exe...
+2025-02-15 23:59:52: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x86\AttachedContainer\packages\vcRuntimeAdditional_x86\cab1.cab
+2025-02-15 23:59:52: Extracting DLLs from CAB...
+2025-02-15 23:59:52: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\x86\cab_content
+2025-02-15 23:59:53: Found 14 DLLs in CAB
+2025-02-15 23:59:53: WARNING: No matching DLLs found in CAB for x86
+2025-02-15 23:59:53: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\x86\AttachedContainer\packages\vcRuntimeMinimum_x86\cab1.cab
+2025-02-15 23:59:53: Extracting DLLs from CAB...
+2025-02-15 23:59:53: Cleaning directory: .\QRBarcode_Release_extractdll\temp_extract\x86\cab_content
+2025-02-15 23:59:54: Found 11 DLLs in CAB
+2025-02-15 23:59:54: Copied and renamed 'msvcp140_codecvt_ids.dll_x86' to 'msvcp140_codecvt_ids.dll'
+2025-02-15 23:59:54: Copied and renamed 'msvcp140.dll_x86' to 'msvcp140.dll'
+2025-02-15 23:59:54: Copied and renamed 'msvcp140_1.dll_x86' to 'msvcp140_1.dll'
+2025-02-15 23:59:54: Copied and renamed 'msvcp140_2.dll_x86' to 'msvcp140_2.dll'
+2025-02-15 23:59:54: Copied and renamed 'msvcp140_atomic_wait.dll_x86' to 'msvcp140_atomic_wait.dll'
+2025-02-15 23:59:54: Copied and renamed 'vcruntime140.dll_x86' to 'vcruntime140.dll'
+2025-02-15 23:59:54: Copied and renamed 'vcruntime140_threads.dll_x86' to 'vcruntime140_threads.dll'
+2025-02-15 23:59:54: Successfully copied 7 DLLs for x86
+2025-02-15 23:59:54: Processing arm64 redistributable...
+2025-02-15 23:59:54: Extracting from: .\QRBarcode_Release_extractdll\vc_redist\VC_redist.arm64.exe
+2025-02-15 23:59:54: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\arm64
+2025-02-15 23:59:54: Extracting bundle with dark.exe...
+2025-02-15 23:59:55: Found CAB file: C:\Users\rickylenon\PROJECTX\qrbarcode\QRBarcode_Release_extractdll\temp_extract\arm64\AttachedContainer\packages\VC_Runtime_arm64\cab1.cab
+2025-02-15 23:59:55: Extracting DLLs from CAB...
+2025-02-15 23:59:55: Creating directory: .\QRBarcode_Release_extractdll\temp_extract\arm64\cab_content
+2025-02-15 23:59:56: Found 28 DLLs in CAB
+2025-02-15 23:59:56: Copied and renamed 'msvcp140_codecvt_ids.dll_arm64' to 'msvcp140_codecvt_ids.dll'
+2025-02-15 23:59:56: Copied and renamed 'msvcp140.dll_arm64' to 'msvcp140.dll'
+2025-02-15 23:59:56: Copied and renamed 'msvcp140_1.dll_arm64' to 'msvcp140_1.dll'
+2025-02-15 23:59:56: Copied and renamed 'msvcp140_2.dll_arm64' to 'msvcp140_2.dll'
+2025-02-15 23:59:56: Copied and renamed 'msvcp140_atomic_wait.dll_arm64' to 'msvcp140_atomic_wait.dll'
+2025-02-15 23:59:56: Copied and renamed 'vcruntime140.dll_arm64' to 'vcruntime140.dll'
+2025-02-15 23:59:56: Copied and renamed 'vcruntime140_1.dll_arm64' to 'vcruntime140_1.dll'
+2025-02-15 23:59:57: Copied and renamed 'vcruntime140_threads.dll_arm64' to 'vcruntime140_threads.dll'
+2025-02-15 23:59:57: Successfully copied 8 DLLs for arm64
+2025-02-15 23:59:57: Cleaned up temporary directory
+2025-02-15 23:59:57: 
+Final DLL Count by Architecture:
+2025-02-15 23:59:57: x64 : 8 DLLs
+2025-02-15 23:59:57: Files in x64 directory:
+2025-02-15 23:59:57:   - msvcp140.dll
+2025-02-15 23:59:57:   - msvcp140_1.dll
+2025-02-15 23:59:57:   - msvcp140_2.dll
+2025-02-15 23:59:57:   - msvcp140_atomic_wait.dll
+2025-02-15 23:59:57:   - msvcp140_codecvt_ids.dll
+2025-02-15 23:59:57:   - vcruntime140.dll
+2025-02-15 23:59:57:   - vcruntime140_1.dll
+2025-02-15 23:59:57:   - vcruntime140_threads.dll
+2025-02-15 23:59:57: x86 : 7 DLLs
+2025-02-15 23:59:57: Files in x86 directory:
+2025-02-15 23:59:57:   - msvcp140.dll
+2025-02-15 23:59:57:   - msvcp140_1.dll
+2025-02-15 23:59:57:   - msvcp140_2.dll
+2025-02-15 23:59:57:   - msvcp140_atomic_wait.dll
+2025-02-15 23:59:57:   - msvcp140_codecvt_ids.dll
+2025-02-15 23:59:57:   - vcruntime140.dll
+2025-02-15 23:59:57:   - vcruntime140_threads.dll
+2025-02-15 23:59:57: arm64 : 8 DLLs
+2025-02-15 23:59:57: Files in arm64 directory:
+2025-02-15 23:59:57:   - msvcp140.dll
+2025-02-15 23:59:57:   - msvcp140_1.dll
+2025-02-15 23:59:57:   - msvcp140_2.dll
+2025-02-15 23:59:57:   - msvcp140_atomic_wait.dll
+2025-02-15 23:59:57:   - msvcp140_codecvt_ids.dll
+2025-02-15 23:59:57:   - vcruntime140.dll
+2025-02-15 23:59:57:   - vcruntime140_1.dll
+2025-02-15 23:59:57:   - vcruntime140_threads.dll
+2025-02-15 23:59:57: 
+Extraction process completed successfully!

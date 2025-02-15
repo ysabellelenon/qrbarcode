@@ -6,11 +6,29 @@ publish_to: 'none'
 
 # The following defines the version and build number for your application.
 # Version format is: major.minor.patch+buildnumber
-# - Major: Breaking changes
-# - Minor: New features, no breaking changes
-# - Patch: Bug fixes and minor updates
+# 
+# Version number components:
+# - Major (first number): Breaking changes
+#   * Incremented for incompatible API changes
+#   * Requires users to modify existing code
+#   * Resets minor and patch to 0 when incremented
+#
+# - Minor (second number): New features, no breaking changes
+#   * Incremented when adding new functionality
+#   * Must be backward-compatible
+#   * Resets patch to 0 when incremented
+#
+# - Patch (third number): Bug fixes and minor updates
+#   * Incremented for backward-compatible bug fixes
+#   * Performance improvements
+#   * No new features added
+#
 # - Build number: Increments with each release
-version: 0.1.0+1  # Initial development version
+#   * Simple increment for each build
+#   * Used for internal tracking and debugging
+#   * Example: 1.1.1+42 is the 42nd build of version 1.1.1
+# 
+version: 0.1.1  # Incremental update for testing
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -43,6 +61,7 @@ dependencies:
   shared_preferences: ^2.2.2
   file_picker: ^6.1.1
   package_info_plus: ^5.0.1
+  http: ^1.1.0
 
 # The following adds the Cupertino Icons font to your application.
 # Use with the CupertinoIcons class for iOS style icons.
@@ -101,4 +120,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   assets:
-    - assets/images/jae-logo.jpg
+    - assets/images/jae-logo.png

@@ -148,29 +148,32 @@ if exist "QRBarcode_Release\data" (
 )
 xcopy /E /I /Y "%BUILD_DIR%\data" "QRBarcode_Release\data\"
 
-:: Ensure Visual C++ Runtime DLLs are present (ARM64 versions if needed)
-echo Checking Visual C++ Runtime DLLs...
+:: Ensure Visual C++ Runtime DLLs are present
+echo Copying Visual C++ Runtime DLLs...
 wmic computersystem get manufacturer | findstr /i "Parallels" >nul
 if not errorlevel 1 (
-    :: ARM64 DLLs - only copy if missing
-    if exist "C:\Windows\System32\arm64\MSVCP140.dll" (
-        for %%F in (MSVCP140.dll VCRUNTIME140.dll VCRUNTIME140_1.dll) do (
-            if not exist "QRBarcode_Release\%%F" (
-                copy /Y "C:\Windows\System32\arm64\%%F" "QRBarcode_Release\" >nul
-                echo [+] Copied missing ARM64 DLL: %%F
-            )
-        )
+    :: ARM64 build - copy ARM64 DLLs
+    echo Copying ARM64 Visual C++ Runtime DLLs...
+    xcopy /Y /I "QRBarcode_Release\dlls\arm64\*.dll" "QRBarcode_Release\" >nul
+    if errorlevel 1 (
+        echo ERROR: Failed to copy ARM64 DLLs
+        echo Please ensure DLLs are extracted using extract_dlls.ps1
+        pause
+        exit /b 1
     ) else (
-        echo WARNING: ARM64 Visual C++ Runtime DLLs not found
-        echo Please install the ARM64 Visual C++ Redistributable
+        echo [+] Copied ARM64 Visual C++ Runtime DLLs
     )
 ) else (
-    :: x64 DLLs - only copy if missing
-    for %%F in (MSVCP140.dll VCRUNTIME140.dll VCRUNTIME140_1.dll) do (
-        if not exist "QRBarcode_Release\%%F" (
-            copy /Y "C:\Windows\System32\%%F" "QRBarcode_Release\" >nul
-            echo [+] Copied missing x64 DLL: %%F
-        )
+    :: x64 build - copy x64 DLLs
+    echo Copying x64 Visual C++ Runtime DLLs...
+    xcopy /Y /I "QRBarcode_Release\dlls\x64\*.dll" "QRBarcode_Release\" >nul
+    if errorlevel 1 (
+        echo ERROR: Failed to copy x64 DLLs
+        echo Please ensure DLLs are extracted using extract_dlls.ps1
+        pause
+        exit /b 1
+    ) else (
+        echo [+] Copied x64 Visual C++ Runtime DLLs
     )
 )
 
