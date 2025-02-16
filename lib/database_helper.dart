@@ -241,6 +241,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS license_info(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         license_key TEXT NOT NULL UNIQUE,
+        hardware_id TEXT,
         activated_at TEXT NOT NULL
       )
     ''');
@@ -1362,5 +1363,66 @@ class DatabaseHelper {
       where: 'sessionId = ? AND groupNumber = ? AND content = ?',
       whereArgs: [sessionId, groupNumber, content],
     );
+  }
+
+  // License-related methods
+  Future<bool> saveLicense(String licenseKey, String? hardwareId) async {
+    try {
+      final db = await database;
+      await db.insert(
+        'license_info',
+        {
+          'license_key': licenseKey,
+          'hardware_id': hardwareId,
+          'activated_at': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return true;
+    } catch (e) {
+      print('Error saving license: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getLicense() async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> result = await db.query(
+        'license_info',
+        orderBy: 'activated_at DESC',
+        limit: 1,
+      );
+      return result.isNotEmpty ? result.first : null;
+    } catch (e) {
+      print('Error getting license: $e');
+      return null;
+    }
+  }
+
+  Future<bool> clearLicense() async {
+    try {
+      final db = await database;
+      await db.delete('license_info');
+      return true;
+    } catch (e) {
+      print('Error clearing license: $e');
+      return false;
+    }
+  }
+
+  Future<bool> isLicenseValid(String licenseKey) async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> result = await db.query(
+        'license_info',
+        where: 'license_key = ?',
+        whereArgs: [licenseKey],
+      );
+      return result.isNotEmpty;
+    } catch (e) {
+      print('Error checking license validity: $e');
+      return false;
+    }
   }
 }

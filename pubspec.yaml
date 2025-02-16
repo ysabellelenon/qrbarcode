@@ -56,12 +56,15 @@ dependencies:
       path: plugins/window_size
   # License system dependencies
   gsheets: ^0.5.0
-  crypto: ^3.0.6
   system_info2: ^4.0.0
   shared_preferences: ^2.2.2
   file_picker: ^6.1.1
   package_info_plus: ^5.0.1
   http: ^1.1.0
+  firebase_core: ^2.24.2
+  cloud_firestore: ^4.14.0
+  device_info_plus: ^9.1.1  # For hardware fingerprinting
+  crypto: ^3.0.6  # For hashing device info
 
 # The following adds the Cupertino Icons font to your application.
 # Use with the CupertinoIcons class for iOS style icons.
