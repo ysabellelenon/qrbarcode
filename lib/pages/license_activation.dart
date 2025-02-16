@@ -36,7 +36,9 @@ class _LicenseActivationPageState extends State<LicenseActivationPage> {
       final packageInfo = await PackageInfo.fromPlatform();
 
       setState(() {
-        _version = 'v$currentVersion (${packageInfo.buildNumber})';
+        _version = packageInfo.buildNumber.isNotEmpty 
+            ? 'v$currentVersion (${packageInfo.buildNumber})'
+            : 'v$currentVersion';
         _appName = "JAE QR Barcode System";
       });
     } catch (e) {
