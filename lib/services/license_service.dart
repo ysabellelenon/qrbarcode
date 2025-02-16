@@ -69,9 +69,9 @@ class LicenseService {
 
       // First check if it's already activated locally
       try {
-        if (await _checkLocalLicense(licenseKey)) {
-          print('✅ License already activated locally');
-          return true;
+      if (await _checkLocalLicense(licenseKey)) {
+        print('✅ License already activated locally');
+        return true;
         }
       } catch (e) {
         print('⚠️ Error checking local license: $e');
@@ -104,7 +104,7 @@ class LicenseService {
   Future<bool> activateLicense(String licenseKey) async {
     try {
       print('🔑 Starting license activation for key: $licenseKey');
-      
+
       if (licenseKey.isEmpty) {
         print('❌ Cannot activate empty license key');
         return false;
@@ -146,7 +146,7 @@ class LicenseService {
       // If we got here, the license is activated in Firestore
       // Try to save locally, but don't fail if it doesn't work
       try {
-        await saveLicenseLocally(licenseKey);
+      await saveLicenseLocally(licenseKey);
         print('✅ License saved locally');
       } catch (e) {
         // If we fail to save locally, log it but still return true
