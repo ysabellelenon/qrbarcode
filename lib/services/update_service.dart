@@ -15,7 +15,7 @@ class UpdateService {
   static const String LOG_FILE = 'update_service.log';
   
   // TODO: Replace with your GitHub repository URL
-  static const String GITHUB_API_URL = 'https://api.github.com/repos/ysabellelenon/qrbarcode/releases/latest';
+  static const String GITHUB_API_URL = 'https://api.github.com/repos/rickylenon/qrbarcode-releases/releases/latest';
   static const String APP_NAME = 'qrbarcode';
 
   Future<void> _log(String message) async {
