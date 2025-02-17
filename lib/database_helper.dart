@@ -25,20 +25,21 @@ class DatabaseHelper {
     final String localAppData = Platform.isWindows
         ? Platform.environment['LOCALAPPDATA']!
         : (await getApplicationDocumentsDirectory()).path;
-    
-    final Directory dbDirectory = Directory(join(localAppData, 'QRBarcode', 'databases'));
+
+    final Directory dbDirectory =
+        Directory(join(localAppData, 'QRBarcode', 'databases'));
     if (!await dbDirectory.exists()) {
       await dbDirectory.create(recursive: true);
     }
 
-    final String path = join(dbDirectory.path, 'users.db');
+    final String path = join(dbDirectory.path, 'qrbarcode.db');
     print('Database path: $path');
 
     bool shouldCopy = !await File(path).exists();
 
     if (shouldCopy) {
       try {
-        ByteData data = await rootBundle.load('assets/databases/users.db');
+        ByteData data = await rootBundle.load('assets/databases/qrbarcode.db');
         List<int> bytes = data.buffer.asUint8List();
         await File(path).writeAsBytes(bytes, flush: true);
         print('Database copied from assets successfully');
@@ -705,7 +706,8 @@ class DatabaseHelper {
   Future<String> getDatabasePath() async {
     final Directory documentsDirectory =
         await getApplicationDocumentsDirectory();
-    final String path = join(documentsDirectory.path, 'databases', 'users.db');
+    final String path =
+        join(documentsDirectory.path, 'databases', 'qrbarcode.db');
     return path;
   }
 
