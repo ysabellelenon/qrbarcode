@@ -159,3 +159,59 @@ If you encounter any DLL-related issues:
 2. This script will automatically detect your system architecture 
 3. It will install the appropriate Visual C++ Runtime DLLs 
  
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
+ 
+DLL Setup 
+========= 
+If you encounter any DLL-related issues: 
+1. Run setup_dlls.bat as administrator 
+2. This script will automatically detect your system architecture 
+3. It will install the appropriate Visual C++ Runtime DLLs 
+ 
