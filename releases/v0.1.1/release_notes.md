@@ -1,10 +1,42 @@
 # QRBarcode v0.1.1 
  
 ## Release Information 
-Release Date: Sun 02/16/2025 
+Release Date: Mon 02/17/2025 
 Build Version: 0.1.1 
  
 ## What's New 
+
+Initial release of the QR Barcode System, featuring:
+
+- **User Authentication**
+  - Role-based access for Engineers and Operators
+  - Secure login with employee ID and password
+  - Session management with logout functionality
+
+- **Item Management**
+  - Comprehensive item registration and configuration
+  - Support for both Counting and Non-Counting items
+  - Revision control and item history tracking
+  - Sub-lot number configuration for Counting items
+
+- **QR/Barcode Scanning**
+  - Real-time validation of scanned codes
+  - Support for serial number tracking
+  - Group-based scanning with automatic counting
+  - Good/No Good tracking with quantity management
+  - Box-wise quantity tracking
+  - Emergency stop functionality with authentication
+
+- **Local Database**
+  - Offline-first architecture with SQLite
+  - Secure data storage and management
+  - Built-in backup and recovery options
+
+- **User Interface**
+  - Modern, responsive Windows desktop interface
+  - Clear navigation and status indicators
+  - Real-time feedback for scanning operations
+  - Comprehensive data tables and progress tracking
  
 ## System Requirements 
  
@@ -20,5 +52,5 @@ Build Version: 0.1.1
 ## SHA-256 Checksum 
  
 ```plaintext 
-0C6677F0E361937FB00B1E9A050221BA3BE847E5A6DC49918C42E7BB658B8EDB  qrbarcode-windows-v0.1.1.zip
+DA9D34C9F00438557BF1C6F2609AC045DD1EDF2AB0D886060C8A56961FECA235  qrbarcode-windows-v0.1.1.zip
 ``` 
