@@ -19,7 +19,7 @@ class _NewAccountState extends State<NewAccount> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  String _selectedCategory = '';
+  String _selectedCategory = 'Assembly';
 
   @override
   void dispose() {
@@ -247,10 +247,6 @@ class _NewAccountState extends State<NewAccount> {
                                                 labelText: 'Username',
                                                 border: OutlineInputBorder(),
                                               ),
-                                              keyboardType: TextInputType.number,
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter.digitsOnly,
-                                              ],
                                               validator: (value) => value!.isEmpty ? 'Required' : null,
                                             ),
                                             const SizedBox(height: 16),

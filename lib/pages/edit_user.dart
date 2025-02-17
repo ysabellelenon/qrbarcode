@@ -38,7 +38,7 @@ class _EditUserState extends State<EditUser> {
     _usernameController = TextEditingController(text: widget.user['username']);
     _passwordController = TextEditingController(text: widget.user['password']);
     _confirmPasswordController = TextEditingController(text: widget.user['password']);
-    _selectedCategory = widget.user['lineNo'];
+    _selectedCategory = widget.user['lineNo'].isEmpty ? 'Assembly' : widget.user['lineNo'];
     print('DEBUG: Initializing EditUser with user data: ${widget.user}');
     _checkCurrentUser();
   }
@@ -270,10 +270,6 @@ class _EditUserState extends State<EditUser> {
                                               labelText: 'Username',
                                               border: OutlineInputBorder(),
                                             ),
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter.digitsOnly,
-                                            ],
                                             validator: (value) => value!.isEmpty ? 'Required' : null,
                                           ),
                                           const SizedBox(height: 16),
