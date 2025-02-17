@@ -24,53 +24,107 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: kBorderRadiusSmallAll,
       ),
-      title: Text('Update Available'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('A new version (${widget.updateInfo['latestVersion']}) is available.'),
-          const SizedBox(height: 8),
-          Text('Current version: ${widget.updateInfo['currentVersion']}'),
-          const SizedBox(height: 16),
-          if (widget.updateInfo['releaseNotes'] != null) ...[
-            Text('What\'s new:'),
-            Container(
-              height: 100,
-              width: 300,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
+      child: ConstrainedBox(
+        constraints: kDialogConstraintsMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              const Text(
+                'Update Available',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              child: SingleChildScrollView(
-                child: Text(widget.updateInfo['releaseNotes']),
+              const SizedBox(height: 24),
+              
+              // Version information
+              Text('A new version (${widget.updateInfo['latestVersion']}) is available.'),
+              const SizedBox(height: 8),
+              Text('Current version: ${widget.updateInfo['currentVersion']}'),
+              const SizedBox(height: 24),
+              
+              // Release notes
+              if (widget.updateInfo['releaseNotes'] != null) ...[
+                const Text(
+                  'What\'s new:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: kBorderRadiusSmallAll,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: kBorderRadiusSmallAll,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(widget.updateInfo['releaseNotes']),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              
+              // Update status
+              if (_isUpdating) ...[
+                const SizedBox(height: 16),
+                LinearProgressIndicator(
+                  borderRadius: kBorderRadiusSmallAll,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _status,
+                  style: TextStyle(
+                    color: _status.toLowerCase().contains('error')
+                        ? Colors.red
+                        : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+              
+              // Action buttons
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: const Text('Later'),
+                  ),
+                  const SizedBox(width: 8),
+                  if (!_isUpdating)
+                    ElevatedButton(
+                      onPressed: _handleUpdate,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: kBorderRadiusSmallAll,
+                        ),
+                      ),
+                      child: const Text('Update Now'),
+                    ),
+                ],
               ),
-            ),
-          ],
-          if (_isUpdating) ...[
-            const SizedBox(height: 16),
-            const LinearProgressIndicator(),
-            const SizedBox(height: 8),
-            Text(_status),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text('Later'),
-        ),
-        if (!_isUpdating)
-          ElevatedButton(
-            onPressed: _handleUpdate,
-            child: Text('Update Now'),
+            ],
           ),
-      ],
+        ),
+      ),
     );
   }
 

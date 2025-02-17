@@ -117,7 +117,14 @@ if not exist "QRBarcode_Release\qrbarcode.exe" (
 )
 
 :: Only copy DLLs if they don't exist or force update is specified
-for %%F in (flutter_windows.dll window_size_plugin.dll printing_plugin.dll pdfium.dll) do (
+for %%F in (
+    flutter_windows.dll 
+    window_size_plugin.dll 
+    printing_plugin.dll 
+    pdfium.dll 
+    screen_retriever_plugin.dll 
+    window_manager_plugin.dll
+) do (
     if not exist "QRBarcode_Release\%%F" (
         copy /Y "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
         echo [+] Copied missing file: %%F

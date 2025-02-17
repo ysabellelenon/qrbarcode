@@ -1,18 +1,10 @@
 # QRBarcode v0.1.2 
  
 ## Release Information 
-Release Date: Mon 02/17/2025 
+Release Date: Tue 02/18/2025 
 Build Version: 0.1.2 
  
 ## What's New 
-
-This is a test release to verify the application update functionality. No functional changes are included.
-
-- **Test Release**
-  - Verifying automatic update detection
-  - Testing update download process
-  - Validating version comparison
-  - Ensuring smooth transition from v0.1.1
  
 ## System Requirements 
  
@@ -28,5 +20,5 @@ This is a test release to verify the application update functionality. No functi
 ## SHA-256 Checksum 
  
 ```plaintext 
-8A33EAC4D0638ED92F4D16A1A7EFBD395E6EDA8923BAF33DA25E0DC34AC0EB0C  qrbarcode-windows-v0.1.2.zip
+C05D9F9051EE866ABBBEA01354788B8F1B79C4B2A3E0A7DF7117E0AFEC3BCEF2  qrbarcode-windows-v0.1.2.zip
 ``` 
