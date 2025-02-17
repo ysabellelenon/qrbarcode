@@ -1059,7 +1059,7 @@ class _ScanItemState extends State<ScanItem> {
                       print(
                           "Mouse is connected - proceeding with emergency stop");
                       // Add a small delay to prevent accidental triggers
-                      Future.delayed(const Duration(milliseconds: 100), () {
+                      Future.delayed(const Duration(milliseconds: 100), () async {
                         if (mounted) {
                           // Calculate progress info
                           final int currentQty =
@@ -1068,6 +1068,9 @@ class _ScanItemState extends State<ScanItem> {
                                   widget.scanData?['qtyPerBox'] ?? '0') ??
                               0;
                           final bool isIncomplete = currentQty < targetQty;
+                          
+                          // Get current username
+                          final username = await _getCurrentUsername();
 
                           showDialog(
                             context: context,
@@ -1084,7 +1087,7 @@ class _ScanItemState extends State<ScanItem> {
                                   .map(
                                       (item) => Map<String, dynamic>.from(item))
                                   .toList(),
-                              username: 'operator',
+                              username: username,
                               isIncomplete: isIncomplete,
                               targetQty: targetQty,
                             ),
@@ -1577,6 +1580,11 @@ class _ScanItemState extends State<ScanItem> {
     } catch (e) {
       print('Error checking if current user is dev_operator: $e');
     }
+  }
+
+  Future<String> _getCurrentUsername() async {
+    final currentUser = await DatabaseHelper().getCurrentUser();
+    return currentUser?['username'] ?? 'operator';
   }
 }
 
