@@ -1,5 +1,40 @@
 @echo off
+:: ==========================================================
+:: QRBarcode Release Creation Script
+:: ==========================================================
+:: Usage:
+::   create_release.bat [flags]
+::
+:: Flags:
+::   --clean     : Force clean build (removes build files and triggers pub get)
+::   --pub-get   : Force flutter pub get (update dependencies)
+::   --force     : Force update release files
+::
+:: Examples:
+::   create_release.bat              : Normal build (fastest)
+::   create_release.bat --clean      : Clean build
+::   create_release.bat --pub-get    : Update dependencies only
+::   create_release.bat --force      : Force update release files
+::   create_release.bat --clean --force : Clean build and force update
+::
+:: Notes:
+::   - By default, clean and pub get are skipped for faster builds
+::   - pub get runs automatically if pubspec.yaml was modified
+::   - --clean flag automatically triggers pub get
+:: ==========================================================
+
 setlocal enabledelayedexpansion
+
+:: Parse flags
+set "FLAGS="
+:parse_args
+if "%1"=="" goto end_parse
+if "%1"=="--clean" set "FLAGS=!FLAGS! --clean"
+if "%1"=="--pub-get" set "FLAGS=!FLAGS! --pub-get"
+if "%1"=="--force" set "FLAGS=!FLAGS! --force"
+shift
+goto parse_args
+:end_parse
 
 :: Get version from pubspec.yaml and clean it
 for /f "tokens=2 delims=: " %%a in ('findstr /C:"version:" pubspec.yaml') do (
@@ -11,8 +46,8 @@ for /f "tokens=2 delims=: " %%a in ('findstr /C:"version:" pubspec.yaml') do (
 
 echo Creating release for version %version%...
 
-:: First run the existing release build
-call release.bat
+:: First run the existing release build with any passed flags
+call release.bat%FLAGS%
 if errorlevel 1 (
     echo Error during build. Aborting release creation.
     exit /b 1

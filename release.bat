@@ -1,10 +1,39 @@
 @echo off
+:: ==========================================================
+:: QRBarcode Release Build Script
+:: ==========================================================
+:: Usage:
+::   release.bat [flags]
+::
+:: Flags:
+::   --clean     : Force clean build (removes build files and triggers pub get)
+::   --pub-get   : Force flutter pub get (update dependencies)
+::   --force     : Force update release files
+::
+:: Notes:
+::   - This script is typically called by create_release.bat
+::   - Can be run directly for testing build process
+::   - By default, clean and pub get are skipped for faster builds
+::   - pub get runs automatically if pubspec.yaml was modified
+::   - --clean flag automatically triggers pub get
+:: ==========================================================
+
 echo Starting release build process...
 echo.
 
-:: Add force update flag at the start of the script
+:: Add flags at the start of the script
 set "FORCE_UPDATE="
+set "DO_CLEAN="
+set "DO_PUB_GET="
+
+:parse_args
+if "%1"=="" goto end_parse
 if "%1"=="--force" set "FORCE_UPDATE=1"
+if "%1"=="--clean" set "DO_CLEAN=1"
+if "%1"=="--pub-get" set "DO_PUB_GET=1"
+shift
+goto parse_args
+:end_parse
 
 :: Kill any running instances of qrbarcode
 echo Checking for running instances...
@@ -16,21 +45,45 @@ if errorlevel 1 (
 )
 timeout /t 2 /nobreak >nul
 
-echo Cleaning build directory...
-call flutter clean
-if errorlevel 1 (
-    echo Error during clean. Press any key to exit.
-    pause
-    exit /b 1
+:: Only clean if --clean flag is provided
+if defined DO_CLEAN (
+    echo Cleaning build directory...
+    call flutter clean
+    if errorlevel 1 (
+        echo Error during clean. Press any key to exit.
+        pause
+        exit /b 1
+    )
+    :: Force pub get after clean
+    set "DO_PUB_GET=1"
+) else (
+    echo Skipping clean ^(use --clean to force clean^)
 )
 
-echo.
-echo Getting dependencies...
-call flutter pub get
-if errorlevel 1 (
-    echo Error getting dependencies. Press any key to exit.
-    pause
-    exit /b 1
+:: Check if pub get is needed
+set "NEED_PUB_GET="
+if defined DO_PUB_GET (
+    set "NEED_PUB_GET=1"
+) else if exist ".dart_tool\package_config.json" (
+    :: Check if pubspec.yaml is newer than package_config.json
+    for /f %%i in ('dir /b /o:d ".dart_tool\package_config.json" "pubspec.yaml" ^| find "pubspec.yaml"') do (
+        set "NEED_PUB_GET=1"
+        echo Detected changes in pubspec.yaml, will run pub get
+    )
+)
+
+:: Run pub get only if needed
+if defined NEED_PUB_GET (
+    echo.
+    echo Getting dependencies...
+    call flutter pub get
+    if errorlevel 1 (
+        echo Error getting dependencies. Press any key to exit.
+        pause
+        exit /b 1
+    )
+) else (
+    echo Skipping pub get ^(use --pub-get to force pub get^)
 )
 
 echo.
