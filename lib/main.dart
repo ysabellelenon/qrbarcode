@@ -18,73 +18,97 @@ import 'pages/license_activation.dart';
 import 'database_helper.dart';
 import 'services/license_service.dart';
 import 'dart:io';
+import 'services/log_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize window_manager
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    await windowManager.ensureInitialized();
+  // Initialize LogService first
+  final logService = await LogService.getInstance();
+  
+  // Run the entire app within the logging zone
+  await logService.runWithLogs(() async {
+    WidgetsFlutterBinding.ensureInitialized();
     
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 720),
-      minimumSize: Size(1280, 720),
-      center: true,
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.normal,
-    );
-    
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-  }
+    print('Application starting...');
 
-  // Set window size for desktop platforms
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    setWindowTitle('QR Barcode System');
-    getCurrentScreen().then((screen) {
-      if (screen != null) {
-        final screenFrame = screen.frame;
-        final workArea = screen.visibleFrame;  // This accounts for taskbar
-        
-        setWindowMinSize(const Size(1280, 720));
-        if (Platform.isMacOS) {
-          setWindowMaxSize(const Size(1440, 900));
-        } else {
-          setWindowMaxSize(Size(workArea.width, workArea.height));
+    // Set up error handling
+    FlutterError.onError = (FlutterErrorDetails details) async {
+      print('Flutter Error: ${details.exception}\n${details.stack}');
+      FlutterError.presentError(details);
+    };
+
+    // Handle uncaught errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      print('Uncaught Error: $error\n$stack');
+      return true;
+    };
+
+    // Initialize window_manager
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      print('Initializing window manager...');
+      await windowManager.ensureInitialized();
+      
+      WindowOptions windowOptions = const WindowOptions(
+        size: Size(1280, 720),
+        minimumSize: Size(1280, 720),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        titleBarStyle: TitleBarStyle.normal,
+      );
+      
+      await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+      print('Window manager initialized');
+    }
+
+    // Set window size for desktop platforms
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      setWindowTitle('QR Barcode System');
+      getCurrentScreen().then((screen) {
+        if (screen != null) {
+          final screenFrame = screen.frame;
+          final workArea = screen.visibleFrame;
+          
+          setWindowMinSize(const Size(1280, 720));
+          if (Platform.isMacOS) {
+            setWindowMaxSize(const Size(1440, 900));
+          } else {
+            setWindowMaxSize(Size(workArea.width, workArea.height));
+          }
+          
+          setWindowFrame(Rect.fromLTWH(
+            workArea.left,
+            workArea.top,
+            workArea.width,
+            workArea.height,
+          ));
         }
-        
-        // Use workArea instead of screenFrame to respect taskbar space
-        setWindowFrame(Rect.fromLTWH(
-          workArea.left,
-          workArea.top,
-          workArea.width,
-          workArea.height,
-        ));
-      }
-    });
-  }
+      });
+    }
 
-  // Initialize sqflite_common_ffi for desktop platforms
-  if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+    // Initialize sqflite_common_ffi for desktop platforms
+    if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
 
-  try {
-    // Initialize database
-    final db = await DatabaseHelper().database;
-    print('Database initialized successfully');
+    try {
+      // Initialize database
+      final db = await DatabaseHelper().database;
+      print('Database initialized successfully');
 
-    // Print database path and contents
-    await DbPathPrinter.printPath();
-  } catch (e) {
-    print('Error initializing database: $e');
-  }
+      // Print database path and contents
+      await DbPathPrinter.printPath();
+    } catch (e, stack) {
+      print('Error initializing database: $e\n$stack');
+    }
 
-  runApp(const MyApp());
+    runApp(const MyApp());
+  });
 }
 
 class MyApp extends StatefulWidget {

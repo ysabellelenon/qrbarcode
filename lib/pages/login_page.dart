@@ -95,7 +95,7 @@ class _LoginPageState extends State<LoginPage> {
           username,
           password,
         );
-        print('DEBUG: Login result user: $user');
+        print('DEBUG: Login result username: ${user?['username']}');
 
         if (user != null) {
           // Store the current user ID
@@ -104,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
 
           // Verify the current user was set
           final currentUser = await DatabaseHelper().getCurrentUser();
-          print('DEBUG: Verified current user after setting: $currentUser');
+          print('DEBUG: Verified current user username after setting: ${currentUser?['username']}');
 
           if (mounted) {
             setState(() {
