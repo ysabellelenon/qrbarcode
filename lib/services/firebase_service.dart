@@ -32,7 +32,7 @@ class FirebaseService {
 
     try {
       print('🔄 Initializing Firebase Service...');
-      
+
       // Check if Firebase is already initialized
       if (Firebase.apps.isEmpty) {
         print('🔄 Initializing Firebase Core...');
@@ -44,8 +44,8 @@ class FirebaseService {
         print('ℹ️ Firebase Core already initialized');
       }
 
-      // Configure Firestore settings for Windows
-      final settings = Platform.isWindows
+      // Configure Firestore settings for Windows and macOS
+      final settings = Platform.isWindows || Platform.isMacOS
           ? const Settings(
               persistenceEnabled: false,
               cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
@@ -54,8 +54,9 @@ class FirebaseService {
 
       _firestore = FirebaseFirestore.instance;
       _firestore.settings = settings;
-      
-      print('✅ Firestore configured with persistence ${Platform.isWindows ? 'disabled' : 'enabled'}');
+
+      print(
+          '✅ Firestore configured with persistence ${Platform.isWindows || Platform.isMacOS ? 'disabled' : 'enabled'}');
       _isInitialized = true;
       print('✅ Firebase Service initialized');
     } catch (e, stackTrace) {
@@ -70,18 +71,30 @@ class FirebaseService {
   Future<String> getHardwareId() async {
     try {
       print('🔄 Getting hardware ID...');
-      final windowsInfo = await _deviceInfo.windowsInfo;
-      
-      // Combine multiple hardware identifiers
-      final rawId = '${windowsInfo.computerName}'
-          '${windowsInfo.numberOfCores}'
-          '${windowsInfo.systemMemoryInMegabytes}'
-          '${windowsInfo.userName}';
-      
+      String rawId;
+
+      if (Platform.isWindows) {
+        final windowsInfo = await _deviceInfo.windowsInfo;
+        rawId = '${windowsInfo.computerName}'
+            '${windowsInfo.numberOfCores}'
+            '${windowsInfo.systemMemoryInMegabytes}'
+            '${windowsInfo.userName}';
+      } else if (Platform.isMacOS) {
+        final macOsInfo = await _deviceInfo.macOsInfo;
+        rawId = '${macOsInfo.computerName}'
+            '${macOsInfo.arch}'
+            '${macOsInfo.model}'
+            '${macOsInfo.systemGUID ?? ''}'
+            '${macOsInfo.kernelVersion}';
+      } else {
+        throw UnsupportedError(
+            'Platform ${Platform.operatingSystem} is not supported');
+      }
+
       // Create a SHA-256 hash of the hardware info
       final bytes = utf8.encode(rawId);
       final digest = sha256.convert(bytes);
-      
+
       final hardwareId = digest.toString();
       print('✅ Hardware ID generated: ${hardwareId.substring(0, 8)}...');
       return hardwareId;
@@ -101,14 +114,14 @@ class FirebaseService {
     try {
       print('🔄 Starting test write...');
       final hardwareId = await getHardwareId();
-      
+
       final docRef = await _firestore.collection('test').add({
         'hardware_id': hardwareId,
         'timestamp': FieldValue.serverTimestamp(),
         'message': 'Test write from Windows app',
         'app_version': '0.1.1',
       });
-      
+
       print('✅ Test write successful. Document ID: ${docRef.id}');
     } catch (e) {
       print('❌ Error writing to Firebase: $e');
@@ -150,7 +163,7 @@ class FirebaseService {
 
     try {
       print('🔄 Validating license: $licenseKey');
-      
+
       // Get the license document from Firestore
       final docSnapshot = await _firestore
           .collection(_licensesCollection)
@@ -191,7 +204,7 @@ class FirebaseService {
     String? hardwareId;
     try {
       print('🔄 Starting activation for license: $licenseKey');
-      
+
       // Step 1: Get hardware ID
       try {
         hardwareId = await getHardwareId();
@@ -204,7 +217,7 @@ class FirebaseService {
       // Step 2: Get document reference
       print('📄 Getting document reference...');
       final docRef = _firestore.collection(_licensesCollection).doc(licenseKey);
-      
+
       // Step 3: Get document snapshot outside transaction
       print('📄 Checking document...');
       final docSnapshot = await docRef.get();
@@ -225,29 +238,27 @@ class FirebaseService {
         'hardware_id': hardwareId,
         'activation_date': FieldValue.serverTimestamp(),
       });
-      
+
       print('✅ License activation successful');
       return true;
     } catch (e, stackTrace) {
       print('❌ Error during license activation:');
       print('Error: $e');
       print('Stack trace: $stackTrace');
-      
+
       // Try to rollback if possible
       if (hardwareId != null) {
         try {
           print('🔄 Attempting to rollback changes...');
-          final docRef = _firestore.collection(_licensesCollection).doc(licenseKey);
-          await docRef.update({
-            'hardware_id': null,
-            'activation_date': null
-          });
+          final docRef =
+              _firestore.collection(_licensesCollection).doc(licenseKey);
+          await docRef.update({'hardware_id': null, 'activation_date': null});
           print('✅ Rollback successful');
         } catch (rollbackError) {
           print('⚠️ Rollback failed: $rollbackError');
         }
       }
-      
+
       return false;
     }
   }
@@ -272,9 +283,10 @@ class FirebaseService {
     try {
       print('\n📄 DEBUG: Listing all licenses in Firestore');
       print('----------------------------------------');
-      
-      final querySnapshot = await _firestore.collection(_licensesCollection).get();
-      
+
+      final querySnapshot =
+          await _firestore.collection(_licensesCollection).get();
+
       if (querySnapshot.docs.isEmpty) {
         print('No licenses found in collection: $_licensesCollection');
         return;
@@ -289,4 +301,4 @@ class FirebaseService {
       print('❌ Error listing licenses: $e');
     }
   }
-} 
+}
