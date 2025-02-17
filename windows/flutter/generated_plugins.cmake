@@ -6,6 +6,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
   firebase_core
   printing
+  screen_retriever
+  window_manager
   window_size
 )
 

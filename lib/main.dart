@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Import sqflite_common_ffi
 import 'package:flutter/foundation.dart';
 import 'package:window_size/window_size.dart';
+import 'package:window_manager/window_manager.dart';  // Add this import
 import 'utils/db_path_printer.dart';
 import 'pages/login_page.dart';
 import 'pages/engineer_login.dart';
@@ -21,26 +22,46 @@ import 'dart:io';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize window_manager
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    await windowManager.ensureInitialized();
+    
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(1280, 720),
+      minimumSize: Size(1280, 720),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   // Set window size for desktop platforms
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     setWindowTitle('QR Barcode System');
     getCurrentScreen().then((screen) {
       if (screen != null) {
         final screenFrame = screen.frame;
-        // Set minimum size to 720p and use screen size directly
-        // setWindowMinSize(const Size(1280, 720));
+        final workArea = screen.visibleFrame;  // This accounts for taskbar
+        
         setWindowMinSize(const Size(1280, 720));
         if (Platform.isMacOS) {
           setWindowMaxSize(const Size(1440, 900));
         } else {
-          setWindowMaxSize(screenFrame.size);
+          setWindowMaxSize(Size(workArea.width, workArea.height));
         }
-        // Set to screen size directly
+        
+        // Use workArea instead of screenFrame to respect taskbar space
         setWindowFrame(Rect.fromLTWH(
-          screenFrame.left,
-          screenFrame.top,
-          screenFrame.width,
-          screenFrame.height,
+          workArea.left,
+          workArea.top,
+          workArea.width,
+          workArea.height,
         ));
       }
     });
