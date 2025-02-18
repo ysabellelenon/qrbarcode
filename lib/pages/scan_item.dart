@@ -512,7 +512,6 @@ class _ScanItemState extends State<ScanItem> {
     }
 
     List<DataRow> allRows = [];
-    int lastGroupNumber = 0;
 
     // Process each session's data separately
     sessionGroups.forEach((sessionId, sessionData) {
@@ -527,15 +526,11 @@ class _ScanItemState extends State<ScanItem> {
 
         // Show group number only for first scan in each group within this session
         bool isFirstInGroup = i % codesInGroup == 0;
-        int groupNumber = (i ~/ codesInGroup) + 1;
-
-        if (isFirstInGroup) {
-          lastGroupNumber = groupNumber;
-        }
 
         allRows.add(DataRow(
           cells: [
-            DataCell(Text(isFirstInGroup ? groupNumber.toString() : '')),
+            DataCell(Text(
+                isFirstInGroup ? data['groupNumber']?.toString() ?? '' : '')),
             DataCell(
               Text(data['content'] ?? ''), // Show completed scans as text
             ),
@@ -553,52 +548,55 @@ class _ScanItemState extends State<ScanItem> {
       }
     });
 
-    // Add single empty row for next scan
-    allRows.add(DataRow(
-      cells: [
-        DataCell(Text((lastGroupNumber + 1).toString())),
-        DataCell(
-          TextField(
-            controller: TextEditingController(),
-            focusNode: _ensureFocusNode(allRows.length),
-            enabled: !_isTotalQtyReached,
-            autofocus: true, // Automatically focus the input field
-            onChanged: (value) {
-              _scanBuffer = value;
-            },
-            onSubmitted: (value) {
-              if (value.isNotEmpty && !_isTotalQtyReached) {
-                Future.delayed(const Duration(milliseconds: 50), () {
-                  if (mounted) {
-                    final completeValue = _scanBuffer;
-                    _validateContent(completeValue, allRows.length - 1);
-                    _scanBuffer = '';
-                  }
-                });
-              }
-            },
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: kBorderRadiusNoneAll,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: kBorderRadiusNoneAll,
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: kBorderRadiusNoneAll,
-                borderSide: const BorderSide(color: Colors.blue),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
+    // Add single empty row for next scan if not reached total QTY
+    if (!_isTotalQtyReached) {
+      allRows.add(DataRow(
+        cells: [
+          DataCell(
+              Text('')), // Group number will be assigned when scan is validated
+          DataCell(
+            TextField(
+              controller: TextEditingController(),
+              focusNode: _ensureFocusNode(allRows.length),
+              enabled: !_isTotalQtyReached,
+              autofocus: true,
+              onChanged: (value) {
+                _scanBuffer = value;
+              },
+              onSubmitted: (value) {
+                if (value.isNotEmpty && !_isTotalQtyReached) {
+                  Future.delayed(const Duration(milliseconds: 50), () {
+                    if (mounted) {
+                      final completeValue = _scanBuffer;
+                      _validateContent(completeValue, allRows.length - 1);
+                      _scanBuffer = '';
+                    }
+                  });
+                }
+              },
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: kBorderRadiusNoneAll,
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ),
-        ),
-        const DataCell(Text('')),
-      ],
-    ));
+          const DataCell(Text('')),
+        ],
+      ));
+    }
 
     return allRows;
   }
@@ -767,6 +765,19 @@ class _ScanItemState extends State<ScanItem> {
       }
     }
 
+    // Get the highest group number for this item and PO combination
+    print('\n=== Getting Last Group Number ===');
+    final db = await DatabaseHelper();
+    final queryResult = await (await db.database).rawQuery('''
+      SELECT MAX(s.groupNumber) as maxGroup
+      FROM scanning_sessions ss
+      JOIN individual_scans s ON s.sessionId = ss.id
+      WHERE ss.itemName = ? AND ss.poNo = ?
+    ''', [itemName, poNo]);
+
+    final highestGroupNumber = queryResult.first['maxGroup'] as int? ?? 0;
+    print('Highest existing group number: $highestGroupNumber');
+
     // Calculate group information for current session
     final currentSessionScans = _tableData
         .where((row) =>
@@ -775,9 +786,18 @@ class _ScanItemState extends State<ScanItem> {
 
     // Calculate current group based only on scans from this session
     int previousCompletedGroups = currentSessionScans.length ~/ codeCount;
-    int currentGroup = previousCompletedGroups + 1;
+    int currentGroup;
 
-    // Get position within current group (0-based)
+    // If starting a new group
+    if (currentSessionScans.length % codeCount == 0) {
+      currentGroup = highestGroupNumber + 1;
+      print('Starting new group: $currentGroup');
+    } else {
+      // Continue current group
+      currentGroup = highestGroupNumber;
+      print('Continuing current group: $currentGroup');
+    }
+
     int positionInGroup = currentSessionScans.length % codeCount;
 
     // Create scan data
@@ -1059,7 +1079,8 @@ class _ScanItemState extends State<ScanItem> {
                       print(
                           "Mouse is connected - proceeding with emergency stop");
                       // Add a small delay to prevent accidental triggers
-                      Future.delayed(const Duration(milliseconds: 100), () async {
+                      Future.delayed(const Duration(milliseconds: 100),
+                          () async {
                         if (mounted) {
                           // Calculate progress info
                           final int currentQty =
@@ -1068,7 +1089,7 @@ class _ScanItemState extends State<ScanItem> {
                                   widget.scanData?['qtyPerBox'] ?? '0') ??
                               0;
                           final bool isIncomplete = currentQty < targetQty;
-                          
+
                           // Get current username
                           final username = await _getCurrentUsername();
 
