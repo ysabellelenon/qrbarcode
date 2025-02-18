@@ -28,7 +28,7 @@ publish_to: 'none'
 #   * Used for internal tracking and debugging
 #   * Example: 1.1.1+42 is the 42nd build of version 1.1.1
 # 
-version: 0.1.1  # Incremental update for testing
+version: 0.1.2  # Incremental update for testing
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
