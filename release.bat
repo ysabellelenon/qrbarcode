@@ -172,11 +172,6 @@ if not exist "QRBarcode_Release\qrbarcode.exe" (
 :: Only copy DLLs if they don't exist or force update is specified
 for %%F in (
     flutter_windows.dll 
-    window_size_plugin.dll 
-    printing_plugin.dll 
-    pdfium.dll 
-    screen_retriever_plugin.dll 
-    window_manager_plugin.dll
 ) do (
     if not exist "QRBarcode_Release\%%F" (
         copy /Y "%BUILD_DIR%\%%F" "QRBarcode_Release\" >nul
@@ -215,16 +210,6 @@ if not exist "QRBarcode_Release\dlls\x64" mkdir "QRBarcode_Release\dlls\x64"
 if not exist "QRBarcode_Release\dlls\x86" mkdir "QRBarcode_Release\dlls\x86"
 if not exist "QRBarcode_Release\dlls\arm64" mkdir "QRBarcode_Release\dlls\arm64"
 
-:: Move existing DLLs to architecture-specific folders
-echo Moving DLLs to architecture folders...
-:: x64 DLLs
-for %%F in (msvcp140.dll vcruntime140.dll vcruntime140_1.dll) do (
-    if exist "QRBarcode_Release\%%F" (
-        move /Y "QRBarcode_Release\%%F" "QRBarcode_Release\dlls\x64\" >nul
-        echo [+] Moved %%F to x64 folder
-    )
-)
-
 :: Copy setup_dlls.bat
 echo Adding DLL setup script...
 copy /Y "setup_dlls.bat" "QRBarcode_Release\" >nul
@@ -247,35 +232,6 @@ echo 1. Run setup_dlls.bat as administrator >> "QRBarcode_Release\README.txt"
 echo 2. This script will automatically detect your system architecture >> "QRBarcode_Release\README.txt"
 echo 3. It will install the appropriate Visual C++ Runtime DLLs >> "QRBarcode_Release\README.txt"
 echo. >> "QRBarcode_Release\README.txt"
-
-:: Ensure Visual C++ Runtime DLLs are present
-echo Copying Visual C++ Runtime DLLs...
-wmic os get caption | findstr "ARM" >nul
-if not errorlevel 1 (
-    :: ARM64 build - copy ARM64 DLLs
-    echo Copying ARM64 Visual C++ Runtime DLLs...
-    xcopy /Y /I "QRBarcode_Release\dlls\arm64\*.dll" "QRBarcode_Release\" >nul
-    if errorlevel 1 (
-        echo ERROR: Failed to copy ARM64 DLLs
-        echo Please ensure DLLs are extracted using extract_dlls.ps1
-        pause
-        exit /b 1
-    ) else (
-        echo [+] Copied ARM64 Visual C++ Runtime DLLs
-    )
-) else (
-    :: x64 build - copy x64 DLLs
-    echo Copying x64 Visual C++ Runtime DLLs...
-    xcopy /Y /I "QRBarcode_Release\dlls\x64\*.dll" "QRBarcode_Release\" >nul
-    if errorlevel 1 (
-        echo ERROR: Failed to copy x64 DLLs
-        echo Please ensure DLLs are extracted using extract_dlls.ps1
-        pause
-        exit /b 1
-    ) else (
-        echo [+] Copied x64 Visual C++ Runtime DLLs
-    )
-)
 
 :: Ensure launch scripts are present and updated
 echo Updating launch scripts...
