@@ -55,6 +55,10 @@ class _ScanItemState extends State<ScanItem> {
   // Add new field to store pending scans
   final List<Map<String, dynamic>> _pendingScans = [];
 
+  // Add this variable at the top of the class with other variables
+  Timer? _scanDebounceTimer;
+  static const _scanDebounceTime = Duration(milliseconds: 100);
+
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
   String get poNo =>
@@ -554,8 +558,7 @@ class _ScanItemState extends State<ScanItem> {
     if (!_isTotalQtyReached) {
       allRows.add(DataRow(
         cells: [
-          DataCell(
-              Text('')), // Group number will be assigned when scan is validated
+          DataCell(Text('')),
           DataCell(
             TextField(
               controller: TextEditingController(),
@@ -563,19 +566,23 @@ class _ScanItemState extends State<ScanItem> {
               enabled: !_isTotalQtyReached,
               autofocus: true,
               onChanged: (value) {
+                // Cancel any existing timer
+                _scanDebounceTimer?.cancel();
                 _scanBuffer = value;
+
+                // Start a new timer
+                _scanDebounceTimer = Timer(_scanDebounceTime, () {
+                  if (mounted && value.isNotEmpty && !_isTotalQtyReached) {
+                    final completeValue = _scanBuffer;
+                    print('\n=== Processing Scan ===');
+                    print('Scan value: $completeValue');
+                    print('Scan buffer length: ${_scanBuffer.length}');
+                    _validateContent(completeValue, allRows.length - 1);
+                    _scanBuffer = '';
+                  }
+                });
               },
-              onSubmitted: (value) {
-                if (value.isNotEmpty && !_isTotalQtyReached) {
-                  Future.delayed(const Duration(milliseconds: 50), () {
-                    if (mounted) {
-                      final completeValue = _scanBuffer;
-                      _validateContent(completeValue, allRows.length - 1);
-                      _scanBuffer = '';
-                    }
-                  });
-                }
-              },
+              // Remove onSubmitted handler since we're using debounce timer
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: kBorderRadiusNoneAll,
@@ -912,6 +919,7 @@ class _ScanItemState extends State<ScanItem> {
 
   @override
   void dispose() {
+    _scanDebounceTimer?.cancel();
     _debounceTimer?.cancel();
     // Clean up focus nodes and controllers
     for (var node in _focusNodes) {
