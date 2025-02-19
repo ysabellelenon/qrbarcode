@@ -261,115 +261,104 @@ The following methods provide consistent group-based counting across all parts o
 ```
 Group Counting Implementation:
 
-1. Group-Based Quantity Calculation:
+1. Sequential Group Processing:
    ```dart
-   Future<Map<String, int>> calculateGroupBasedCounts({
-     required List<Map<String, dynamic>> scans,
-     required int codesPerGroup
-   }) async {
-     // Group the scans by session and group number
-     Map<String, Map<int, List<Map<String, dynamic>>>> groupedScans = {};
-     
-     // Process all scans with results
-     for (var scan in scans.where((item) => item['result']?.isNotEmpty == true)) {
-       String sessionId = scan['sessionId']?.toString() ?? '';
-       int groupNum = scan['groupNumber'] ?? 1;
-       
-       groupedScans[sessionId] = groupedScans[sessionId] ?? {};
-       groupedScans[sessionId]![groupNum] = groupedScans[sessionId]![groupNum] ?? [];
-       groupedScans[sessionId]![groupNum]!.add(scan);
-     }
-     
-     // Count completed groups
-     int totalGoodGroups = 0;
-     int totalNoGoodGroups = 0;
-     int totalCompletedGroups = 0;
-     
-     // Process each session's groups
-     groupedScans.forEach((sessionId, groups) {
-       groups.forEach((groupNum, scans) {
-         if (scans.length == codesPerGroup) {  // Only count completed groups
-           totalCompletedGroups++;
-           bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-           if (isGroupGood) {
-             totalGoodGroups++;
-           } else {
-             totalNoGoodGroups++;
-           }
+   // Process scans sequentially to form groups
+   void processGroups(List<Map<String, dynamic>> scans, int codesPerGroup) {
+     // Get all scans for current session with results
+     final currentSessionScans = scans
+         .where((item) => 
+             item['result']?.isNotEmpty == true && 
+             item['sessionId'] == currentSessionId)
+         .toList();
+
+     // Count completed good groups
+     int completedGoodGroups = 0;
+     for (int i = 0; i < currentSessionScans.length; i += codesPerGroup) {
+       // Check if we have enough scans remaining for a complete group
+       if (i + codesPerGroup <= currentSessionScans.length) {
+         // Get the scans for this group
+         final groupScans = currentSessionScans.sublist(i, i + codesPerGroup);
+         // Check if all scans in the group are good
+         if (groupScans.every((scan) => scan['result'] == 'Good')) {
+           completedGoodGroups++;
          }
-       });
-     });
-     
-     return {
-       'inspectionQty': totalCompletedGroups,
-       'goodCount': totalGoodGroups,
-       'noGoodCount': totalNoGoodGroups
-     };
+       }
+     }
    }
    ```
 
-2. Usage Examples:
-   ```dart
-   // In scan_item.dart
-   Future<void> _updateTotalCounts() async {
-     final items = await DatabaseHelper().getItems();
-     final matchingItem = items.firstWhere(
-       (item) => item['itemCode'] == itemName,
-       orElse: () => {},
-     );
-     int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
-     
-     final counts = await calculateGroupBasedCounts(
-       scans: _tableData,
-       codesPerGroup: codesPerGroup
-     );
-     
-     setState(() {
-       goodCountController.text = counts['goodCount'].toString();
-       noGoodCountController.text = counts['noGoodCount'].toString();
-       inspectionQtyController.text = counts['inspectionQty'].toString();
-     });
-   }
-   
-   // In emergency_stop.dart
-   Future<void> _loadCounts() async {
-     final counts = await calculateGroupBasedCounts(
-       scans: _scannedData,
-       codesPerGroup: codesPerGroup
-     );
-     
-     setState(() {
-       _counts = counts;
-     });
-   }
-   ```
+2. Key Principles:
+   a. Group Formation:
+      - Groups are formed sequentially as scans are completed
+      - Each group must have exactly codesPerGroup number of scans
+      - Groups are session-specific and never merge across sessions
+      - Incomplete groups remain pending until all scans are completed
 
-3. Key Features:
-   - Session-aware grouping
-   - Handles incomplete groups
-   - Consistent counting rules:
-     * Groups must be complete
-     * All scans good = Good group
-     * Any scan no-good = No-good group
-   - Real-time calculation
-   - Reusable across components
+   b. Group Status Rules:
+      - A group is only counted as "Good" when:
+        * It has exactly codesPerGroup number of scans
+        * ALL scans in the group have "Good" status
+      - A group is counted as "No Good" when:
+        * It has exactly codesPerGroup number of scans
+        * ANY scan in the group has "No Good" status
+      - Incomplete groups are not counted in any totals
 
-4. Implementation Notes:
+   c. Counting Rules:
+      - QTY per box counts ONLY completed good groups
+      - Each group counts as ONE unit regardless of number of scans
+      - Groups are counted sequentially within each session
+      - Historical groups maintain their original status
+
+3. Implementation Details:
    a. Required Data Structure:
-      - Each scan must have:
-        * sessionId
-        * groupNumber
-        * result (Good/No Good)
-   
-   b. Performance Considerations:
-      - Groups scans first to minimize iterations
-      - Only processes scans with results
-      - Maintains O(n) complexity
-   
-   c. Error Handling:
-      - Handles missing sessionId/groupNumber
-      - Validates codesPerGroup
-      - Graceful handling of incomplete data
+      ```dart
+      {
+        'content': String,        // Scanned content
+        'result': String,         // 'Good' or 'No Good'
+        'sessionId': String,      // Current session identifier
+        'timestamp': DateTime,    // Scan timestamp
+        'isLocked': bool         // Prevents modification
+      }
+      ```
+
+   b. Group Tracking:
+      - Groups are formed based on scan sequence
+      - No explicit group numbers stored
+      - Position in sequence determines group membership
+      - Each session starts fresh sequence
+
+   c. Display Rules:
+      - Show group number only for first scan in group
+      - Empty group number for subsequent scans
+      - Clear visual separation between groups
+      - Maintain session boundaries in display
+
+4. Session Management:
+   a. Session Boundaries:
+      - Each box represents a new session
+      - Sessions never merge or overlap
+      - Group counting restarts with each session
+      - Historical data preserved across sessions
+
+   b. Cross-Session Counting:
+      - Total inspection quantity accumulates across sessions
+      - Good/No Good counts aggregate all sessions
+      - QTY per box tracks only current session
+      - Previous scans show all historical data
+
+5. Database Considerations:
+   a. Storage Requirements:
+      - Store individual scans with timestamps
+      - Maintain session relationships
+      - Preserve scan sequence
+      - Track completion status
+
+   b. Query Optimization:
+      - Group by session first
+      - Order by timestamp within session
+      - Calculate groups based on sequence
+      - Aggregate counts across sessions
 ```
 
 ### 4. Individual Item Scanning
