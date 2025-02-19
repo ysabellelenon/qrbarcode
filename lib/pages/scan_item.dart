@@ -330,28 +330,30 @@ class _ScanItemState extends State<ScanItem> {
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
       print('Codes per group: $codesPerGroup');
 
-      // Group the scans by session and group number for current session only
-      Map<int, List<Map<String, dynamic>>> currentSessionGroups = {};
+      // Get all scans for current session with results
+      final currentSessionScans = _tableData
+          .where((item) =>
+              item['result']?.isNotEmpty == true &&
+              item['sessionId'] == _sessionId)
+          .toList();
 
-      for (var scan in _tableData.where((item) =>
-          item['result']?.isNotEmpty == true &&
-          item['sessionId'] == _sessionId)) {
-        int groupNum = scan['groupNumber'] ?? 1;
-        currentSessionGroups[groupNum] = currentSessionGroups[groupNum] ?? [];
-        currentSessionGroups[groupNum]!.add(scan);
-      }
+      print('Current session scans count: ${currentSessionScans.length}');
 
       // Count completed good groups in current session
       int completedGoodGroups = 0;
-      currentSessionGroups.forEach((groupNum, scans) {
-        if (scans.length == codesPerGroup) {
-          // Only count completed groups
-          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
-          if (isGroupGood) {
+      for (int i = 0; i < currentSessionScans.length; i += codesPerGroup) {
+        // Check if we have enough scans remaining for a complete group
+        if (i + codesPerGroup <= currentSessionScans.length) {
+          // Get the scans for this group
+          final groupScans = currentSessionScans.sublist(i, i + codesPerGroup);
+          // Check if all scans in the group are good
+          if (groupScans.every((scan) => scan['result'] == 'Good')) {
             completedGoodGroups++;
+            print(
+                'Found completed good group ${completedGoodGroups} at index $i');
           }
         }
-      });
+      }
 
       print('Completed good groups in current session: $completedGoodGroups');
 
