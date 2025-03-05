@@ -55,9 +55,9 @@ class _ScanItemState extends State<ScanItem> {
   // Add new field to store pending scans
   final List<Map<String, dynamic>> _pendingScans = [];
 
-  // Add this variable at the top of the class with other variables
-  Timer? _scanDebounceTimer;
-  static const _scanDebounceTime = Duration(milliseconds: 100);
+  // Add this variable at the top with other state variables
+  bool _isProcessingScan = false;
+  String? _processingMessage;
 
   String get itemName =>
       widget.scanData?['itemName'] ?? widget.resumeData?['itemName'] ?? '';
@@ -77,9 +77,6 @@ class _ScanItemState extends State<ScanItem> {
       widget.resumeData?['totalQty'] ?? widget.scanData?['totalQty'] ?? 0;
 
   final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-
-  bool _isDevOperator =
-      false; // Add this variable to track if the current user is dev_operator
 
   // Add this method to convert sub-lot numbers
   String _convertSubLotNumber(String lotNumber) {
@@ -269,9 +266,6 @@ class _ScanItemState extends State<ScanItem> {
     if (!_preserveHistory) {
       _restorePreviousState();
     }
-
-    // Check if the current user is dev_operator
-    _checkIfDevOperator();
   }
 
   // New method to initialize counts and check status
@@ -334,30 +328,28 @@ class _ScanItemState extends State<ScanItem> {
       int codesPerGroup = int.parse(matchingItem['codeCount'] ?? '1');
       print('Codes per group: $codesPerGroup');
 
-      // Get all scans for current session with results
-      final currentSessionScans = _tableData
-          .where((item) =>
-              item['result']?.isNotEmpty == true &&
-              item['sessionId'] == _sessionId)
-          .toList();
+      // Group the scans by session and group number for current session only
+      Map<int, List<Map<String, dynamic>>> currentSessionGroups = {};
 
-      print('Current session scans count: ${currentSessionScans.length}');
+      for (var scan in _tableData.where((item) =>
+          item['result']?.isNotEmpty == true &&
+          item['sessionId'] == _sessionId)) {
+        int groupNum = scan['groupNumber'] ?? 1;
+        currentSessionGroups[groupNum] = currentSessionGroups[groupNum] ?? [];
+        currentSessionGroups[groupNum]!.add(scan);
+      }
 
       // Count completed good groups in current session
       int completedGoodGroups = 0;
-      for (int i = 0; i < currentSessionScans.length; i += codesPerGroup) {
-        // Check if we have enough scans remaining for a complete group
-        if (i + codesPerGroup <= currentSessionScans.length) {
-          // Get the scans for this group
-          final groupScans = currentSessionScans.sublist(i, i + codesPerGroup);
-          // Check if all scans in the group are good
-          if (groupScans.every((scan) => scan['result'] == 'Good')) {
+      currentSessionGroups.forEach((groupNum, scans) {
+        if (scans.length == codesPerGroup) {
+          // Only count completed groups
+          bool isGroupGood = scans.every((scan) => scan['result'] == 'Good');
+          if (isGroupGood) {
             completedGoodGroups++;
-            print(
-                'Found completed good group ${completedGoodGroups} at index $i');
           }
         }
-      }
+      });
 
       print('Completed good groups in current session: $completedGoodGroups');
 
@@ -409,9 +401,6 @@ class _ScanItemState extends State<ScanItem> {
         // Also prevent dismissing with back button
         onWillPop: () async => false,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
           title: const Text('Information'),
           content: const Text('QTY per box has been reached'),
           actions: [
@@ -518,6 +507,7 @@ class _ScanItemState extends State<ScanItem> {
     }
 
     List<DataRow> allRows = [];
+    int lastGroupNumber = 0;
 
     // Process each session's data separately
     sessionGroups.forEach((sessionId, sessionData) {
@@ -532,11 +522,15 @@ class _ScanItemState extends State<ScanItem> {
 
         // Show group number only for first scan in each group within this session
         bool isFirstInGroup = i % codesInGroup == 0;
+        int groupNumber = (i ~/ codesInGroup) + 1;
+
+        if (isFirstInGroup) {
+          lastGroupNumber = groupNumber;
+        }
 
         allRows.add(DataRow(
           cells: [
-            DataCell(Text(
-                isFirstInGroup ? data['groupNumber']?.toString() ?? '' : '')),
+            DataCell(Text(isFirstInGroup ? groupNumber.toString() : '')),
             DataCell(
               Text(data['content'] ?? ''), // Show completed scans as text
             ),
@@ -554,79 +548,96 @@ class _ScanItemState extends State<ScanItem> {
       }
     });
 
-    // Add single empty row for next scan if not reached total QTY
-    if (!_isTotalQtyReached) {
-      allRows.add(DataRow(
-        cells: [
-          DataCell(Text('')),
-          DataCell(
-            TextField(
-              controller: TextEditingController(),
-              focusNode: _ensureFocusNode(allRows.length),
-              enabled: !_isTotalQtyReached,
-              autofocus: true,
-              onChanged: (value) {
-                // Cancel any existing timer
-                _scanDebounceTimer?.cancel();
-                _scanBuffer = value;
-
-                // Start a new timer
-                _scanDebounceTimer = Timer(_scanDebounceTime, () {
-                  if (mounted && value.isNotEmpty && !_isTotalQtyReached) {
+    // Add single empty row for next scan
+    allRows.add(DataRow(
+      cells: [
+        DataCell(Text((lastGroupNumber + 1).toString())),
+        DataCell(
+          TextField(
+            controller: TextEditingController(),
+            focusNode: _ensureFocusNode(allRows.length),
+            enabled: !_isTotalQtyReached,
+            autofocus: true, // Automatically focus the input field
+            onChanged: (value) {
+              _scanBuffer = value;
+            },
+            onSubmitted: (value) {
+              if (value.isNotEmpty && !_isTotalQtyReached) {
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  if (mounted) {
                     final completeValue = _scanBuffer;
-                    print('\n=== Processing Scan ===');
-                    print('Scan value: $completeValue');
-                    print('Scan buffer length: ${_scanBuffer.length}');
                     _validateContent(completeValue, allRows.length - 1);
                     _scanBuffer = '';
                   }
                 });
-              },
-              // Remove onSubmitted handler since we're using debounce timer
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: kBorderRadiusNoneAll,
-                  borderSide: const BorderSide(color: Colors.blue),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+              }
+            },
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: kBorderRadiusNoneAll,
+                borderSide: const BorderSide(color: Colors.blue),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
               ),
             ),
           ),
-          const DataCell(Text('')),
-        ],
-      ));
-    }
+        ),
+        const DataCell(Text('')),
+      ],
+    ));
 
     return allRows;
   }
 
   /// Validates the scanned content and updates the result.
   Future<void> _validateContent(String value, int index) async {
+    // If currently processing a scan, ignore new scans
+    if (_isProcessingScan) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please wait 1 second before scanning again'),
+          duration: Duration(seconds: 1),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     print('\n====== Starting Content Validation ======');
     print('Row Index: $index');
     print('Label Content from Database: $_labelContent');
     print('Scanned Value: $value');
     print('Item Category: $_itemCategory');
 
+    // Set processing flag
+    setState(() {
+      _isProcessingScan = true;
+    });
+
     // If QTY per box is reached, don't allow new scans
     if (_isQtyPerBoxReached) {
       _showQtyReachedDialog();
+      setState(() {
+        _isProcessingScan = false;
+      });
       return;
     }
 
     // If this row already has a result, don't validate again
     if (_tableData[index]['result']?.isNotEmpty == true) {
       print('Row already validated - skipping');
+      setState(() {
+        _isProcessingScan = false;
+      });
       return;
     }
 
@@ -666,72 +677,42 @@ class _ScanItemState extends State<ScanItem> {
         bool hasSubLotRules =
             countingCode['hasSubLot'] == 1 || countingCode['hasSubLot'] == true;
 
-        // For validation, we need to compare against the displayed format for numbers 10-20
+        // For validation, we need to compare against the original lot number format
         String expectedBaseContent;
         if (hasSubLotRules && lotNumber.contains('-')) {
+          // Use the original lot number format for validation
+          String baseContent = _labelContent ?? '';
+          
           // Split the lot number to handle sub-lot part
           final parts = lotNumber.split('-');
           final mainPart = parts[0];
           final subLotPart = parts[1];
-
+          
           // Parse the sub-lot number
           int subLotNum = int.tryParse(subLotPart) ?? 0;
-
-          // For validation, use the converted format for numbers 10-20
-          String convertedSubLot;
-          if (subLotNum >= 10 && subLotNum <= 20) {
-            // Use the converted letter format for validation
-            if (subLotNum == 10) {
-              convertedSubLot = '0';
-            } else {
-              // Convert to letters A-J (11=A, 12=B, etc.)
-              convertedSubLot =
-                  String.fromCharCode('A'.codeUnitAt(0) + (subLotNum - 11));
-            }
-          } else if (subLotNum < 10) {
-            // For numbers less than 10, normalize by removing leading zeros
-            convertedSubLot = subLotNum.toString();
-          } else {
-            // For numbers > 20, use as is
-            convertedSubLot = subLotNum.toString();
-          }
-
-          expectedBaseContent = baseDisplayContent;
-
+          
+          // For validation, normalize the sub-lot number (remove leading zeros)
+          String normalizedSubLot = subLotNum.toString();
+          expectedBaseContent = '$baseContent$mainPart$normalizedSubLot';
+          
           print('Original lot number: $lotNumber');
-          print('Sub-lot number: $subLotNum');
-          print('Converted sub-lot: $convertedSubLot');
+          print('Normalized sub-lot: $normalizedSubLot');
           print('Expected Base Content: "$expectedBaseContent"');
           print('Scanned Base Content: "$scannedBaseContent"');
 
-          // Compare the scanned content against the converted format
+          // Compare the scanned content against the normalized format
           if (scannedBaseContent == expectedBaseContent) {
             // Validate the serial part
             String serialPart = value.substring(value.length - serialCount);
             if (serialPart.length == serialCount) {
-              // Check for duplicates in current session
-              bool isDuplicateInSession = _tableData.any((row) {
+              // Check for duplicates
+              bool isDuplicate = _tableData.any((row) {
                 if (_tableData.indexOf(row) == index ||
                     row['content']?.isEmpty == true) return false;
                 return row['content'] == value;
               });
 
-              // Check for duplicates in historical scans
-              final historicalScans =
-                  await DatabaseHelper().getAllHistoricalScans(itemName);
-              bool isDuplicateInHistory =
-                  historicalScans.any((scan) => scan['content'] == value);
-
-              result = (isDuplicateInSession || isDuplicateInHistory)
-                  ? 'No Good'
-                  : 'Good';
-
-              if (isDuplicateInSession) {
-                print('Duplicate found in current session');
-              }
-              if (isDuplicateInHistory) {
-                print('Duplicate found in historical scans');
-              }
+              result = isDuplicate ? 'No Good' : 'Good';
             }
           }
         } else {
@@ -740,29 +721,14 @@ class _ScanItemState extends State<ScanItem> {
             // Validate the serial part
             String serialPart = value.substring(value.length - serialCount);
             if (serialPart.length == serialCount) {
-              // Check for duplicates in current session
-              bool isDuplicateInSession = _tableData.any((row) {
+              // Check for duplicates
+              bool isDuplicate = _tableData.any((row) {
                 if (_tableData.indexOf(row) == index ||
                     row['content']?.isEmpty == true) return false;
                 return row['content'] == value;
               });
 
-              // Check for duplicates in historical scans
-              final historicalScans =
-                  await DatabaseHelper().getAllHistoricalScans(itemName);
-              bool isDuplicateInHistory =
-                  historicalScans.any((scan) => scan['content'] == value);
-
-              result = (isDuplicateInSession || isDuplicateInHistory)
-                  ? 'No Good'
-                  : 'Good';
-
-              if (isDuplicateInSession) {
-                print('Duplicate found in current session');
-              }
-              if (isDuplicateInHistory) {
-                print('Duplicate found in historical scans');
-              }
+              result = isDuplicate ? 'No Good' : 'Good';
             }
           }
         }
@@ -774,19 +740,6 @@ class _ScanItemState extends State<ScanItem> {
       }
     }
 
-    // Get the highest group number for this item and PO combination
-    print('\n=== Getting Last Group Number ===');
-    final db = await DatabaseHelper();
-    final queryResult = await (await db.database).rawQuery('''
-      SELECT MAX(s.groupNumber) as maxGroup
-      FROM scanning_sessions ss
-      JOIN individual_scans s ON s.sessionId = ss.id
-      WHERE ss.itemName = ? AND ss.poNo = ?
-    ''', [itemName, poNo]);
-
-    final highestGroupNumber = queryResult.first['maxGroup'] as int? ?? 0;
-    print('Highest existing group number: $highestGroupNumber');
-
     // Calculate group information for current session
     final currentSessionScans = _tableData
         .where((row) =>
@@ -795,18 +748,9 @@ class _ScanItemState extends State<ScanItem> {
 
     // Calculate current group based only on scans from this session
     int previousCompletedGroups = currentSessionScans.length ~/ codeCount;
-    int currentGroup;
+    int currentGroup = previousCompletedGroups + 1;
 
-    // If starting a new group
-    if (currentSessionScans.length % codeCount == 0) {
-      currentGroup = highestGroupNumber + 1;
-      print('Starting new group: $currentGroup');
-    } else {
-      // Continue current group
-      currentGroup = highestGroupNumber;
-      print('Continuing current group: $currentGroup');
-    }
-
+    // Get position within current group (0-based)
     int positionInGroup = currentSessionScans.length % codeCount;
 
     // Create scan data
@@ -890,6 +834,16 @@ class _ScanItemState extends State<ScanItem> {
         _addRow();
       }
     }
+
+    // After processing the scan, start the cooldown timer
+    Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _isProcessingScan = false;
+          print('Ready for next scan');
+        });
+      }
+    });
   }
 
   /// Displays an alert dialog when a "No Good" result is recorded.
@@ -899,9 +853,6 @@ class _ScanItemState extends State<ScanItem> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: kBorderRadiusSmallAll,
-          ),
           title: const Text('Alert'),
           content: const Text(
               'A "No Good" result has been recorded. Please review the issue.'),
@@ -919,7 +870,6 @@ class _ScanItemState extends State<ScanItem> {
 
   @override
   void dispose() {
-    _scanDebounceTimer?.cancel();
     _debounceTimer?.cancel();
     // Clean up focus nodes and controllers
     for (var node in _focusNodes) {
@@ -1089,8 +1039,7 @@ class _ScanItemState extends State<ScanItem> {
                       print(
                           "Mouse is connected - proceeding with emergency stop");
                       // Add a small delay to prevent accidental triggers
-                      Future.delayed(const Duration(milliseconds: 100),
-                          () async {
+                      Future.delayed(const Duration(milliseconds: 100), () {
                         if (mounted) {
                           // Calculate progress info
                           final int currentQty =
@@ -1099,9 +1048,6 @@ class _ScanItemState extends State<ScanItem> {
                                   widget.scanData?['qtyPerBox'] ?? '0') ??
                               0;
                           final bool isIncomplete = currentQty < targetQty;
-
-                          // Get current username
-                          final username = await _getCurrentUsername();
 
                           showDialog(
                             context: context,
@@ -1118,7 +1064,7 @@ class _ScanItemState extends State<ScanItem> {
                                   .map(
                                       (item) => Map<String, dynamic>.from(item))
                                   .toList(),
-                              username: username,
+                              username: 'operator',
                               isIncomplete: isIncomplete,
                               targetQty: targetQty,
                             ),
@@ -1148,28 +1094,21 @@ class _ScanItemState extends State<ScanItem> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        if (_isDevOperator)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 20),
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text('Back'),
-                            ),
-                          ),
-                        const SizedBox(width: 20),
-                        const Text(
-                          'Scan Item',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C3E50),
-                          ),
-                        ),
-                      ],
+                    /* Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Back'),
+                      ), */
+                    const Text(
+                      'Scan Item',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
                     ),
                     Row(
                       children: [
@@ -1598,25 +1537,6 @@ class _ScanItemState extends State<ScanItem> {
 
   // Add periodic state saving
   Timer? _autoSaveTimer;
-
-  // Add method to check if the current user is dev_operator
-  Future<void> _checkIfDevOperator() async {
-    try {
-      final currentUser = await DatabaseHelper().getCurrentUser();
-      if (currentUser != null && currentUser['username'] == 'dev_operator') {
-        setState(() {
-          _isDevOperator = true;
-        });
-      }
-    } catch (e) {
-      print('Error checking if current user is dev_operator: $e');
-    }
-  }
-
-  Future<String> _getCurrentUsername() async {
-    final currentUser = await DatabaseHelper().getCurrentUser();
-    return currentUser?['username'] ?? 'operator';
-  }
 }
 
 // Add this class at the top of the file or in a separate utilities file
